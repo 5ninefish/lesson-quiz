@@ -391,6 +391,74 @@ function bulkHashPasswords_() {
  * Call from the Script Editor when a student needs an extra attempt.
  * Example: resetTries('hoku003', 'L2')
  */
+/**
+ * Clears the Questions tab and populates it with L1 (Soil) and L2 (3D Printing & Coral).
+ * Run this ONCE from the Script Editor.
+ * Add your L3–L6 rows manually in the Questions tab afterward.
+ */
+function populateQuestions() {
+  const ss    = SpreadsheetApp.openById(SHEET_ID);
+  const sheet = ss.getSheetByName('Questions');
+
+  // Clear everything and reset
+  sheet.clearContents();
+
+  const rows = [
+    // Header
+    ['Lesson','Q#','Question','A','B','C','D','E','F','Correct'],
+    // ── L1: Soil ──────────────────────────────────────────────────────────
+    ['L1',1,'Put the following soil types in the correct order from largest particles to smallest:',
+     'Clay, human hair, sand, silt, cornstarch',
+     'Sand, human hair, silt, clay, cornstarch',
+     'Sand, human hair, clay, silt, cornstarch',
+     'Human hair, clay, sand, silt, cornstarch','','','B'],
+    ['L1',2,'Which statement is true?',
+     'Water moves through sandy soil slower than silty soil.',
+     'Water moves through clayey soil faster than sandy soil.',
+     'Water moves through sandy soil faster than silty soil.',
+     "It doesn't make a difference. Water moves through all soils at the same rate.",'','','C'],
+    ['L1',3,'Which particle size is best for water-loving plants like rice, water lilies, cattails, and taro?',
+     'Soil with small particle sizes, such as clay',
+     'Soil with large particle sizes, such as sand',
+     'A 3-to-2 mixture of large particle sizes such as sand, and small particle sizes such as clay',
+     'Either small or large is good for water-loving plants','','','A'],
+    ['L1',4,'Which of the following is NOT a texture of soil?',
+     'Sandy','Clayey','Grainy','Sparkly','a & b','c & d','D'],
+    ['L1',5,'Which texture of soil gives the longest ribbon of soil?',
+     'Sandy','Silty loam','Clay loam','Clayey','','','D'],
+    // ── L2: 3D Printing & Coral ───────────────────────────────────────────
+    ['L2',1,'What is coral?',
+     'Coral is a plant because it uses photosynthesis to grow.',
+     'Coral is an animal because it does not make its own food.',
+     'Coral is both an animal and a plant because of symbiosis.',
+     'Coral is neither a plant nor an animal because of its unique characteristics and physical structures.',
+     '','','B'],
+    ['L2',2,'What scale is used to measure the acidity of a substance?',
+     'pH scale','Digital scale','Interval scale','Acidic scale','','','A'],
+    ['L2',3,'True or False: Usually when there is a chemical change, the process can be undone.',
+     'True','False','','','','','B'],
+    ['L2',4,'What process does a 3D printer use?',
+     'Subtractive process','Continuous flow process','Selective process','Additive process','','','D'],
+    ['L2',5,'How can 3D printed coral be helpful for the ocean?',
+     'It provides much needed food for some fish.',
+     '3D printed coral is bad for the ocean because it is made of plastic.',
+     'Eventually with enough 3D printed coral, we will no longer need real coral.',
+     'Marine life can live in the 3D printed coral.','','','D'],
+  ];
+
+  sheet.getRange(1, 1, rows.length, 10).setValues(rows);
+  sheet.setFrozenRows(1);
+
+  // Bold the header
+  sheet.getRange(1, 1, 1, 10).setFontWeight('bold');
+
+  Logger.log('Questions tab populated: ' + (rows.length - 1) + ' questions written.');
+  SpreadsheetApp.getUi().alert(
+    'Done! ' + (rows.length - 1) + ' questions written to the Questions tab.\n\n' +
+    'Add your L3–L6 questions directly in the Questions tab using the same format.'
+  );
+}
+
 function resetTries(username, lesson) {
   const ss      = SpreadsheetApp.openById(SHEET_ID);
   const sheet   = ss.getSheetByName('Students');
