@@ -219,20 +219,16 @@
   .option-label.wrong    { background: #fee2e2; border-color: var(--danger); }
   .option-label.revealed { background: #fef9c3; border-color: #ca8a04; }
 
-  /* Image answer choices */
-  .img-options { display: flex; flex-wrap: wrap; gap: .75rem; }
+  /* Image answer choices — single column */
+  .img-options { display: flex; flex-direction: column; gap: .75rem; }
   .option-img {
     flex-direction: column;
     align-items: center;
-    padding: .6rem;
-    width: calc(50% - .5rem);
-    min-width: 200px;
+    padding: .75rem;
+    width: 100%;
   }
-  .option-img img { width: 100%; height: auto; border-radius: 4px; pointer-events: none; }
-  .option-img input { margin: 0 0 .4rem; }
-  @media (max-width: 480px) {
-    .option-img { width: 100%; }
-  }
+  .option-img img { width: 100%; max-width: 340px; height: auto; border-radius: 4px; pointer-events: none; }
+  .option-img input { margin: 0 0 .5rem; }
 
   /* ── Score screen ─────────────────────────────────────────────────── */
   .score-circle {
@@ -620,14 +616,14 @@ function renderQuestions(questions) {
       const body = document.createElement('div');
       body.className = 'q-body';
 
-      // Render full question HTML (images, bold etc.) inside the body
+      // If question contains <img> tags, show those in the body (not the full repeated text)
       const hasImgOpts = q.options.some(o => o.startsWith('https://') || o.startsWith('http://'));
-      const hasHtml = /<[a-z]/i.test(q.question);
-      if (hasHtml || hasImgOpts) {
-        const qtxt = document.createElement('div');
-        qtxt.className = 'q-full-text';
-        qtxt.innerHTML = q.question;
-        body.appendChild(qtxt);
+      const qImgs = q.question.match(/<img[^>]*>/gi);
+      if (qImgs) {
+        const imgDiv = document.createElement('div');
+        imgDiv.className = 'q-images';
+        imgDiv.innerHTML = qImgs.join('');
+        body.appendChild(imgDiv);
       }
       if (hasImgOpts) body.classList.add('img-options');
       q.options.forEach((opt, oi) => {
