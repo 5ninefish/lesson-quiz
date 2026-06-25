@@ -142,7 +142,7 @@
 
   summary.q-header {
     display: flex;
-    align-items: center;
+    align-items: flex-start;
     gap: .5rem;
     padding: .75rem 1rem;
     cursor: pointer;
@@ -174,12 +174,9 @@
   .q-preview {
     font-size: .875rem;
     color: var(--text);
-    display: -webkit-box;
-    -webkit-line-clamp: 3;
-    -webkit-box-orient: vertical;
-    overflow: hidden;
     flex: 1;
     min-width: 0;
+    line-height: 1.45;
   }
   .q-status {
     font-size: .75rem;
@@ -195,6 +192,7 @@
     border-top: 1px solid var(--border);
   }
   .q-body img { max-width: 100%; height: auto; border-radius: 6px; display: block; margin-bottom: .5rem; }
+  .q-full-text { font-size: .9rem; line-height: 1.5; margin-bottom: .75rem; color: var(--text); }
 
   /* sub-questions inside Q4 group */
   .sub-question { margin-bottom: .75rem; }
@@ -611,7 +609,7 @@ function renderQuestions(questions) {
       groupDetails  = null;
       groupBody     = null;
 
-      const preview = q.question.replace(/<[^>]*>/g, '').slice(0, 120);
+      const preview = q.question.replace(/<[^>]*>/g, '');
       const d = makeDetails();
       const s = document.createElement('summary');
       s.className = 'q-header';
@@ -622,7 +620,15 @@ function renderQuestions(questions) {
       const body = document.createElement('div');
       body.className = 'q-body';
 
+      // Render full question HTML (images, bold etc.) inside the body
       const hasImgOpts = q.options.some(o => o.startsWith('https://') || o.startsWith('http://'));
+      const hasHtml = /<[a-z]/i.test(q.question);
+      if (hasHtml || hasImgOpts) {
+        const qtxt = document.createElement('div');
+        qtxt.className = 'q-full-text';
+        qtxt.innerHTML = q.question;
+        body.appendChild(qtxt);
+      }
       if (hasImgOpts) body.classList.add('img-options');
       q.options.forEach((opt, oi) => {
         const lbl = document.createElement('label');
