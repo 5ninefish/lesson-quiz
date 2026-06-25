@@ -9,7 +9,7 @@ const LESSONS     = ['L1', 'L2', 'L3', 'L4', 'L5', 'L6'];
 const LESSON_NAMES = {
   L1: 'Lesson 1 – Soil',
   L2: 'Lesson 2 – 3D Printing & Coral',
-  L3: 'Lesson 3',
+  L3: 'Lesson 3 – Computer Science',
   L4: 'Lesson 4',
   L5: 'Lesson 5',
   L6: 'Lesson 6',
@@ -444,6 +444,26 @@ function populateQuestions() {
      '3D printed coral is bad for the ocean because it is made of plastic.',
      'Eventually with enough 3D printed coral, we will no longer need real coral.',
      'Marine life can live in the 3D printed coral.','','','D'],
+    // ── L3: Computer Science ──────────────────────────────────────────────
+    ['L3',1,'What is the definition of an algorithm?',
+     'A command that repeats certain steps over and over',
+     'A list of steps that you can follow to finish a task',
+     'A device used for storing and processing data',
+     'A command given as an if-then statement','','','B'],
+    ['L3',2,'In computer science, what is a program?',
+     'The study of computers and computing concepts, including hardware, software, networking, and the Internet',
+     'A series of actions completed in a specific order',
+     'A show that comes on TV',
+     'An algorithm that has been coded into a computer language that can then be run by a machine','','','D'],
+    ['L3',3,'True or False: If a list (or sequence) of directions is incorrect, it is still an algorithm.',
+     'True','False','','','','','A'],
+    ['L3',4,'<img src="https://5ninefish.github.io/lesson-quiz/images/cs_q4_code.png" alt="Code blocks for drawing a diamond">Study the code blocks above. What are the correct degree values for the three TURN commands (blanks 3, 6, and 9) to draw a diamond shape?',
+     '90°, 90°, 90°',
+     '45°, 90°, 120°',
+     '60°, 120°, 60°',
+     '120°, 60°, 120°','','','D'],
+    ['L3',5,'For the code in question 4, what command could be used to shorten the repeated lines of code?',
+     'Loop','Conditional statement','Set color','None of the above','','','A'],
   ];
 
   sheet.getRange(1, 1, rows.length, 10).setValues(rows);
@@ -455,8 +475,48 @@ function populateQuestions() {
   Logger.log('Questions tab populated: ' + (rows.length - 1) + ' questions written.');
   SpreadsheetApp.getUi().alert(
     'Done! ' + (rows.length - 1) + ' questions written to the Questions tab.\n\n' +
-    'Add your L3–L6 questions directly in the Questions tab using the same format.'
+    'Add L4–L6 questions directly in the Questions tab using the same format.'
   );
+}
+
+// Run this from the Apps Script editor to append only the L3 (Computer Science) questions
+// without clearing existing L1/L2 questions.
+function addL3Questions() {
+  const ss    = SpreadsheetApp.openById(SHEET_ID);
+  const sheet = ss.getSheetByName('Questions');
+
+  // Remove any existing L3 placeholder rows first
+  const data = sheet.getDataRange().getValues();
+  for (let i = data.length - 1; i >= 1; i--) {
+    if (String(data[i][0]) === 'L3') sheet.deleteRow(i + 1);
+  }
+
+  const rows = [
+    ['L3',1,'What is the definition of an algorithm?',
+     'A command that repeats certain steps over and over',
+     'A list of steps that you can follow to finish a task',
+     'A device used for storing and processing data',
+     'A command given as an if-then statement','','','B'],
+    ['L3',2,'In computer science, what is a program?',
+     'The study of computers and computing concepts, including hardware, software, networking, and the Internet',
+     'A series of actions completed in a specific order',
+     'A show that comes on TV',
+     'An algorithm that has been coded into a computer language that can then be run by a machine','','','D'],
+    ['L3',3,'True or False: If a list (or sequence) of directions is incorrect, it is still an algorithm.',
+     'True','False','','','','','A'],
+    ['L3',4,'<img src="https://5ninefish.github.io/lesson-quiz/images/cs_q4_code.png" alt="Code blocks for drawing a diamond">Study the code blocks above. What are the correct degree values for the three TURN commands (blanks 3, 6, and 9) to draw a diamond shape?',
+     '90°, 90°, 90°',
+     '45°, 90°, 120°',
+     '60°, 120°, 60°',
+     '120°, 60°, 120°','','','D'],
+    ['L3',5,'For the code in question 4, what command could be used to shorten the repeated lines of code?',
+     'Loop','Conditional statement','Set color','None of the above','','','A'],
+  ];
+
+  const lastRow = sheet.getLastRow();
+  sheet.getRange(lastRow + 1, 1, rows.length, 10).setValues(rows);
+  Logger.log('L3 questions added: ' + rows.length);
+  SpreadsheetApp.getUi().alert('Done! 5 Computer Science (L3) questions added to the Questions tab.');
 }
 
 function resetTries(username, lesson) {

@@ -9,7 +9,11 @@ L2,2,What scale is used to measure the acidity of a substance?,pH scale,Digital 
 L2,3,"True or False: Usually when there is a chemical change, the process can be undone.",True,False,,,,, B
 L2,4,What process does a 3D printer use?,Subtractive process,Continuous flow process,Selective process,Additive process,,,D
 L2,5,How can 3D printed coral be helpful for the ocean?,"It provides much needed food for some fish.","3D printed coral is bad for the ocean because it is made of plastic.","Eventually with enough 3D printed coral, we will no longer need real coral.","Marine life can live in the 3D printed coral.",,,D
-L3,1,ADD QUESTION HERE,Option A,Option B,Option C,Option D,,,A
+L3,1,What is the definition of an algorithm?,A command that repeats certain steps over and over,A list of steps that you can follow to finish a task,A device used for storing and processing data,A command given as an if-then statement,,,B
+L3,2,In computer science what is a program?,The study of computers and computing concepts,A series of actions completed in a specific order,A show that comes on TV,An algorithm coded into a computer language that can be run by a machine,,,D
+L3,3,"True or False: If a list of directions is incorrect, it is still an algorithm.",True,False,,,,,A
+L3,4,(See cs_q4_code.png) Correct degree values for TURN commands (blanks 3/6/9) to draw a diamond?,90° 90° 90°,45° 90° 120°,60° 120° 60°,120° 60° 120°,,,D
+L3,5,What command could shorten the repeated lines of code in question 4?,Loop,Conditional statement,Set color,None of the above,,,A
 L4,1,ADD QUESTION HERE,Option A,Option B,Option C,Option D,,,A
 L5,1,ADD QUESTION HERE,Option A,Option B,Option C,Option D,,,A
 L6,1,ADD QUESTION HERE,Option A,Option B,Option C,Option D,,,A
