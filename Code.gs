@@ -458,7 +458,7 @@ function populateQuestions() {
     ['L3',3,'True or False: If a list (or sequence) of directions is incorrect, it is still an algorithm.',
      'True','False','','','','','A'],
     // Q4 — 10 sub-questions (4A–4J). 4A holds the intro images + first blank.
-    ['L3','4A','<img src="https://5ninefish.github.io/lesson-quiz/images/cs_q4_code.png" style="max-width:100%;margin-bottom:.4rem"><img src="https://5ninefish.github.io/lesson-quiz/images/cs_q4_diamond.png" style="max-width:140px;display:block;margin:.25rem auto .6rem"><strong>Blank 1</strong> — Move ___ by 150 pixels',
+    ['L3','4A','Study the image below. In the table underneath, select the correct command to fill in each piece of the missing code that will allow the person to draw the diamond.<img src="https://5ninefish.github.io/lesson-quiz/images/cs_q4_diamond.png" style="max-width:140px;display:block;margin:.5rem auto .4rem"><img src="https://5ninefish.github.io/lesson-quiz/images/cs_q4_code.png" style="max-width:100%;margin-bottom:.5rem"><strong>Blank 1</strong> — Move ___ by 150 pixels',
      'Forward','Backward','','','','','A'],
     ['L3','4B','<strong>Blank 2</strong> — Turn ___ by X degrees',
      'Left','Right','','','','','A'],
@@ -521,7 +521,7 @@ function addL3Questions() {
     ['L3',3,'True or False: If a list (or sequence) of directions is incorrect, it is still an algorithm.',
      'True','False','','','','','A'],
     // Q4 — 10 sub-questions (4A–4J). 4A holds the intro images + first blank.
-    ['L3','4A','<img src="https://5ninefish.github.io/lesson-quiz/images/cs_q4_code.png" style="max-width:100%;margin-bottom:.4rem"><img src="https://5ninefish.github.io/lesson-quiz/images/cs_q4_diamond.png" style="max-width:140px;display:block;margin:.25rem auto .6rem"><strong>Blank 1</strong> — Move ___ by 150 pixels',
+    ['L3','4A','Study the image below. In the table underneath, select the correct command to fill in each piece of the missing code that will allow the person to draw the diamond.<img src="https://5ninefish.github.io/lesson-quiz/images/cs_q4_diamond.png" style="max-width:140px;display:block;margin:.5rem auto .4rem"><img src="https://5ninefish.github.io/lesson-quiz/images/cs_q4_code.png" style="max-width:100%;margin-bottom:.5rem"><strong>Blank 1</strong> — Move ___ by 150 pixels',
      'Forward','Backward','','','','','A'],
     ['L3','4B','<strong>Blank 2</strong> — Turn ___ by X degrees',
      'Left','Right','','','','','A'],
