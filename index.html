@@ -174,9 +174,10 @@
   .q-preview {
     font-size: .875rem;
     color: var(--text);
-    white-space: nowrap;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
     overflow: hidden;
-    text-overflow: ellipsis;
     flex: 1;
     min-width: 0;
   }
@@ -252,6 +253,24 @@
 
   .divider { border: none; border-top: 1px solid var(--border); margin: 1.25rem 0; }
 
+  /* ── Timer ────────────────────────────────────────────────────────── */
+  .timer-bar {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: .4rem;
+    padding: .5rem .9rem;
+    border-radius: 6px;
+    font-size: .875rem;
+    font-weight: 700;
+    margin-bottom: .75rem;
+    background: #f0fdf4;
+    color: var(--success);
+    border: 1px solid #bbf7d0;
+  }
+  .timer-bar.warn   { background: #fef9c3; color: #854d0e; border-color: #fde047; }
+  .timer-bar.danger { background: #fee2e2; color: var(--danger); border-color: #fca5a5; }
+
   /* ── Loading ──────────────────────────────────────────────────────── */
   .spinner {
     width: 32px; height: 32px;
@@ -285,9 +304,9 @@ const LESSON_NAMES = {
   L1: 'Lesson 1 – Soil',
   L2: 'Lesson 2 – 3D Printing & Coral',
   L3: 'Lesson 3 – Computer Science',
-  L4: 'Lesson 4',
-  L5: 'Lesson 5',
-  L6: 'Lesson 6',
+  L4: 'Lesson 4 – Astronomy',
+  L5: 'Lesson 5 – Health',
+  L6: 'Lesson 6 – Digital Media',
 };
 const ALL_LESSONS = ['L1','L2','L3','L4','L5','L6'];
 </script>
@@ -321,6 +340,7 @@ const ALL_LESSONS = ['L1','L2','L3','L4','L5','L6'];
     <h2 id="quiz-title" style="margin-bottom:0"></h2>
     <button class="btn btn-outline btn-sm" onclick="backToLessons()">← Back</button>
   </div>
+  <div id="quiz-timer" class="timer-bar hidden"></div>
   <div id="quiz-info" class="info hidden"></div>
   <div id="quiz-error" class="error hidden"></div>
   <form id="quiz-form" onsubmit="return false">
@@ -350,6 +370,8 @@ let state = {
   currentLesson: null,
   tryCounts: {},    // { L1: 0, L2: 1, ... }
   questions: [],
+  timerInterval: null,
+  timeLimit: 0,
 };
 
 // ── View helpers ──────────────────────────────────────────────────────────────
@@ -386,25 +408,16 @@ async function login() {
   btn.textContent = 'Signing in…';
   btn.disabled = true;
 
-  // Validate by trying to load L1 — if auth fails we know immediately
-  // (We use a lightweight approach: try each lesson lazily, not all at once)
-  // Instead, validate with a dummy load — if L1 gives invalid_credentials, auth bad
   try {
-    const r = await api({ action: 'auth_and_load', username: u, password: p, lesson: 'L1' });
+    const r = await api({ action: 'get_tries', username: u, password: p });
     if (r.error === 'invalid_credentials') {
       setError('login-error', 'Incorrect username or password.');
       btn.textContent = 'Sign In'; btn.disabled = false;
       return;
     }
-    // Auth succeeded (even if L1 is maxed out — that's a different error)
     state.username = u;
     state.password = p;
-    state.tryCounts = {};
-
-    // Collect L1 try count from this response
-    if (r.tries !== undefined) state.tryCounts.L1 = r.tries;
-    if (r.error === 'max_attempts_reached') state.tryCounts.L1 = r.tries;
-
+    state.tryCounts = r.allTries || {};
     showLessons();
   } catch (err) {
     setError('login-error', 'Connection error. Please try again.');
@@ -413,7 +426,8 @@ async function login() {
 }
 
 function logout() {
-  state = { username:'', password:'', currentLesson:null, tryCounts:{}, questions:[] };
+  stopTimer();
+  state = { username:'', password:'', currentLesson:null, tryCounts:{}, questions:[], timerInterval:null, timeLimit:0 };
   document.getElementById('username').value = '';
   document.getElementById('password').value = '';
   show('view-login');
@@ -485,18 +499,27 @@ async function startLesson(lesson) {
     }
 
     state.currentLesson = lesson;
-    state.tryCounts[lesson] = r.tries;
     state.questions = r.questions;
+    if (r.allTries) state.tryCounts = Object.assign({}, state.tryCounts, r.allTries);
+    else state.tryCounts[lesson] = r.tries;
+    state.timeLimit = r.timeLimit || 0;
 
-    const attemptsLeft = 2 - r.tries;
     const info = document.getElementById('quiz-info');
-    info.textContent = `Attempt ${r.tries + 1} of 2 — answer all questions then click Submit.`;
+    let infoText = `Attempt ${r.tries + 1} of 2 — answer all questions then click Submit.`;
+    if (state.timeLimit > 0) {
+      const m = Math.floor(state.timeLimit / 60);
+      infoText += ` You have ${m} minute${m !== 1 ? 's' : ''}.`;
+    }
+    info.textContent = infoText;
     info.classList.remove('hidden');
 
     renderQuestions(r.questions);
     document.getElementById('submit-btn').classList.remove('hidden');
     document.getElementById('submit-btn').disabled = false;
     document.getElementById('submit-btn').textContent = 'Submit Answers';
+
+    if (state.timeLimit > 0) startTimer(state.timeLimit);
+    else document.getElementById('quiz-timer').classList.add('hidden');
 
   } catch (err) {
     document.getElementById('quiz-loading').classList.add('hidden');
@@ -616,8 +639,9 @@ function renderQuestions(questions) {
 }
 
 // ── Submit quiz ────────────────────────────────────────────────────────────────
-async function submitQuiz() {
+async function submitQuiz(force = false) {
   setError('quiz-error', '');
+  stopTimer();
 
   // Collect answers
   const answers = {};
@@ -628,7 +652,7 @@ async function submitQuiz() {
     else missing = true;
   });
 
-  if (missing) {
+  if (!force && missing) {
     setError('quiz-error', 'Please answer all questions before submitting.');
     return;
   }
@@ -718,10 +742,39 @@ function showScore(r) {
 
 // ── Back to lessons ────────────────────────────────────────────────────────────
 function backToLessons() {
+  stopTimer();
   state.currentLesson = null;
   state.questions = [];
   renderLessonGrid();
   show('view-lessons');
+}
+
+// ── Timer ──────────────────────────────────────────────────────────────────────
+function startTimer(seconds) {
+  stopTimer();
+  let remaining = seconds;
+  const el = document.getElementById('quiz-timer');
+  el.className = 'timer-bar';
+  el.classList.remove('hidden');
+
+  function tick() {
+    const m = Math.floor(remaining / 60);
+    const s = remaining % 60;
+    el.textContent = '⏱ ' + m + ':' + s.toString().padStart(2, '0') + ' remaining';
+    if (remaining <= 30)       el.className = 'timer-bar danger';
+    else if (remaining <= 120) el.className = 'timer-bar warn';
+    else                       el.className = 'timer-bar';
+    if (remaining <= 0) { stopTimer(); submitQuiz(true); return; }
+    remaining--;
+  }
+  tick();
+  state.timerInterval = setInterval(tick, 1000);
+}
+
+function stopTimer() {
+  if (state.timerInterval) { clearInterval(state.timerInterval); state.timerInterval = null; }
+  const el = document.getElementById('quiz-timer');
+  if (el) el.classList.add('hidden');
 }
 
 // ── Enter key on login ─────────────────────────────────────────────────────────

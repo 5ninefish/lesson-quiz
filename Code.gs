@@ -3,6 +3,10 @@
 const SHEET_ID = '1wFjzB6PgjhZjHWBcgLLVOa1TtBvaEDqoV8PGFYoX3EI';
 const MAX_TRIES = 2;
 
+// Set to a positive number (seconds) to enable a countdown timer on the quiz.
+// 0 = no timer.  Example: 600 = 10 minutes.
+const QUIZ_TIME_SECONDS = 0;
+
 // Lesson IDs — must match values in the Questions sheet "Lesson" column
 // Update LESSON_NAMES to show friendly names in the UI
 const LESSONS     = ['L1', 'L2', 'L3', 'L4', 'L5', 'L6'];
@@ -10,9 +14,9 @@ const LESSON_NAMES = {
   L1: 'Lesson 1 – Soil',
   L2: 'Lesson 2 – 3D Printing & Coral',
   L3: 'Lesson 3 – Computer Science',
-  L4: 'Lesson 4',
-  L5: 'Lesson 5',
-  L6: 'Lesson 6',
+  L4: 'Lesson 4 – Astronomy',
+  L5: 'Lesson 5 – Health',
+  L6: 'Lesson 6 – Digital Media',
 };
 
 // ─── ENTRY POINT ─────────────────────────────────────────────────────────────
@@ -23,6 +27,7 @@ function doPost(e) {
 
     if (action === 'auth_and_load') return authAndLoad(username, password, lesson);
     if (action === 'submit')        return submit(username, password, lesson, answers);
+    if (action === 'get_tries')     return getTries(username, password);
     if (action === 'lesson_list')   return lessonList();
 
     return respond({ error: 'unknown_action' });
@@ -52,17 +57,43 @@ function authAndLoad(username, password, lesson) {
 
   const tries = Number(student.row[2 + li]) || 0;
   if (tries >= MAX_TRIES) {
-    return respond({ error: 'max_attempts_reached', tries });
+    return respond({ error: 'max_attempts_reached', tries, allTries: allTriesFor(student) });
   }
 
   const questions = loadQuestions(ss, lesson);
   if (questions.length === 0) return respond({ error: 'no_questions_found' });
 
-  return respond({ ok: true, tries, questions, lessonName: LESSON_NAMES[lesson] || lesson });
+  return respond({
+    ok: true, tries, questions,
+    lessonName: LESSON_NAMES[lesson] || lesson,
+    allTries:   allTriesFor(student),
+    timeLimit:  QUIZ_TIME_SECONDS,
+  });
+}
+
+// Returns all lesson try counts for a student row
+function allTriesFor(student) {
+  const out = {};
+  LESSONS.forEach((l, i) => { out[l] = Number(student.row[2 + i]) || 0; });
+  return out;
+}
+
+// Lightweight: auth + return all try counts (called on login)
+function getTries(username, password) {
+  const ss   = SpreadsheetApp.openById(SHEET_ID);
+  const data = ss.getSheetByName('Students').getDataRange().getValues();
+  const student = findStudent(data, username, password);
+  if (!student) return respond({ error: 'invalid_credentials' });
+  return respond({ ok: true, allTries: allTriesFor(student), timeLimit: QUIZ_TIME_SECONDS });
 }
 
 // Called when a student submits their answers
 function submit(username, password, lesson, answers) {
+  // Lock prevents race conditions when many students submit simultaneously
+  const lock = LockService.getScriptLock();
+  lock.waitLock(15000);
+
+  try {
   const ss = SpreadsheetApp.openById(SHEET_ID);
   const studentsSheet = ss.getSheetByName('Students');
   const studentsData  = studentsSheet.getDataRange().getValues();
@@ -121,6 +152,9 @@ function submit(username, password, lesson, answers) {
   }));
 
   return respond({ ok: true, score, total, attempt: attemptNum, isLastTry, graded: returnGraded });
+  } finally {
+    lock.releaseLock();
+  }
 }
 
 // Returns lesson list with try counts for the logged-in student
@@ -565,4 +599,91 @@ function resetTries(username, lesson) {
     }
   }
   Logger.log('Student not found: ' + username);
+}
+
+// ── Lesson population helpers ─────────────────────────────────────────────────
+
+function addLessonQuestions_(lessonId, rows) {
+  const ss    = SpreadsheetApp.openById(SHEET_ID);
+  const sheet = ss.getSheetByName('Questions');
+  const data  = sheet.getDataRange().getValues();
+  for (let i = data.length - 1; i >= 1; i--) {
+    if (String(data[i][0]) === lessonId) sheet.deleteRow(i + 1);
+  }
+  const lastRow = sheet.getLastRow();
+  sheet.getRange(lastRow + 1, 1, rows.length, 10).setValues(rows);
+  Logger.log(lessonId + ' questions added: ' + rows.length);
+  SpreadsheetApp.getUi().alert('Done! ' + rows.length + ' questions added for ' + lessonId + '.');
+}
+
+function addL4Questions() {
+  addLessonQuestions_('L4', [
+    ['L4',1,'The visible light spectrum…',
+     'Is the light that you can see',
+     'Contains the colors you see in a rainbow',
+     'Has wavelengths of 400-700 nm',
+     'All of the above','','','D'],
+    ['L4',2,'What is refraction?',
+     'Computing a fraction twice',
+     'The phenomenon of light changing directions due to changes in its transmission medium',
+     'The science of reflections',
+     'The process of factoring out parts of a polynomial','','','B'],
+    ['L4',3,'Other than visible light, what is another form of electromagnetic radiation?',
+     'Electrical current','Magnetic fields','Radio waves','None of the above','','','C'],
+    ['L4',4,'Which unit of measurement do astronomers use to measure distances?',
+     'Inches','Astronomical units','Sun years','Gigameters','','','B'],
+    ['L4',5,'Do the stars in the night sky ever move?',
+     'Yes','No','','','','','A'],
+  ]);
+}
+
+function addL5Questions() {
+  addLessonQuestions_('L5', [
+    ['L5',1,'What is the most likely cause of death in the United States?',
+     'Stroke','Cancer','Heart disease','Murder','','','C'],
+    ['L5',2,'Which are the correct steps of the scientific method?',
+     'Identify a problem, develop a question, make a hypothesis, conduct experiment and draw conclusion',
+     'Develop a question, make a hypothesis, conduct experiment, identify a problem, and draw conclusion',
+     'Identify a problem, develop a question, conduct experiment, make a hypothesis, and draw a conclusion',
+     'Make a hypothesis, identify a problem, develop a question, conduct experiment, draw conclusion','','','A'],
+    ['L5',3,'What is an appropriate hypothesis?',
+     'If I run, then my heart rate will increase.',
+     'Running is not fun.',
+     'I don\'t like to run because it makes me tired.',
+     'People run to stay healthy.','','','A'],
+    ['L5',4,'Which is NOT part of vital signs you should get checked every time you see a doctor?',
+     'Pulse rate','Blood pressure','Eye sight','Body temperature','','','C'],
+    ['L5',5,'If your blood pressure is consistently high, how can you reduce it?',
+     'Exercise more','Eat a balanced diet','Stop smoking','All of the above','','','D'],
+  ]);
+}
+
+function addL6Questions() {
+  addLessonQuestions_('L6', [
+    ['L6',1,'Which of the following best describes "Artificial Intelligence" (AI)?',
+     'A type of computer hardware that processes information quickly.',
+     'Software used for creating digital art and designs.',
+     'Complex computer code that follows pre-programmed instructions.',
+     'Machines that can learn from data and perform tasks that typically require human intelligence.','','','D'],
+    ['L6',2,'What is the fundamental concept behind how AI is able to generate text, images, or videos?',
+     'It uses pre-written scripts and templates.',
+     'It learns patterns from large amounts of data.',
+     'It directly copies existing human-created content.',
+     'It relies on random number generation.','','','B'],
+    ['L6',3,'What does it mean for an AI algorithm to "curate" content, such as on a social media feed?',
+     'To delete old or unpopular posts.',
+     'To organize and present content based on user data and preferences.',
+     'To randomly display all available content.',
+     'To allow users to manually select everything they see.','','','B'],
+    ['L6',4,'When comparing generative AI and analytical AI, what is the fundamental difference in their primary function?',
+     'Generative AI creates new content, while analytical AI interprets and categorizes existing data.',
+     'Generative AI requires more computational power than analytical AI.',
+     'Generative AI is primarily used for creative tasks, while analytical AI is used for scientific research.',
+     'Generative AI relies on different types of algorithms compared to analytical AI.','','','A'],
+    ['L6',5,'What is the role of a "prompt" when using AI tools for text or image generation?',
+     'It\'s an instruction or input given to the AI to guide its creation.',
+     'It\'s the final output generated by the AI.',
+     'It\'s a technical error that occurs during the AI process.',
+     'It\'s a type of file format used for AI-generated media.','','','A'],
+  ]);
 }
