@@ -175,6 +175,141 @@ function respond(data) {
     .setMimeType(ContentService.MimeType.JSON);
 }
 
+// ─── CUSTOM SHEET MENU ───────────────────────────────────────────────────────
+
+/**
+ * Runs automatically when the sheet is opened.
+ * Adds a "Quiz Admin" menu to the Google Sheets menu bar.
+ */
+function onOpen() {
+  SpreadsheetApp.getUi()
+    .createMenu('Quiz Admin')
+    .addItem('Reset student tries…', 'showResetDialog')
+    .addItem('View attempt summary', 'showSummary')
+    .addSeparator()
+    .addItem('Hash new passwords', 'bulkHashPasswords_')
+    .addToUi();
+}
+
+/**
+ * Shows a dialog where you can reset a student's try count for a lesson.
+ */
+function showResetDialog() {
+  const ss      = SpreadsheetApp.openById(SHEET_ID);
+  const sheet   = ss.getSheetByName('Students');
+  const data    = sheet.getDataRange().getValues();
+  const students = data.slice(1).map(r => r[0]).filter(u => u !== '');
+
+  const html = HtmlService.createHtmlOutput(`
+    <style>
+      body { font-family: Arial, sans-serif; padding: 16px; font-size: 14px; }
+      label { display: block; margin-top: 10px; font-weight: bold; }
+      select { width: 100%; padding: 6px; margin-top: 4px; font-size: 14px; }
+      button { margin-top: 16px; padding: 8px 20px; background: #1a73e8;
+               color: white; border: none; border-radius: 4px; cursor: pointer;
+               font-size: 14px; width: 100%; }
+      button:hover { background: #1557b0; }
+      #msg { margin-top: 12px; color: green; font-weight: bold; display: none; }
+    </style>
+    <label>Student:</label>
+    <select id="student">
+      ${students.map(u => `<option value="${u}">${u}</option>`).join('')}
+    </select>
+    <label>Lesson:</label>
+    <select id="lesson">
+      <option value="L1">L1</option>
+      <option value="L2">L2</option>
+      <option value="L3">L3</option>
+      <option value="L4">L4</option>
+      <option value="L5">L5</option>
+      <option value="L6">L6</option>
+      <option value="ALL">ALL lessons</option>
+    </select>
+    <button onclick="doReset()">Reset Tries</button>
+    <div id="msg"></div>
+    <script>
+      function doReset() {
+        const u = document.getElementById('student').value;
+        const l = document.getElementById('lesson').value;
+        google.script.run
+          .withSuccessHandler(function(result) {
+            const msg = document.getElementById('msg');
+            msg.textContent = result;
+            msg.style.display = 'block';
+          })
+          .resetTriesFromDialog(u, l);
+      }
+    <\/script>
+  `)
+  .setWidth(320)
+  .setHeight(260);
+
+  SpreadsheetApp.getUi().showModalDialog(html, 'Reset Student Tries');
+}
+
+/** Called by the reset dialog. */
+function resetTriesFromDialog(username, lesson) {
+  const ss    = SpreadsheetApp.openById(SHEET_ID);
+  const sheet = ss.getSheetByName('Students');
+  const data  = sheet.getDataRange().getValues();
+
+  for (let i = 1; i < data.length; i++) {
+    if (String(data[i][0]) !== username) continue;
+    if (lesson === 'ALL') {
+      sheet.getRange(i + 1, 3, 1, 6).setValues([[0, 0, 0, 0, 0, 0]]);
+      return username + ': all lessons reset to 0.';
+    }
+    const li = LESSONS.indexOf(lesson);
+    if (li < 0) return 'Invalid lesson: ' + lesson;
+    sheet.getRange(i + 1, 3 + li).setValue(0);
+    return username + ' / ' + lesson + ' reset to 0.';
+  }
+  return 'Student not found: ' + username;
+}
+
+/** Shows a color-coded attempt summary for all students. */
+function showSummary() {
+  const ss    = SpreadsheetApp.openById(SHEET_ID);
+  const sheet = ss.getSheetByName('Students');
+  const data  = sheet.getDataRange().getValues();
+
+  let rows = '';
+  for (let i = 1; i < data.length; i++) {
+    const u = data[i][0];
+    const tries = LESSONS.map((l, li) => {
+      const t = Number(data[i][2 + li]) || 0;
+      const color = t >= 2 ? '#dc2626' : t === 1 ? '#d97706' : '#16a34a';
+      return `<td style="text-align:center;color:${color};font-weight:bold">${t}</td>`;
+    }).join('');
+    rows += `<tr><td style="padding:4px 8px">${u}</td>${tries}</tr>`;
+  }
+
+  const html = HtmlService.createHtmlOutput(`
+    <style>
+      body { font-family: Arial, sans-serif; font-size: 13px; padding: 12px; }
+      table { border-collapse: collapse; width: 100%; }
+      th { background: #f1f5f9; padding: 6px 8px; text-align: center; }
+      th:first-child { text-align: left; }
+      tr:nth-child(even) { background: #f8fafc; }
+      td { padding: 4px 8px; border-bottom: 1px solid #e2e8f0; }
+      .legend { margin-top: 8px; font-size: 11px; color: #64748b; }
+    </style>
+    <table>
+      <tr><th>Username</th>${LESSONS.map(l => `<th>${l}</th>`).join('')}</tr>
+      ${rows}
+    </table>
+    <p class="legend">
+      <span style="color:#16a34a">&#9679;</span> 0 attempts &nbsp;
+      <span style="color:#d97706">&#9679;</span> 1 attempt &nbsp;
+      <span style="color:#dc2626">&#9679;</span> 2 attempts (done)
+    </p>
+  `)
+  .setWidth(500)
+  .setHeight(400);
+
+  SpreadsheetApp.getUi().showModalDialog(html, 'Attempt Summary');
+}
+
 // ─── ONE-TIME SETUP  (run from Apps Script editor, not via web) ───────────────
 
 /**
