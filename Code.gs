@@ -491,27 +491,12 @@ function populateQuestions() {
      'An algorithm that has been coded into a computer language that can then be run by a machine','','','D'],
     ['L3',3,'True or False: If a list (or sequence) of directions is incorrect, it is still an algorithm.',
      'True','False','','','','','A'],
-    // Q4 — 10 sub-questions (4A–4J). 4A holds the intro images + first blank.
-    ['L3','4A','Study the image below. In the table underneath, select the correct command to fill in each piece of the missing code that will allow the person to draw the diamond.<img src="https://5ninefish.github.io/lesson-quiz/images/cs_q4_diamond.png" style="max-width:140px;display:block;margin:.5rem auto .4rem"><img src="https://5ninefish.github.io/lesson-quiz/images/cs_q4_code.png" style="max-width:100%;margin-bottom:.5rem"><strong>Blank 1</strong> — Move ___ by 150 pixels',
-     'Forward','Backward','','','','','A'],
-    ['L3','4B','<strong>Blank 2</strong> — Turn ___ by X degrees',
-     'Left','Right','','','','','A'],
-    ['L3','4C','<strong>Blank 3</strong> — Turn X by ___ degrees',
-     '45°','60°','90°','120°','180°','','D'],
-    ['L3','4D','<strong>Blank 4</strong> — Move ___ by 150 pixels',
-     'Forward','Backward','','','','','A'],
-    ['L3','4E','<strong>Blank 5</strong> — Turn ___ by X degrees',
-     'Left','Right','','','','','A'],
-    ['L3','4F','<strong>Blank 6</strong> — Turn X by ___ degrees',
-     '45°','60°','90°','120°','180°','','B'],
-    ['L3','4G','<strong>Blank 7</strong> — Move ___ by 150 pixels',
-     'Forward','Backward','','','','','A'],
-    ['L3','4H','<strong>Blank 8</strong> — Turn ___ by X degrees',
-     'Left','Right','','','','','A'],
-    ['L3','4I','<strong>Blank 9</strong> — Turn X by ___ degrees',
-     '45°','60°','90°','120°','180°','','D'],
-    ['L3','4J','<strong>Blank 10</strong> — Move ___ by 150 pixels',
-     'Forward','Backward','','','','','A'],
+    // Q4 — single image-choice question
+    ['L3',4,'In the image below, the Artist has a pencil and is ready to draw. Select the correct algorithm that allows the Artist to draw the diamond.<img src="https://5ninefish.github.io/lesson-quiz/images/cs_q4_diamond.png" style="max-width:140px;display:block;margin:.5rem auto .4rem">',
+     'https://5ninefish.github.io/lesson-quiz/images/cs_q4_choice_a.svg',
+     'https://5ninefish.github.io/lesson-quiz/images/cs_q4_choice_b.svg',
+     'https://5ninefish.github.io/lesson-quiz/images/cs_q4_choice_c.svg',
+     '','','','A'],
     ['L3',5,'For the code in question 4, what command could be used to shorten the repeated lines of code?',
      'Loop','Conditional statement','Set color','None of the above','','','A'],
   ];
@@ -554,27 +539,12 @@ function addL3Questions() {
      'An algorithm that has been coded into a computer language that can then be run by a machine','','','D'],
     ['L3',3,'True or False: If a list (or sequence) of directions is incorrect, it is still an algorithm.',
      'True','False','','','','','A'],
-    // Q4 — 10 sub-questions (4A–4J). 4A holds the intro images + first blank.
-    ['L3','4A','Study the image below. In the table underneath, select the correct command to fill in each piece of the missing code that will allow the person to draw the diamond.<img src="https://5ninefish.github.io/lesson-quiz/images/cs_q4_diamond.png" style="max-width:140px;display:block;margin:.5rem auto .4rem"><img src="https://5ninefish.github.io/lesson-quiz/images/cs_q4_code.png" style="max-width:100%;margin-bottom:.5rem"><strong>Blank 1</strong> — Move ___ by 150 pixels',
-     'Forward','Backward','','','','','A'],
-    ['L3','4B','<strong>Blank 2</strong> — Turn ___ by X degrees',
-     'Left','Right','','','','','A'],
-    ['L3','4C','<strong>Blank 3</strong> — Turn X by ___ degrees',
-     '45°','60°','90°','120°','180°','','D'],
-    ['L3','4D','<strong>Blank 4</strong> — Move ___ by 150 pixels',
-     'Forward','Backward','','','','','A'],
-    ['L3','4E','<strong>Blank 5</strong> — Turn ___ by X degrees',
-     'Left','Right','','','','','A'],
-    ['L3','4F','<strong>Blank 6</strong> — Turn X by ___ degrees',
-     '45°','60°','90°','120°','180°','','B'],
-    ['L3','4G','<strong>Blank 7</strong> — Move ___ by 150 pixels',
-     'Forward','Backward','','','','','A'],
-    ['L3','4H','<strong>Blank 8</strong> — Turn ___ by X degrees',
-     'Left','Right','','','','','A'],
-    ['L3','4I','<strong>Blank 9</strong> — Turn X by ___ degrees',
-     '45°','60°','90°','120°','180°','','D'],
-    ['L3','4J','<strong>Blank 10</strong> — Move ___ by 150 pixels',
-     'Forward','Backward','','','','','A'],
+    // Q4 — single image-choice question
+    ['L3',4,'In the image below, the Artist has a pencil and is ready to draw. Select the correct algorithm that allows the Artist to draw the diamond.<img src="https://5ninefish.github.io/lesson-quiz/images/cs_q4_diamond.png" style="max-width:140px;display:block;margin:.5rem auto .4rem">',
+     'https://5ninefish.github.io/lesson-quiz/images/cs_q4_choice_a.svg',
+     'https://5ninefish.github.io/lesson-quiz/images/cs_q4_choice_b.svg',
+     'https://5ninefish.github.io/lesson-quiz/images/cs_q4_choice_c.svg',
+     '','','','A'],
     ['L3',5,'For the code in question 4, what command could be used to shorten the repeated lines of code?',
      'Loop','Conditional statement','Set color','None of the above','','','A'],
   ];
@@ -582,7 +552,7 @@ function addL3Questions() {
   const lastRow = sheet.getLastRow();
   sheet.getRange(lastRow + 1, 1, rows.length, 10).setValues(rows);
   Logger.log('L3 questions added: ' + rows.length);
-  SpreadsheetApp.getUi().alert('Done! 5 Computer Science (L3) questions added to the Questions tab.');
+  SpreadsheetApp.getUi().alert('Done! L3 Computer Science questions added (Q4 is now a single image-choice question).');
 }
 
 function resetTries(username, lesson) {

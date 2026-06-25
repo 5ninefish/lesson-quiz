@@ -221,6 +221,21 @@
   .option-label.wrong    { background: #fee2e2; border-color: var(--danger); }
   .option-label.revealed { background: #fef9c3; border-color: #ca8a04; }
 
+  /* Image answer choices */
+  .img-options { display: flex; flex-wrap: wrap; gap: .6rem; }
+  .option-img {
+    flex-direction: column;
+    align-items: center;
+    padding: .5rem;
+    width: calc(33.33% - .5rem);
+    min-width: 140px;
+  }
+  .option-img img { width: 100%; height: auto; border-radius: 4px; pointer-events: none; }
+  .option-img input { margin: 0 0 .3rem; }
+  @media (max-width: 500px) {
+    .option-img { width: 100%; }
+  }
+
   /* ── Score screen ─────────────────────────────────────────────────── */
   .score-circle {
     width: 100px;
@@ -581,8 +596,11 @@ function renderQuestions(questions) {
 
       q.options.forEach((opt, oi) => {
         const lbl = document.createElement('label');
-        lbl.className = 'option-label';
-        lbl.innerHTML = `<input type="radio" name="q${q.num}" value="${LETTERS[oi]}"><span><strong>${LETTERS[oi]}.</strong> ${opt}</span>`;
+        const isImg = opt.startsWith('https://') || opt.startsWith('http://');
+        lbl.className = isImg ? 'option-label option-img' : 'option-label';
+        lbl.innerHTML = isImg
+          ? `<input type="radio" name="q${q.num}" value="${LETTERS[oi]}"><img src="${opt}" alt="Option ${LETTERS[oi]}">`
+          : `<input type="radio" name="q${q.num}" value="${LETTERS[oi]}"><span><strong>${LETTERS[oi]}.</strong> ${opt}</span>`;
         subDiv.appendChild(lbl);
       });
 
@@ -604,10 +622,15 @@ function renderQuestions(questions) {
       const body = document.createElement('div');
       body.className = 'q-body';
 
+      const hasImgOpts = q.options.some(o => o.startsWith('https://') || o.startsWith('http://'));
+      if (hasImgOpts) body.classList.add('img-options');
       q.options.forEach((opt, oi) => {
         const lbl = document.createElement('label');
-        lbl.className = 'option-label';
-        lbl.innerHTML = `<input type="radio" name="q${q.num}" value="${LETTERS[oi]}"><span><strong>${LETTERS[oi]}.</strong> ${opt}</span>`;
+        const isImg = opt.startsWith('https://') || opt.startsWith('http://');
+        lbl.className = isImg ? 'option-label option-img' : 'option-label';
+        lbl.innerHTML = isImg
+          ? `<input type="radio" name="q${q.num}" value="${LETTERS[oi]}"><img src="${opt}" alt="Option ${LETTERS[oi]}">`
+          : `<input type="radio" name="q${q.num}" value="${LETTERS[oi]}"><span><strong>${LETTERS[oi]}.</strong> ${opt}</span>`;
         body.appendChild(lbl);
       });
 

@@ -1,0 +1,38 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 260 242" width="260" height="242">
+  <rect width="260" height="242" fill="#f8fafc" rx="8"/>
+
+  <!-- Hat: when run -->
+  <rect x="10" y="6" width="240" height="32" rx="16" fill="#FFAB19"/>
+  <text x="130" y="27" text-anchor="middle" fill="white" font-family="Arial,sans-serif" font-size="14" font-weight="bold">when run</text>
+
+  <!-- Block 1: move forward by 150 pixels -->
+  <rect x="18" y="38" width="224" height="26" rx="4" fill="#4C97FF"/>
+  <text x="130" y="55" text-anchor="middle" fill="white" font-family="Arial,sans-serif" font-size="11">move  forward ▾  by  150  pixels</text>
+
+  <!-- Block 2: turn right by 120 degrees -->
+  <rect x="18" y="64" width="224" height="26" rx="4" fill="#4C97FF"/>
+  <text x="130" y="81" text-anchor="middle" fill="white" font-family="Arial,sans-serif" font-size="11">turn  <tspan font-weight="bold">right ▾</tspan>  by  <tspan font-weight="bold">120 ▾</tspan>  degrees</text>
+
+  <!-- Block 3: move forward by 150 pixels -->
+  <rect x="18" y="90" width="224" height="26" rx="4" fill="#4C97FF"/>
+  <text x="130" y="107" text-anchor="middle" fill="white" font-family="Arial,sans-serif" font-size="11">move  forward ▾  by  150  pixels</text>
+
+  <!-- Block 4: turn right by 60 degrees -->
+  <rect x="18" y="116" width="224" height="26" rx="4" fill="#4C97FF"/>
+  <text x="130" y="133" text-anchor="middle" fill="white" font-family="Arial,sans-serif" font-size="11">turn  <tspan font-weight="bold">right ▾</tspan>  by  <tspan font-weight="bold">60 ▾</tspan>  degrees</text>
+
+  <!-- Block 5: move forward by 150 pixels -->
+  <rect x="18" y="142" width="224" height="26" rx="4" fill="#4C97FF"/>
+  <text x="130" y="159" text-anchor="middle" fill="white" font-family="Arial,sans-serif" font-size="11">move  forward ▾  by  150  pixels</text>
+
+  <!-- Block 6: turn right by 120 degrees -->
+  <rect x="18" y="168" width="224" height="26" rx="4" fill="#4C97FF"/>
+  <text x="130" y="185" text-anchor="middle" fill="white" font-family="Arial,sans-serif" font-size="11">turn  <tspan font-weight="bold">right ▾</tspan>  by  <tspan font-weight="bold">120 ▾</tspan>  degrees</text>
+
+  <!-- Block 7: move forward by 150 pixels -->
+  <rect x="18" y="194" width="224" height="26" rx="4" fill="#4C97FF"/>
+  <text x="130" y="211" text-anchor="middle" fill="white" font-family="Arial,sans-serif" font-size="11">move  forward ▾  by  150  pixels</text>
+
+  <!-- Label -->
+  <text x="130" y="234" text-anchor="middle" fill="#64748b" font-family="Arial,sans-serif" font-size="11">b.</text>
+</svg>
