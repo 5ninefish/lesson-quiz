@@ -175,7 +175,7 @@
     font-size: .875rem;
     color: var(--text);
     display: -webkit-box;
-    -webkit-line-clamp: 2;
+    -webkit-line-clamp: 3;
     -webkit-box-orient: vertical;
     overflow: hidden;
     flex: 1;
@@ -222,17 +222,17 @@
   .option-label.revealed { background: #fef9c3; border-color: #ca8a04; }
 
   /* Image answer choices */
-  .img-options { display: flex; flex-wrap: wrap; gap: .6rem; }
+  .img-options { display: flex; flex-wrap: wrap; gap: .75rem; }
   .option-img {
     flex-direction: column;
     align-items: center;
-    padding: .5rem;
-    width: calc(33.33% - .5rem);
-    min-width: 140px;
+    padding: .6rem;
+    width: calc(50% - .5rem);
+    min-width: 200px;
   }
   .option-img img { width: 100%; height: auto; border-radius: 4px; pointer-events: none; }
-  .option-img input { margin: 0 0 .3rem; }
-  @media (max-width: 500px) {
+  .option-img input { margin: 0 0 .4rem; }
+  @media (max-width: 480px) {
     .option-img { width: 100%; }
   }
 
@@ -611,7 +611,7 @@ function renderQuestions(questions) {
       groupDetails  = null;
       groupBody     = null;
 
-      const preview = q.question.replace(/<[^>]*>/g, '').slice(0, 75);
+      const preview = q.question.replace(/<[^>]*>/g, '').slice(0, 120);
       const d = makeDetails();
       const s = document.createElement('summary');
       s.className = 'q-header';
