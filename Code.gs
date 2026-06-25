@@ -84,7 +84,7 @@ function submit(username, password, lesson, answers) {
     const row = questionsData[i];
     if (String(row[0]) !== lesson) continue;
 
-    const qNum    = Number(row[1]);
+    const qNum    = String(row[1]).trim();
     const correct = String(row[9]).trim().toUpperCase();  // Column J = Correct
     const given   = String(answers[qNum] || '').trim().toUpperCase();
     const isRight = given === correct;
@@ -457,11 +457,27 @@ function populateQuestions() {
      'An algorithm that has been coded into a computer language that can then be run by a machine','','','D'],
     ['L3',3,'True or False: If a list (or sequence) of directions is incorrect, it is still an algorithm.',
      'True','False','','','','','A'],
-    ['L3',4,'<img src="https://5ninefish.github.io/lesson-quiz/images/cs_q4_code.png" alt="Code blocks for drawing a diamond">Study the code blocks above. What are the correct degree values for the three TURN commands (blanks 3, 6, and 9) to draw a diamond shape?',
-     '90°, 90°, 90°',
-     '45°, 90°, 120°',
-     '60°, 120°, 60°',
-     '120°, 60°, 120°','','','D'],
+    // Q4 — 10 sub-questions (4A–4J). 4A holds the intro images + first blank.
+    ['L3','4A','<img src="https://5ninefish.github.io/lesson-quiz/images/cs_q4_code.png" style="max-width:100%;margin-bottom:.4rem"><img src="https://5ninefish.github.io/lesson-quiz/images/cs_q4_diamond.png" style="max-width:140px;display:block;margin:.25rem auto .6rem"><strong>Blank 1</strong> — Move ___ by 150 pixels',
+     'Forward','Backward','','','','','A'],
+    ['L3','4B','<strong>Blank 2</strong> — Turn ___ by X degrees',
+     'Left','Right','','','','','A'],
+    ['L3','4C','<strong>Blank 3</strong> — Turn X by ___ degrees',
+     '45°','60°','90°','120°','180°','','D'],
+    ['L3','4D','<strong>Blank 4</strong> — Move ___ by 150 pixels',
+     'Forward','Backward','','','','','A'],
+    ['L3','4E','<strong>Blank 5</strong> — Turn ___ by X degrees',
+     'Left','Right','','','','','A'],
+    ['L3','4F','<strong>Blank 6</strong> — Turn X by ___ degrees',
+     '45°','60°','90°','120°','180°','','B'],
+    ['L3','4G','<strong>Blank 7</strong> — Move ___ by 150 pixels',
+     'Forward','Backward','','','','','A'],
+    ['L3','4H','<strong>Blank 8</strong> — Turn ___ by X degrees',
+     'Left','Right','','','','','A'],
+    ['L3','4I','<strong>Blank 9</strong> — Turn X by ___ degrees',
+     '45°','60°','90°','120°','180°','','D'],
+    ['L3','4J','<strong>Blank 10</strong> — Move ___ by 150 pixels',
+     'Forward','Backward','','','','','A'],
     ['L3',5,'For the code in question 4, what command could be used to shorten the repeated lines of code?',
      'Loop','Conditional statement','Set color','None of the above','','','A'],
   ];
@@ -504,11 +520,27 @@ function addL3Questions() {
      'An algorithm that has been coded into a computer language that can then be run by a machine','','','D'],
     ['L3',3,'True or False: If a list (or sequence) of directions is incorrect, it is still an algorithm.',
      'True','False','','','','','A'],
-    ['L3',4,'<img src="https://5ninefish.github.io/lesson-quiz/images/cs_q4_code.png" alt="Code blocks for drawing a diamond">Study the code blocks above. What are the correct degree values for the three TURN commands (blanks 3, 6, and 9) to draw a diamond shape?',
-     '90°, 90°, 90°',
-     '45°, 90°, 120°',
-     '60°, 120°, 60°',
-     '120°, 60°, 120°','','','D'],
+    // Q4 — 10 sub-questions (4A–4J). 4A holds the intro images + first blank.
+    ['L3','4A','<img src="https://5ninefish.github.io/lesson-quiz/images/cs_q4_code.png" style="max-width:100%;margin-bottom:.4rem"><img src="https://5ninefish.github.io/lesson-quiz/images/cs_q4_diamond.png" style="max-width:140px;display:block;margin:.25rem auto .6rem"><strong>Blank 1</strong> — Move ___ by 150 pixels',
+     'Forward','Backward','','','','','A'],
+    ['L3','4B','<strong>Blank 2</strong> — Turn ___ by X degrees',
+     'Left','Right','','','','','A'],
+    ['L3','4C','<strong>Blank 3</strong> — Turn X by ___ degrees',
+     '45°','60°','90°','120°','180°','','D'],
+    ['L3','4D','<strong>Blank 4</strong> — Move ___ by 150 pixels',
+     'Forward','Backward','','','','','A'],
+    ['L3','4E','<strong>Blank 5</strong> — Turn ___ by X degrees',
+     'Left','Right','','','','','A'],
+    ['L3','4F','<strong>Blank 6</strong> — Turn X by ___ degrees',
+     '45°','60°','90°','120°','180°','','B'],
+    ['L3','4G','<strong>Blank 7</strong> — Move ___ by 150 pixels',
+     'Forward','Backward','','','','','A'],
+    ['L3','4H','<strong>Blank 8</strong> — Turn ___ by X degrees',
+     'Left','Right','','','','','A'],
+    ['L3','4I','<strong>Blank 9</strong> — Turn X by ___ degrees',
+     '45°','60°','90°','120°','180°','','D'],
+    ['L3','4J','<strong>Blank 10</strong> — Move ___ by 150 pixels',
+     'Forward','Backward','','','','','A'],
     ['L3',5,'For the code in question 4, what command could be used to shorten the repeated lines of code?',
      'Loop','Conditional statement','Set color','None of the above','','','A'],
   ];
