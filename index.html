@@ -1,0 +1,603 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Lesson Post-Tests</title>
+<style>
+  /* ── Reset & base ─────────────────────────────────────────────────── */
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --bg:       #f5f7fa;
+    --card:     #ffffff;
+    --primary:  #2563eb;
+    --primary-h:#1d4ed8;
+    --success:  #16a34a;
+    --danger:   #dc2626;
+    --border:   #e2e8f0;
+    --text:     #1e293b;
+    --muted:    #64748b;
+    --radius:   10px;
+  }
+
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 1rem;
+  }
+
+  .card {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 2rem;
+    width: 100%;
+    max-width: 540px;
+    box-shadow: 0 1px 3px rgba(0,0,0,.08);
+  }
+
+  h1 { font-size: 1.4rem; font-weight: 700; margin-bottom: .25rem; }
+  h2 { font-size: 1.1rem; font-weight: 600; margin-bottom: 1.25rem; }
+  p  { color: var(--muted); font-size: .9rem; margin-bottom: 1rem; }
+
+  label { display: block; font-size: .85rem; font-weight: 600; margin-bottom: .3rem; }
+
+  input[type=text],
+  input[type=password] {
+    width: 100%;
+    padding: .6rem .8rem;
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    font-size: 1rem;
+    margin-bottom: 1rem;
+    outline: none;
+  }
+  input:focus { border-color: var(--primary); box-shadow: 0 0 0 3px rgba(37,99,235,.15); }
+
+  .btn {
+    display: inline-block;
+    padding: .65rem 1.4rem;
+    border: none;
+    border-radius: 6px;
+    font-size: .95rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background .15s;
+  }
+  .btn-primary { background: var(--primary); color: #fff; width: 100%; }
+  .btn-primary:hover { background: var(--primary-h); }
+  .btn-sm { padding: .45rem 1rem; font-size: .85rem; }
+  .btn-outline { background: transparent; border: 1px solid var(--border); color: var(--text); }
+  .btn-outline:hover { background: var(--bg); }
+
+  .error {
+    background: #fef2f2;
+    color: var(--danger);
+    border: 1px solid #fecaca;
+    border-radius: 6px;
+    padding: .6rem .9rem;
+    font-size: .875rem;
+    margin-bottom: 1rem;
+  }
+
+  .info {
+    background: #eff6ff;
+    color: var(--primary);
+    border: 1px solid #bfdbfe;
+    border-radius: 6px;
+    padding: .6rem .9rem;
+    font-size: .875rem;
+    margin-bottom: 1rem;
+  }
+
+  /* ── Lesson selector ─────────────────────────────────────────────── */
+  .lesson-grid {
+    display: flex;
+    flex-direction: column;
+    gap: .6rem;
+    margin-bottom: 1rem;
+  }
+
+  .lesson-btn {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: .8rem 1rem;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    background: var(--card);
+    cursor: pointer;
+    font-size: .95rem;
+    font-weight: 500;
+    transition: border-color .15s, background .15s;
+  }
+  .lesson-btn:hover:not(:disabled) { border-color: var(--primary); background: #eff6ff; }
+  .lesson-btn:disabled { opacity: .5; cursor: not-allowed; }
+
+  .lesson-badge {
+    font-size: .75rem;
+    font-weight: 700;
+    padding: .2rem .55rem;
+    border-radius: 20px;
+  }
+  .badge-ok      { background: #dcfce7; color: #166534; }
+  .badge-warn    { background: #fef9c3; color: #854d0e; }
+  .badge-blocked { background: #fee2e2; color: #991b1b; }
+
+  /* ── Quiz questions ───────────────────────────────────────────────── */
+  .question-block { margin-bottom: 1.5rem; }
+  .question-block strong { display: block; margin-bottom: .65rem; font-size: .95rem; line-height: 1.45; }
+
+  .option-label {
+    display: flex;
+    align-items: flex-start;
+    gap: .55rem;
+    padding: .5rem .7rem;
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    margin-bottom: .4rem;
+    cursor: pointer;
+    font-size: .9rem;
+    line-height: 1.4;
+    transition: border-color .12s, background .12s;
+  }
+  .option-label:hover { border-color: var(--primary); background: #eff6ff; }
+  .option-label input { margin-top: .15rem; flex-shrink: 0; }
+
+  .option-label.correct  { background: #dcfce7; border-color: var(--success); }
+  .option-label.wrong    { background: #fee2e2; border-color: var(--danger); }
+  .option-label.revealed { background: #fef9c3; border-color: #ca8a04; }
+
+  /* ── Score screen ─────────────────────────────────────────────────── */
+  .score-circle {
+    width: 100px;
+    height: 100px;
+    border-radius: 50%;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    margin: 0 auto 1rem;
+    font-weight: 700;
+  }
+  .score-circle .num  { font-size: 2rem; line-height: 1; }
+  .score-circle .denom { font-size: .85rem; }
+  .score-pass { background: #dcfce7; color: #166534; border: 3px solid var(--success); }
+  .score-fail { background: #fee2e2; color: #991b1b; border: 3px solid var(--danger); }
+
+  .result-row {
+    display: flex;
+    align-items: center;
+    gap: .5rem;
+    padding: .4rem .6rem;
+    border-radius: 6px;
+    font-size: .875rem;
+    margin-bottom: .3rem;
+  }
+  .result-row.right { background: #f0fdf4; }
+  .result-row.wrong { background: #fef2f2; }
+  .result-icon { font-size: 1rem; }
+
+  .divider { border: none; border-top: 1px solid var(--border); margin: 1.25rem 0; }
+
+  /* ── Loading ──────────────────────────────────────────────────────── */
+  .spinner {
+    width: 32px; height: 32px;
+    border: 3px solid var(--border);
+    border-top-color: var(--primary);
+    border-radius: 50%;
+    animation: spin .7s linear infinite;
+    margin: 1.5rem auto;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  .hidden { display: none !important; }
+
+  footer {
+    text-align: center;
+    font-size: .75rem;
+    color: var(--muted);
+    margin-top: 1rem;
+  }
+</style>
+</head>
+<body>
+
+<!-- ── Configuration ───────────────────────────────────────────────────────── -->
+<script>
+// REPLACE THIS with your deployed Apps Script URL after deploying Code.gs
+const API_URL = 'PASTE_YOUR_APPS_SCRIPT_URL_HERE';
+
+// Lesson display names — keep in sync with LESSON_NAMES in Code.gs
+const LESSON_NAMES = {
+  L1: 'Lesson 1 – Soil',
+  L2: 'Lesson 2 – 3D Printing & Coral',
+  L3: 'Lesson 3',
+  L4: 'Lesson 4',
+  L5: 'Lesson 5',
+  L6: 'Lesson 6',
+};
+const ALL_LESSONS = ['L1','L2','L3','L4','L5','L6'];
+</script>
+
+<!-- ── Views ───────────────────────────────────────────────────────────────── -->
+
+<!-- VIEW: Login -->
+<div class="card" id="view-login">
+  <h1>Lesson Post-Tests</h1>
+  <p>Enter your username and password to continue.</p>
+  <div id="login-error" class="error hidden"></div>
+  <label for="username">Username</label>
+  <input type="text" id="username" autocomplete="username" autocapitalize="none" spellcheck="false">
+  <label for="password">Password</label>
+  <input type="password" id="password" autocomplete="current-password">
+  <button class="btn btn-primary" onclick="login()">Sign In</button>
+</div>
+
+<!-- VIEW: Lesson selector -->
+<div class="card hidden" id="view-lessons">
+  <h2 id="lessons-greeting">Select a Lesson</h2>
+  <p>Choose the test you'd like to take. You have <strong>2 attempts</strong> per lesson.</p>
+  <div id="lesson-select-error" class="error hidden"></div>
+  <div class="lesson-grid" id="lesson-grid"></div>
+  <button class="btn btn-outline btn-sm" onclick="logout()" style="margin-top:.5rem">Sign Out</button>
+</div>
+
+<!-- VIEW: Quiz -->
+<div class="card hidden" id="view-quiz">
+  <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:1rem">
+    <h2 id="quiz-title" style="margin-bottom:0"></h2>
+    <button class="btn btn-outline btn-sm" onclick="backToLessons()">← Back</button>
+  </div>
+  <div id="quiz-info" class="info hidden"></div>
+  <div id="quiz-error" class="error hidden"></div>
+  <form id="quiz-form" onsubmit="return false">
+    <div id="quiz-questions"></div>
+    <div id="quiz-loading" class="hidden"><div class="spinner"></div></div>
+    <button class="btn btn-primary" id="submit-btn" onclick="submitQuiz()">Submit Answers</button>
+  </form>
+</div>
+
+<!-- VIEW: Score -->
+<div class="card hidden" id="view-score">
+  <h2 id="score-title"></h2>
+  <div id="score-circle-wrap" style="text-align:center;margin-bottom:1rem"></div>
+  <p id="score-msg" style="text-align:center"></p>
+  <hr class="divider">
+  <div id="score-details"></div>
+  <hr class="divider">
+  <button class="btn btn-primary" onclick="backToLessons()">← Back to Lessons</button>
+</div>
+
+<!-- ── App logic ───────────────────────────────────────────────────────────── -->
+<script>
+// ── State ─────────────────────────────────────────────────────────────────────
+let state = {
+  username: '',
+  password: '',
+  currentLesson: null,
+  tryCounts: {},    // { L1: 0, L2: 1, ... }
+  questions: [],
+};
+
+// ── View helpers ──────────────────────────────────────────────────────────────
+function show(id) {
+  ['view-login','view-lessons','view-quiz','view-score'].forEach(v => {
+    document.getElementById(v).classList.toggle('hidden', v !== id);
+  });
+}
+
+function setError(id, msg) {
+  const el = document.getElementById(id);
+  if (msg) { el.textContent = msg; el.classList.remove('hidden'); }
+  else      { el.classList.add('hidden'); }
+}
+
+// ── API call ──────────────────────────────────────────────────────────────────
+async function api(body) {
+  const res = await fetch(API_URL, {
+    method: 'POST',
+    body: JSON.stringify(body),
+    redirect: 'follow',
+  });
+  return res.json();
+}
+
+// ── Login ─────────────────────────────────────────────────────────────────────
+async function login() {
+  setError('login-error', '');
+  const u = document.getElementById('username').value.trim();
+  const p = document.getElementById('password').value;
+  if (!u || !p) { setError('login-error', 'Please enter your username and password.'); return; }
+
+  const btn = document.querySelector('#view-login .btn-primary');
+  btn.textContent = 'Signing in…';
+  btn.disabled = true;
+
+  // Validate by trying to load L1 — if auth fails we know immediately
+  // (We use a lightweight approach: try each lesson lazily, not all at once)
+  // Instead, validate with a dummy load — if L1 gives invalid_credentials, auth bad
+  try {
+    const r = await api({ action: 'auth_and_load', username: u, password: p, lesson: 'L1' });
+    if (r.error === 'invalid_credentials') {
+      setError('login-error', 'Incorrect username or password.');
+      btn.textContent = 'Sign In'; btn.disabled = false;
+      return;
+    }
+    // Auth succeeded (even if L1 is maxed out — that's a different error)
+    state.username = u;
+    state.password = p;
+    state.tryCounts = {};
+
+    // Collect L1 try count from this response
+    if (r.tries !== undefined) state.tryCounts.L1 = r.tries;
+    if (r.error === 'max_attempts_reached') state.tryCounts.L1 = r.tries;
+
+    showLessons();
+  } catch (err) {
+    setError('login-error', 'Connection error. Please try again.');
+  }
+  btn.textContent = 'Sign In'; btn.disabled = false;
+}
+
+function logout() {
+  state = { username:'', password:'', currentLesson:null, tryCounts:{}, questions:[] };
+  document.getElementById('username').value = '';
+  document.getElementById('password').value = '';
+  show('view-login');
+}
+
+// ── Lesson selector ────────────────────────────────────────────────────────────
+function showLessons() {
+  document.getElementById('lessons-greeting').textContent = 'Hello, ' + state.username;
+  setError('lesson-select-error', '');
+  renderLessonGrid();
+  show('view-lessons');
+}
+
+function renderLessonGrid() {
+  const grid = document.getElementById('lesson-grid');
+  grid.innerHTML = '';
+  ALL_LESSONS.forEach(lid => {
+    const tries  = state.tryCounts[lid] ?? '?';
+    const maxed  = tries >= 2;
+    const untried = tries === 0 || tries === '?';
+
+    const btn = document.createElement('button');
+    btn.className = 'lesson-btn';
+    btn.disabled  = maxed;
+    btn.onclick   = () => startLesson(lid);
+
+    let badgeClass = 'badge-ok';
+    let badgeText  = tries === '?' ? '' : (tries === 0 ? 'Not started' : `${tries}/2 attempt${tries > 1 ? 's' : ''}`);
+    if (tries === 1)   badgeClass = 'badge-warn';
+    if (maxed)         badgeClass = 'badge-blocked';
+    if (maxed)         badgeText  = 'Complete';
+
+    btn.innerHTML = `
+      <span>${LESSON_NAMES[lid] || lid}</span>
+      ${badgeText ? `<span class="lesson-badge ${badgeClass}">${badgeText}</span>` : ''}
+    `;
+    grid.appendChild(btn);
+  });
+}
+
+// ── Start a lesson ─────────────────────────────────────────────────────────────
+async function startLesson(lesson) {
+  setError('lesson-select-error', '');
+  document.getElementById('quiz-title').textContent = LESSON_NAMES[lesson] || lesson;
+  document.getElementById('quiz-info').classList.add('hidden');
+  document.getElementById('quiz-error').classList.add('hidden');
+  document.getElementById('quiz-questions').innerHTML = '';
+  document.getElementById('quiz-loading').classList.remove('hidden');
+  document.getElementById('submit-btn').classList.add('hidden');
+  show('view-quiz');
+
+  try {
+    const r = await api({ action: 'auth_and_load', username: state.username, password: state.password, lesson });
+
+    document.getElementById('quiz-loading').classList.add('hidden');
+
+    if (r.error === 'max_attempts_reached') {
+      setError('quiz-error', 'You have used both attempts for this lesson. Contact your instructor if you need another try.');
+      return;
+    }
+    if (r.error === 'invalid_credentials') {
+      setError('quiz-error', 'Session expired. Please sign in again.');
+      setTimeout(logout, 2000);
+      return;
+    }
+    if (r.error || !r.questions) {
+      setError('quiz-error', 'Could not load questions: ' + (r.error || 'unknown error'));
+      return;
+    }
+
+    state.currentLesson = lesson;
+    state.tryCounts[lesson] = r.tries;
+    state.questions = r.questions;
+
+    const attemptsLeft = 2 - r.tries;
+    const info = document.getElementById('quiz-info');
+    info.textContent = `Attempt ${r.tries + 1} of 2 — answer all questions then click Submit.`;
+    info.classList.remove('hidden');
+
+    renderQuestions(r.questions);
+    document.getElementById('submit-btn').classList.remove('hidden');
+    document.getElementById('submit-btn').disabled = false;
+    document.getElementById('submit-btn').textContent = 'Submit Answers';
+
+  } catch (err) {
+    document.getElementById('quiz-loading').classList.add('hidden');
+    setError('quiz-error', 'Connection error. Please try again.');
+  }
+}
+
+function renderQuestions(questions) {
+  const LETTERS = ['A','B','C','D','E','F'];
+  const container = document.getElementById('quiz-questions');
+  container.innerHTML = '';
+
+  questions.forEach((q, qi) => {
+    const block = document.createElement('div');
+    block.className = 'question-block';
+    block.dataset.qnum = q.num;
+
+    block.innerHTML = `<strong>${q.num}. ${q.question}</strong>`;
+
+    q.options.forEach((opt, oi) => {
+      const letter = LETTERS[oi];
+      const lbl = document.createElement('label');
+      lbl.className = 'option-label';
+      lbl.innerHTML = `
+        <input type="radio" name="q${q.num}" value="${letter}">
+        <span><strong>${letter}.</strong> ${opt}</span>
+      `;
+      block.appendChild(lbl);
+    });
+
+    container.appendChild(block);
+  });
+}
+
+// ── Submit quiz ────────────────────────────────────────────────────────────────
+async function submitQuiz() {
+  setError('quiz-error', '');
+
+  // Collect answers
+  const answers = {};
+  let missing = false;
+  state.questions.forEach(q => {
+    const sel = document.querySelector(`input[name="q${q.num}"]:checked`);
+    if (sel) answers[q.num] = sel.value;
+    else missing = true;
+  });
+
+  if (missing) {
+    setError('quiz-error', 'Please answer all questions before submitting.');
+    return;
+  }
+
+  const btn = document.getElementById('submit-btn');
+  btn.textContent = 'Submitting…';
+  btn.disabled = true;
+  document.getElementById('quiz-loading').classList.remove('hidden');
+
+  try {
+    const r = await api({
+      action:   'submit',
+      username: state.username,
+      password: state.password,
+      lesson:   state.currentLesson,
+      answers,
+    });
+
+    document.getElementById('quiz-loading').classList.add('hidden');
+
+    if (r.error) {
+      setError('quiz-error', 'Submission error: ' + r.error);
+      btn.textContent = 'Submit Answers'; btn.disabled = false;
+      return;
+    }
+
+    // Update cached try count
+    state.tryCounts[state.currentLesson] = r.attempt;
+
+    showScore(r);
+  } catch (err) {
+    document.getElementById('quiz-loading').classList.add('hidden');
+    setError('quiz-error', 'Connection error. Your answers may not have been saved. Please try again.');
+    btn.textContent = 'Submit Answers'; btn.disabled = false;
+  }
+}
+
+// ── Score screen ───────────────────────────────────────────────────────────────
+function showScore(r) {
+  const pct  = Math.round((r.score / r.total) * 100);
+  const pass = pct >= 70;
+
+  document.getElementById('score-title').textContent =
+    (LESSON_NAMES[state.currentLesson] || state.currentLesson) + ' — Results';
+
+  document.getElementById('score-circle-wrap').innerHTML = `
+    <div class="score-circle ${pass ? 'score-pass' : 'score-fail'}">
+      <span class="num">${r.score}</span>
+      <span class="denom">out of ${r.total}</span>
+    </div>
+    <p style="font-size:.85rem;color:var(--muted);margin-top:.4rem">${pct}%</p>
+  `;
+
+  let msg = '';
+  if (r.isLastTry) {
+    msg = pass
+      ? 'Great work! You passed. Correct answers are shown below.'
+      : 'You\'ve used both attempts. Correct answers are shown below.';
+  } else {
+    msg = pass
+      ? 'You passed! You can retake to try for a perfect score.'
+      : `You have one more attempt available.`;
+  }
+  document.getElementById('score-msg').textContent = msg;
+
+  // Per-question breakdown
+  const LETTERS = ['A','B','C','D','E','F'];
+  const details = document.getElementById('score-details');
+  details.innerHTML = '';
+
+  if (r.graded && r.graded.length > 0) {
+    r.graded.forEach(g => {
+      const row = document.createElement('div');
+      row.className = 'result-row ' + (g.isRight ? 'right' : 'wrong');
+
+      let text = `Q${g.qNum}: Your answer — <strong>${g.given}</strong>`;
+      if (!g.isRight && g.correct) {
+        text += ` &nbsp;·&nbsp; Correct: <strong>${g.correct}</strong>`;
+      }
+      row.innerHTML = `<span class="result-icon">${g.isRight ? '✓' : '✗'}</span><span>${text}</span>`;
+      details.appendChild(row);
+    });
+  }
+
+  show('view-score');
+}
+
+// ── Back to lessons ────────────────────────────────────────────────────────────
+function backToLessons() {
+  state.currentLesson = null;
+  state.questions = [];
+  renderLessonGrid();
+  show('view-lessons');
+}
+
+// ── Enter key on login ─────────────────────────────────────────────────────────
+document.getElementById('password').addEventListener('keydown', e => {
+  if (e.key === 'Enter') login();
+});
+document.getElementById('username').addEventListener('keydown', e => {
+  if (e.key === 'Enter') document.getElementById('password').focus();
+});
+</script>
+
+<footer id="app-footer" style="display:none">
+  <!-- shown only if API_URL is not set -->
+</footer>
+
+<script>
+// Config check
+if (!API_URL || API_URL.includes('PASTE_YOUR')) {
+  document.body.innerHTML = `
+    <div class="card" style="max-width:480px">
+      <h1 style="color:#dc2626">Setup Required</h1>
+      <p style="margin-top:.5rem">Open <code>index.html</code> and replace
+      <code>PASTE_YOUR_APPS_SCRIPT_URL_HERE</code> with your deployed Apps Script URL.</p>
+      <p>See <code>SETUP.md</code> for instructions.</p>
+    </div>`;
+}
+</script>
+</body>
+</html>
