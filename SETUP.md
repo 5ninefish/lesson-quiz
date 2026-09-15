@@ -138,6 +138,16 @@ Do not just zero the L1–L6 cell; eligibility is counted from Results for the c
 Quiz Admin: Open now, Close now, Set window, Set attempts, Set time limit.
 Manual OPEN overrides CloseAt. Empty OpenAt + AUTO = hidden.
 
+### Scores and reports
+Students never see a score or correct answers. Scores live on the Results tab.
+
+Quiz Admin:
+- **Students in progress** — open sits and time left (also writes `InProgress` tab)
+- **Best scores** — per student per test, only sits where every question was answered; uses the best of those (writes `BestScores`)
+- **Missing tests** — who has not completed which tests (writes `MissingTests`)
+
+Timer: the iPad submits whatever is filled when the clock hits 0. Status `time_expired`. If they never submit, the next Start closes that sit. A sit counts as complete only if every question has an answer.
+
 ### Add more lessons
 1. Add rows to the Questions tab (use L3, L4, L5, or L6 in the Lesson column)
 2. Update `LESSON_NAMES` in `Code.gs` and in `index.html` with the real lesson names

@@ -232,7 +232,7 @@ function submit(username, password, testId, answers, clientSubmissionId) {
     const result = finalizeAttempt_(ss, inFlight, answers, status, now);
     repairStudentsCache_(ss, student, testId);
     const studentNow = reloadStudent_(ss, username, password) || student;
-    return liveSubmitResponse_(result, rel, now, studentNow, testId, inFlight);
+    return studentSubmitPayload_(result, rel, studentNow, testId, inFlight);
   });
 
   if (lockResult && lockResult._busy) return respond({ error: 'busy_try_again' });
@@ -257,44 +257,45 @@ function joinPayload_(student, testId, submissionId, questions, remaining, maxTr
   };
 }
 
-function liveSubmitResponse_(result, rel, now, student, testId, inFlight) {
+// Student JSON never includes score, keys, or per-question correctness.
+function studentSubmitPayload_(result, rel, student, testId, inFlight) {
   const lesson = TEST_TO_LESSON[testId] || testId;
-  const maxTries = Number(inFlight.maxTriesSnapshot) || (rel.missing ? MAX_TRIES : rel.maxTries);
-  const attempt = cycleSits_(ss_(), student.username || usernameFromStudent_(student), testId, currentCycle_(student, testId));
-  const isLastTry = attempt >= maxTries;
-  const graded = stripCorrect_(result.graded, keysVisible_(rel, now));
-  const payload = {
+  const maxTries = (inFlight && Number(inFlight.maxTriesSnapshot)) || (rel.missing ? MAX_TRIES : rel.maxTries);
+  const attempt = cycleSits_(ss_(), usernameFromStudent_(student), testId, currentCycle_(student, testId));
+  return {
     ok: true,
-    score: result.score,
-    total: result.total,
+    submitted: true,
+    complete: !!result.complete,
+    status: result.status || 'submitted',
     attempt: attempt,
     maxTries: maxTries,
-    isLastTry: isLastTry,
-    status: result.status,
-    graded: graded,
+    isLastTry: attempt >= maxTries,
     lesson: lesson,
     testId: testId,
   };
-  if (result.status === 'time_expired') payload.error = undefined;
-  return payload;
 }
 
 function storedSubmitResponse_(row, rel, now, student, testId) {
-  const maxTries = rel.missing ? MAX_TRIES : rel.maxTries;
-  const attempt = Number(row.lifetimeSeq) || cycleSits_(ss_(), usernameFromStudent_(student), testId, currentCycle_(student, testId));
-  const graded = stripCorrect_(row.graded || [], keysVisible_(rel, now));
-  return {
-    ok: true,
-    score: row.scoreNum,
-    total: row.total || 5,
-    attempt: cycleSits_(ss_(), usernameFromStudent_(student), testId, currentCycle_(student, testId)),
-    maxTries: maxTries,
-    isLastTry: cycleSits_(ss_(), usernameFromStudent_(student), testId, currentCycle_(student, testId)) >= maxTries,
+  return studentSubmitPayload_({
+    complete: !!row.complete,
     status: row.status || 'submitted',
-    graded: graded,
-    lesson: TEST_TO_LESSON[testId] || testId,
-    testId: testId,
-  };
+  }, rel, student, testId, null);
+}
+
+function sitComplete_(questions, answers) {
+  if (!questions || !questions.length) return false;
+  for (let i = 0; i < questions.length; i++) {
+    if (!String(answers[questions[i].num] || '').trim()) return false;
+  }
+  return true;
+}
+
+function answersAllFilled_(graded) {
+  if (!graded || !graded.length) return false;
+  for (let i = 0; i < graded.length; i++) {
+    if (!String(graded[i].given || '').trim()) return false;
+  }
+  return true;
 }
 
 function stripCorrect_(graded, reveal) {
@@ -525,6 +526,15 @@ function isTimerExpired_(startedAt, timeLimitSec, now) {
   return now.getTime() - asDate_(startedAt).getTime() >= (cap + TIMER_GRACE_SEC) * 1000;
 }
 
+/*
+  Timer runs out:
+  - iPad hits 0 → submit with whatever is filled (force).
+  - Server: if elapsed >= TimeLimitSec+30s grace → status=time_expired, still grade.
+  - If they never POST: next Start auto-finalizes the in_flight sit (blank answers) as time_expired.
+  - Complete (counts for best score) only if every question has an answer.
+  - Students never see the score.
+*/
+
 // ─── ATTEMPTS / RESULTS / CYCLE ──────────────────────────────────────────────
 function currentCycle_(student, testId) {
   const lesson = TEST_TO_LESSON[testId];
@@ -669,6 +679,7 @@ function mintAttempt_(ss, username, testId, cycle, loaded, maxTries, timeLimitSe
 function finalizeAttempt_(ss, inFlight, answers, status, now) {
   const questions = parseQuestionsSnapshot_(inFlight.questionsSnapshot) || [];
   const graded = grade_(answers || {}, questions, inFlight.correctSnapshot);
+  const complete = sitComplete_(questions, answers || {});
   const lifetimeSeq = nextLifetimeSeq_(ss, inFlight.username, inFlight.testId);
   const results = ss.getSheetByName('Results');
   const answerLog = [];
@@ -702,6 +713,7 @@ function finalizeAttempt_(ss, inFlight, answers, status, now) {
   setCol('Q5', null, answerLog[4]);
   setCol('SubmissionId', null, inFlight.submissionId);
   setCol('Status', null, status);
+  setCol('Complete', null, complete ? 'YES' : 'NO');
   results.appendRow(row);
   ss.getSheetByName('Attempts').getRange(inFlight.sheetRow, 10).setValue('done');
   SpreadsheetApp.flush();
@@ -709,6 +721,7 @@ function finalizeAttempt_(ss, inFlight, answers, status, now) {
     score: graded.score,
     total: graded.total,
     graded: graded.graded,
+    complete: complete,
     status: status,
     lifetimeSeq: lifetimeSeq,
     submissionId: inFlight.submissionId,
@@ -738,6 +751,10 @@ function findResultsBySubmissionId_(ss, submissionId) {
       const qi = q1 >= 0 ? q1 + (q - 1) : 5 + q;
       graded.push({ qNum: q, given: String(data[i][qi] || ''), isRight: false });
     }
+    const completeCol = headerIndex_(headers, 'Complete');
+    let complete = false;
+    if (completeCol >= 0) complete = String(data[i][completeCol]).toUpperCase() === 'YES';
+    else complete = answersAllFilled_(graded);
     return {
       submissionId: submissionId,
       cycle: cycleCol >= 0 ? (Number(data[i][cycleCol]) || 1) : 1,
@@ -745,6 +762,7 @@ function findResultsBySubmissionId_(ss, submissionId) {
       scoreNum: scoreNum,
       total: total,
       status: statusCol >= 0 ? String(data[i][statusCol] || 'submitted') : 'submitted',
+      complete: complete,
       graded: graded,
     };
   }
@@ -834,6 +852,7 @@ function ensureResultsHeaders_(ss) {
   if (headerIndex_(headers, 'LifetimeSeq') < 0 && headerIndex_(headers, 'Attempt') < 0) extra.push('LifetimeSeq');
   if (headerIndex_(headers, 'SubmissionId') < 0) extra.push('SubmissionId');
   if (headerIndex_(headers, 'Status') < 0) extra.push('Status');
+  if (headerIndex_(headers, 'Complete') < 0) extra.push('Complete');
   if (extra.length) {
     sheet.getRange(1, lastCol + 1, 1, extra.length).setValues([extra]);
   }
@@ -877,6 +896,9 @@ function onOpen() {
     .createMenu('Quiz Admin')
     .addItem('Reset student tries…', 'showResetDialog')
     .addItem('View attempt summary', 'showSummary')
+    .addItem('Students in progress', 'showInProgress')
+    .addItem('Best scores (complete sits)', 'showBestScores')
+    .addItem('Missing tests', 'showMissingTests')
     .addSeparator()
     .addItem('Open test now…', 'adminOpenNow')
     .addItem('Close test now…', 'adminCloseNow')
@@ -920,6 +942,163 @@ function resetTriesFromDialog(username, lesson) {
 function resetTries(username, lesson) {
   ensureRuntimeSchema_(ss_());
   bumpCycle_(ss_(), username, lesson);
+}
+
+function adminDialog_(title, html, w, h) {
+  SpreadsheetApp.getUi().showModalDialog(
+    HtmlService.createHtmlOutput(html).setWidth(w || 640).setHeight(h || 480),
+    title
+  );
+}
+
+function showInProgress() {
+  const ss = ss_();
+  ensureRuntimeSchema_(ss);
+  const now = new Date();
+  const sheet = ss.getSheetByName('Attempts');
+  const rows = [];
+  if (sheet) {
+    const data = sheet.getDataRange().getValues();
+    for (let i = 1; i < data.length; i++) {
+      const a = attemptFromRow_(data[i], i + 1);
+      if (a.status !== 'in_flight') continue;
+      const rem = remainingSec_(a.startedAt, a.timeLimitSec, now);
+      const expired = isTimerExpired_(a.startedAt, a.timeLimitSec, now);
+      const untimed = !(Number(a.timeLimitSec) > 0);
+      rows.push({
+        user: a.username,
+        test: a.testId,
+        started: Utilities.formatDate(asDate_(a.startedAt), TZ, 'HH:mm:ss'),
+        left: untimed ? 'no timer' : (expired ? 'expired' : formatMmSs_(rem)),
+      });
+    }
+  }
+  writeSheet_(ss, 'InProgress', [['Email', 'Test', 'Started HST', 'Time left']].concat(
+    rows.map(function (r) { return [r.user, r.test, r.started, r.left]; })
+  ));
+  let body = '<p style="font-family:Arial;font-size:13px">' + rows.length + ' student(s) in an open sit.</p>';
+  body += adminTable_(['Email', 'Test', 'Started', 'Time left'], rows.map(function (r) {
+    return [r.user, r.test, r.started, r.left];
+  }));
+  adminDialog_('Students in progress', body);
+}
+
+function showBestScores() {
+  const ss = ss_();
+  const best = bestCompleteScores_(ss);
+  const lines = [['Email', 'Test', 'Best score', 'Out of', 'Complete sits']];
+  Object.keys(best).sort().forEach(function (user) {
+    Object.keys(best[user]).sort().forEach(function (testId) {
+      const b = best[user][testId];
+      lines.push([user, testId, b.score, b.total, b.sits]);
+    });
+  });
+  writeSheet_(ss, 'BestScores', lines);
+  const body = '<p style="font-family:Arial;font-size:13px">Best score per test, only sits where every question was answered. Also written to the BestScores tab.</p>' +
+    adminTable_(['Email', 'Test', 'Best', 'Out of', 'Sits'], lines.slice(1));
+  adminDialog_('Best scores (complete sits)', body);
+}
+
+function showMissingTests() {
+  const ss = ss_();
+  const best = bestCompleteScores_(ss);
+  const students = ss.getSheetByName('Students').getDataRange().getValues();
+  const lines = [['Email', 'Missing tests', 'Has complete']];
+  const table = [];
+  for (let i = 1; i < students.length; i++) {
+    const user = normalizeUsername_(students[i][0]);
+    if (!user) continue;
+    const missing = [];
+    const has = [];
+    LESSONS.forEach(function (lesson) {
+      const testId = LESSON_TO_TEST[lesson];
+      if (best[user] && best[user][testId]) has.push(testId);
+      else missing.push(testId);
+    });
+    lines.push([user, missing.join(', '), has.join(', ')]);
+    table.push([user, missing.length ? missing.join(', ') : '—', has.length ? has.join(', ') : 'none']);
+  }
+  writeSheet_(ss, 'MissingTests', lines);
+  const body = '<p style="font-family:Arial;font-size:13px">A test is complete only if the student submitted every question on at least one sit. Best score is used when they have more than one complete sit. Also written to MissingTests tab.</p>' +
+    adminTable_(['Email', 'Missing', 'Complete'], table);
+  adminDialog_('Missing tests', body, 720, 520);
+}
+
+function formatMmSs_(sec) {
+  const n = Math.max(0, Number(sec) || 0);
+  const m = Math.floor(n / 60);
+  const s = n % 60;
+  return m + ':' + (s < 10 ? '0' : '') + s;
+}
+
+function adminTable_(headers, rows) {
+  let h = '<table style="border-collapse:collapse;width:100%;font-family:Arial;font-size:12px"><tr>';
+  headers.forEach(function (x) {
+    h += '<th style="text-align:left;border-bottom:1px solid #ccc;padding:4px 6px">' + x + '</th>';
+  });
+  h += '</tr>';
+  if (!rows.length) {
+    h += '<tr><td colspan="' + headers.length + '" style="padding:8px;color:#64748b">None</td></tr>';
+  }
+  rows.forEach(function (r) {
+    h += '<tr>';
+    r.forEach(function (c) {
+      h += '<td style="padding:4px 6px;border-bottom:1px solid #eee">' + c + '</td>';
+    });
+    h += '</tr>';
+  });
+  return h + '</table>';
+}
+
+function writeSheet_(ss, name, values) {
+  let sheet = ss.getSheetByName(name);
+  if (!sheet) sheet = ss.insertSheet(name);
+  sheet.clearContents();
+  if (values && values.length) {
+    sheet.getRange(1, 1, values.length, values[0].length).setValues(values);
+    sheet.setFrozenRows(1);
+  }
+}
+
+function bestCompleteScores_(ss) {
+  const sheet = ss.getSheetByName('Results');
+  const out = {};
+  if (!sheet) return out;
+  const data = sheet.getDataRange().getValues();
+  const headers = data[0] || [];
+  const userCol = 1;
+  const testCol = headerIndex_(headers, 'TestId') >= 0 ? headerIndex_(headers, 'TestId') : 2;
+  const scoreCol = headerIndex_(headers, 'Score');
+  const completeCol = headerIndex_(headers, 'Complete');
+  const q1 = headerIndex_(headers, 'Q1');
+  for (let i = 1; i < data.length; i++) {
+    const user = normalizeUsername_(data[i][userCol]);
+    const testId = resolveTestId_(data[i][testCol]);
+    if (!user || !testId) continue;
+    let complete = false;
+    if (completeCol >= 0 && String(data[i][completeCol]).trim() !== '') {
+      complete = String(data[i][completeCol]).toUpperCase() === 'YES';
+    } else if (q1 >= 0) {
+      complete = true;
+      for (let q = 0; q < 5; q++) {
+        if (!String(data[i][q1 + q] || '').trim()) complete = false;
+      }
+    }
+    if (!complete) continue;
+    const scoreRaw = String(scoreCol >= 0 ? data[i][scoreCol] : '');
+    const parts = scoreRaw.split('/');
+    const scoreNum = Number(parts[0]);
+    const total = Number(parts[1]) || 5;
+    if (isNaN(scoreNum)) continue;
+    if (!out[user]) out[user] = {};
+    const prev = out[user][testId];
+    if (!prev || scoreNum > prev.score) {
+      out[user][testId] = { score: scoreNum, total: total, sits: prev ? prev.sits + 1 : 1 };
+    } else {
+      prev.sits += 1;
+    }
+  }
+  return out;
 }
 
 function showSummary() {
@@ -1377,6 +1556,10 @@ function runAcceptanceTests_() {
   check(cs[3][3].indexOf('cs_q4_choice_a.svg') >= 0, 'CS Q4 image option');
   check(String(cs[0][2]).indexOf('algorithm') >= 0, 'CS Q1 stem frozen');
   check(cs.every(function (r) { return r[9] === ''; }), 'loaders have no keys');
+
+  check(sitComplete_(qs, { '1': 'A', '2': 'B' }), 'all answered = complete');
+  check(!sitComplete_(qs, { '1': 'A' }), 'blank item = not complete');
+  check(!sitComplete_(qs, {}), 'empty answers = not complete');
 
   if (fails.length) {
     Logger.log('FAIL\n' + fails.join('\n'));

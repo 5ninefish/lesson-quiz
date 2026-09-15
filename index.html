@@ -359,15 +359,11 @@ const ALL_LESSONS = ['L1','L2','L3','L4','L5','L6'];
   </form>
 </div>
 
-<!-- VIEW: Score -->
+<!-- VIEW: Submitted (no score, no keys) -->
 <div class="card hidden" id="view-score">
-  <h2 id="score-title"></h2>
-  <div id="score-circle-wrap" style="text-align:center;margin-bottom:1rem"></div>
+  <h2 id="score-title">Submitted</h2>
   <p id="score-msg" style="text-align:center"></p>
-  <hr class="divider">
-  <div id="score-details"></div>
-  <hr class="divider">
-  <button class="btn btn-primary" onclick="backToLessons()">← Back to Lessons</button>
+  <button class="btn btn-primary" onclick="backToLessons()" style="margin-top:1.25rem">← Back to Lessons</button>
 </div>
 
 <!-- ── App logic ───────────────────────────────────────────────────────────── -->
@@ -754,11 +750,6 @@ async function submitQuiz(force = false) {
 
     if (r.error && !r.ok) {
       setError('quiz-error', 'Submission error: ' + friendlyError(r.error));
-      if (r.error === 'time_expired' && r.score !== undefined) {
-        state.tryCounts[state.currentLesson] = r.attempt;
-        showScore(r);
-        return;
-      }
       btn.textContent = 'Submit Answers'; btn.disabled = false;
       return;
     }
@@ -773,7 +764,7 @@ async function submitQuiz(force = false) {
       });
     }
 
-    showScore(r);
+    showSubmitted(r);
   } catch (err) {
     document.getElementById('quiz-loading').classList.add('hidden');
     setError('quiz-error', 'Connection error. Your answers may not have been saved. Please try again.');
@@ -781,56 +772,19 @@ async function submitQuiz(force = false) {
   }
 }
 
-// ── Score screen ───────────────────────────────────────────────────────────────
-function showScore(r) {
-  const pct  = Math.round((r.score / r.total) * 100);
-  const pass = pct >= 70;
-
-  document.getElementById('score-title').textContent =
-    (LESSON_NAMES[state.currentLesson] || state.currentLesson) + ' — Results';
-
-  document.getElementById('score-circle-wrap').innerHTML = `
-    <div class="score-circle ${pass ? 'score-pass' : 'score-fail'}">
-      <span class="num">${r.score}</span>
-      <span class="denom">out of ${r.total}</span>
-    </div>
-    <p style="font-size:.85rem;color:var(--muted);margin-top:.4rem">${pct}%</p>
-  `;
-
-  let msg = '';
-  if (r.status === 'time_expired') {
-    msg = 'Time expired. Your answers were saved.';
-  } else if (r.isLastTry) {
-    msg = pass
-      ? 'Great work! You passed.'
-      : 'You\'ve used all attempts for this cycle.';
-    if (r.graded && r.graded.some(g => g.correct)) msg += ' Correct answers are shown below.';
-  } else {
-    msg = pass
-      ? 'You passed! You can retake to try for a perfect score.'
-      : 'You have another attempt available.';
+function showSubmitted(r) {
+  const title = LESSON_NAMES[state.currentLesson] || state.currentLesson || 'Test';
+  document.getElementById('score-title').textContent = title;
+  let msg = r.status === 'time_expired'
+    ? 'Time is up. Your answers were saved.'
+    : 'Your answers were submitted.';
+  if (r.complete === false) {
+    msg += ' Some questions were left blank.';
+  }
+  if (r.isLastTry) {
+    msg += ' You have no attempts left on this cycle.';
   }
   document.getElementById('score-msg').textContent = msg;
-
-  // Per-question breakdown
-  const LETTERS = ['A','B','C','D','E','F'];
-  const details = document.getElementById('score-details');
-  details.innerHTML = '';
-
-  if (r.graded && r.graded.length > 0) {
-    r.graded.forEach(g => {
-      const row = document.createElement('div');
-      row.className = 'result-row ' + (g.isRight ? 'right' : 'wrong');
-
-      let text = `Q${g.qNum}: Your answer — <strong>${g.given}</strong>`;
-      if (!g.isRight && g.correct) {
-        text += ` &nbsp;·&nbsp; Correct: <strong>${g.correct}</strong>`;
-      }
-      row.innerHTML = `<span class="result-icon">${g.isRight ? '✓' : '✗'}</span><span>${text}</span>`;
-      details.appendChild(row);
-    });
-  }
-
   show('view-score');
 }
 
