@@ -25,21 +25,30 @@ const TEST_TO_LESSON = {
   'SCI-DM': 'L6',
 };
 const LESSON_NAMES = {
-  L1: 'Lesson 1 – Soil',
-  L2: 'Lesson 2 – 3D Printing & Coral',
-  L3: 'Lesson 3 – Computer Science',
-  L4: 'Lesson 4 – Astronomy',
-  L5: 'Lesson 5 – Health',
-  L6: 'Lesson 6 – Digital Media',
+  L1: 'Soil — Science Lesson 1',
+  L2: '3D Printing & Coral — Science Lesson 2',
+  L3: 'Computer Science — Science Lesson 3',
+  L4: 'Astronomy — Science Lesson 4',
+  L5: 'Health — Science Lesson 5',
+  L6: 'Digital Media — Science Lesson 6',
 };
 const TEST_META = {
-  'SCI-SOIL':  { strand: 'Science', title: 'Soil' },
-  'SCI-CORAL': { strand: 'Science', title: '3D Printing & Coral' },
-  'SCI-CS':    { strand: 'Science', title: 'Computer Science' },
-  'SCI-ASTRO': { strand: 'Science', title: 'Astronomy' },
-  'SCI-HEALTH':{ strand: 'Science', title: 'Health' },
-  'SCI-DM':    { strand: 'Science', title: 'Digital Media' },
+  'SCI-SOIL':  { strand: 'Science', title: 'Soil — Science Lesson 1' },
+  'SCI-CORAL': { strand: 'Science', title: '3D Printing & Coral — Science Lesson 2' },
+  'SCI-CS':    { strand: 'Science', title: 'Computer Science — Science Lesson 3' },
+  'SCI-ASTRO': { strand: 'Science', title: 'Astronomy — Science Lesson 4' },
+  'SCI-HEALTH':{ strand: 'Science', title: 'Health — Science Lesson 5' },
+  'SCI-DM':    { strand: 'Science', title: 'Digital Media — Science Lesson 6' },
 };
+
+function testLabel_(testId) {
+  const id = resolveTestId_(testId);
+  const meta = TEST_META[id];
+  const lesson = TEST_TO_LESSON[id];
+  if (meta && meta.title) return meta.title;
+  if (lesson && LESSON_NAMES[lesson]) return LESSON_NAMES[lesson];
+  return id || String(testId || '');
+}
 
 // ─── ENTRY POINT ─────────────────────────────────────────────────────────────
 function doPost(e) {
@@ -333,6 +342,7 @@ function buildTestsPayload_(ss, student) {
     let state = 'open';
     if (rel.error) state = 'locked';
     else if (rel.missing) state = tries >= maxTries ? 'done' : 'open';
+    else if (rel.manual === 'UNSET' || !rel.manual) state = tries >= maxTries ? 'done' : 'open';
     else if (rel.manual === 'AUTO' && !rel.openAt) state = 'hidden';
     else if (!releaseAllowsStart_(rel, now)) {
       if (rel.manual === 'AUTO' && rel.openAt && now.getTime() < rel.openAt.getTime()) state = 'upcoming';
@@ -464,7 +474,7 @@ function getRelease_(ss, testId) {
   const row = matches[0];
   const openAt = parseSheetDate_(row[3]);
   const closeAt = parseSheetDate_(row[4]);
-  const manual = String(row[5] || 'AUTO').trim().toUpperCase() || 'AUTO';
+  const manual = String(row[5] || '').trim().toUpperCase() || 'UNSET';
   const maxTries = Number(row[6]) > 0 ? Number(row[6]) : MAX_TRIES;
   const timeLimitSec = Number(row[7]) >= 0 ? Number(row[7]) : QUIZ_TIME_SECONDS;
   return {
@@ -482,6 +492,7 @@ function getRelease_(ss, testId) {
 
 function releaseAllowsStart_(rel, now) {
   if (!rel || rel.missing) return true;
+  if (rel.manual === 'UNSET' || !rel.manual) return true;
   if (rel.manual === 'OPEN') return true;
   if (rel.manual === 'CLOSED') return false;
   if (rel.manual === 'AUTO' && !rel.openAt) return false;
@@ -818,6 +829,8 @@ function withScriptLock_(ms, fn) {
 function ensureRuntimeSchema_(ss) {
   ensureResultsHeaders_(ss);
   ensureAttemptsSheet_(ss);
+  ensureReleasesSheet_(ss);
+  ensureRosterImport_(ss);
   const students = ss.getSheetByName('Students');
   if (students) ensureCycleHeaders_(students, students.getRange(1, 1, 1, Math.max(14, students.getLastColumn())).getValues()[0]);
 }
@@ -908,6 +921,7 @@ function onOpen() {
     .addSeparator()
     .addItem('Sync roster from RosterImport', 'syncRoster')
     .addItem('Hash new passwords', 'bulkHashPasswords_')
+    .addItem('Create missing tabs (Releases, RosterImport)', 'createMissingTabs')
     .addToUi();
 }
 
@@ -922,7 +936,7 @@ function showResetDialog() {
     '<label>Student:</label><select id="student">' +
     students.map(function (u) { return '<option value="' + u + '">' + u + '</option>'; }).join('') +
     '</select><label>Lesson:</label><select id="lesson">' +
-    LESSONS.map(function (l) { return '<option value="' + l + '">' + l + '</option>'; }).join('') +
+    LESSONS.map(function (l) { return '<option value="' + l + '">' + LESSON_NAMES[l] + '</option>'; }).join('') +
     '<option value="ALL">ALL lessons</option></select>' +
     '<button onclick="doReset()">Reset Tries (new cycle)</button><div id="msg"></div>' +
     '<script>function doReset(){google.script.run.withSuccessHandler(function(result){var msg=document.getElementById("msg");msg.textContent=result;msg.style.display="block";}).resetTriesFromDialog(document.getElementById("student").value,document.getElementById("lesson").value);}<\/script>'
@@ -967,7 +981,7 @@ function showInProgress() {
       const untimed = !(Number(a.timeLimitSec) > 0);
       rows.push({
         user: a.username,
-        test: a.testId,
+        test: testLabel_(a.testId),
         started: Utilities.formatDate(asDate_(a.startedAt), TZ, 'HH:mm:ss'),
         left: untimed ? 'no timer' : (expired ? 'expired' : formatMmSs_(rem)),
       });
@@ -990,7 +1004,7 @@ function showBestScores() {
   Object.keys(best).sort().forEach(function (user) {
     Object.keys(best[user]).sort().forEach(function (testId) {
       const b = best[user][testId];
-      lines.push([user, testId, b.score, b.total, b.sits]);
+      lines.push([user, testLabel_(testId), b.score, b.total, b.sits]);
     });
   });
   writeSheet_(ss, 'BestScores', lines);
@@ -1012,8 +1026,8 @@ function showMissingTests() {
     const has = [];
     LESSONS.forEach(function (lesson) {
       const testId = LESSON_TO_TEST[lesson];
-      if (best[user] && best[user][testId]) has.push(testId);
-      else missing.push(testId);
+      if (best[user] && best[user][testId]) has.push(testLabel_(testId));
+      else missing.push(testLabel_(testId));
     });
     lines.push([user, missing.join(', '), has.join(', ')]);
     table.push([user, missing.length ? missing.join(', ') : '—', has.length ? has.join(', ') : 'none']);
@@ -1117,7 +1131,7 @@ function showSummary() {
   }
   const html = HtmlService.createHtmlOutput(
     '<style>body{font-family:Arial,sans-serif;font-size:13px;padding:12px}table{border-collapse:collapse;width:100%}th{background:#f1f5f9;padding:6px 8px;text-align:center}th:first-child{text-align:left}td{padding:4px 8px;border-bottom:1px solid #e2e8f0}</style>' +
-    '<table><tr><th>Username</th>' + LESSONS.map(function (l) { return '<th>' + l + '</th>'; }).join('') + '</tr>' + rows + '</table>' +
+    '<table><tr><th>Email</th>' + LESSONS.map(function (l) { return '<th>' + LESSON_NAMES[l] + '</th>'; }).join('') + '</tr>' + rows + '</table>' +
     '<p class="legend" style="margin-top:8px;font-size:11px;color:#64748b">Cache of current-cycle sits. Reset increments Cycle, does not delete Results.</p>'
   ).setWidth(500).setHeight(400);
   SpreadsheetApp.getUi().showModalDialog(html, 'Attempt Summary');
@@ -1125,9 +1139,27 @@ function showSummary() {
 
 function pickTestId_() {
   const ui = SpreadsheetApp.getUi();
-  const r = ui.prompt('Test ID', 'Canonical or alias (SCI-CS or L3)', ui.ButtonSet.OK_CANCEL);
+  const lines = LESSONS.map(function (l, i) {
+    return (i + 1) + '. ' + testLabel_(LESSON_TO_TEST[l]);
+  });
+  const r = ui.prompt(
+    'Which test?',
+    lines.join('\n') + '\n\nType the number (1–6) or L3 / Computer Science',
+    ui.ButtonSet.OK_CANCEL
+  );
   if (r.getSelectedButton() !== ui.Button.OK) return '';
-  return resolveTestId_(r.getResponseText());
+  const raw = String(r.getResponseText() || '').trim();
+  const n = Number(raw);
+  if (n >= 1 && n <= LESSONS.length) return LESSON_TO_TEST[LESSONS[n - 1]];
+  const resolved = resolveTestId_(raw);
+  if (TEST_TO_LESSON[resolved]) return resolved;
+  const lower = raw.toLowerCase();
+  for (let i = 0; i < LESSONS.length; i++) {
+    const id = LESSON_TO_TEST[LESSONS[i]];
+    if (testLabel_(id).toLowerCase().indexOf(lower) >= 0) return id;
+  }
+  ui.alert('Could not match: ' + raw);
+  return '';
 }
 
 function ensureReleasesSheet_(ss) {
@@ -1139,7 +1171,37 @@ function ensureReleasesSheet_(ss) {
     ]]);
     sheet.setFrozenRows(1);
   }
+  if (sheet.getLastRow() < 2) {
+    const rows = LESSONS.map(function (l) {
+      const id = LESSON_TO_TEST[l];
+      const meta = TEST_META[id];
+      return [id, meta.strand, meta.title, '', '', 'UNSET', 2, 0];
+    });
+    sheet.getRange(2, 1, rows.length, 8).setValues(rows);
+  }
   return sheet;
+}
+
+function ensureRosterImport_(ss) {
+  if (ss.getSheetByName('RosterImport')) return ss.getSheetByName('RosterImport');
+  const ri = ss.insertSheet('RosterImport');
+  ri.getRange(1, 1, 1, 2).setValues([['Email', 'Password']]);
+  ri.getRange(2, 1, 1, 2).setValues([['(paste issued email)', '(paste roster password in plaintext)']]);
+  return ri;
+}
+
+function createMissingTabs() {
+  const ss = ss_();
+  ensureRuntimeSchema_(ss);
+  ensureAuditSheet_(ss);
+  SpreadsheetApp.getUi().alert(
+    'Tabs ready on this book:\n\n' +
+    'Releases — one row per test with full titles. Manual=UNSET means not gated yet (tests still open).\n' +
+    'RosterImport — paste Email + plaintext password, then Quiz Admin → Sync roster.\n' +
+    'Attempts / Results extra columns created if missing.\n\n' +
+    'Passwords: type plaintext in Students column B (or RosterImport), then Quiz Admin → Hash new passwords.\n' +
+    'Already-hashed 64-character values are left alone.'
+  );
 }
 
 function upsertRelease_(testId, mutator) {
@@ -1152,7 +1214,7 @@ function upsertRelease_(testId, mutator) {
   }
   if (rowNum < 0) {
     const meta = TEST_META[testId] || { strand: '', title: testId };
-    sheet.appendRow([testId, meta.strand, meta.title, '', '', 'AUTO', MAX_TRIES, 0]);
+    sheet.appendRow([testId, meta.strand, meta.title, '', '', 'UNSET', MAX_TRIES, 0]);
     rowNum = sheet.getLastRow();
   }
   const row = sheet.getRange(rowNum, 1, 1, 8).getValues()[0];
@@ -1519,6 +1581,7 @@ function runAcceptanceTests_() {
   check(!releaseAllowsStart_(hidden, now), 'empty OpenAt AUTO hidden');
   const missing = { missing: true, manual: 'AUTO' };
   check(releaseAllowsStart_(missing, now), 'missing Releases row legacy open');
+  check(releaseAllowsStart_({ missing: false, manual: 'UNSET', openAt: null }, now), 'UNSET row stays open');
   check(!keysVisible_(upcoming, now), 'no keys while OPEN');
   check(keysVisible_({ missing: false, manual: 'CLOSED' }, now), 'keys after CLOSED');
   check(!keysVisible_(missing, now), 'legacy missing does not dump keys');
