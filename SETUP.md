@@ -26,10 +26,14 @@ Total time: ~30 minutes.
 4. A popup will confirm setup is complete
 
    This will:
-   - Add L1–L6 try-count columns to your Students tab
+   - Add L1–L6 try-count columns and CycleL1–CycleL6 (default 1)
    - Hash all the plaintext passwords (column B becomes 64-char hashes)
-   - Create a **Results** tab
-   - Create a **Questions** tab with headers
+   - Create **Results**, **Questions**, **Attempts**, **Releases**, **Audit**, **RosterImport**
+   - Set spreadsheet timezone to Pacific/Honolulu
+   - Seed Releases as CLOSED (use Quiz Admin to open a window)
+
+   Bound script: uses **this** spreadsheet (`getActiveSpreadsheet`). Do not paste a Sheet ID.
+   A copied workbook needs its own Deploy → Web App, then paste **that** exec URL into that program's `index.html`.
 
 ### Step 4: Fill in the Questions tab
 
@@ -38,14 +42,13 @@ The Questions tab needs one row per question. Column layout:
 | Lesson | Q# | Question | A | B | C | D | E | F | Correct |
 |--------|----|----------|---|---|---|---|---|---|---------|
 
-- **Lesson**: use `L1`, `L2`, `L3`, `L4`, `L5`, or `L6`
+- **Lesson**: canonical TestId (`SCI-SOIL`, `SCI-CORAL`, `SCI-CS`, `SCI-ASTRO`, `SCI-HEALTH`, `SCI-DM`). The API still accepts `L1`–`L6`. Do not store both L3 and SCI-CS.
 - **Q#**: 1–5
 - **Question**: the full question text
 - **A–F**: answer options (leave E and F blank for 4-option questions)
 - **Correct**: the letter of the correct answer (A, B, C, D, E, or F) — **no asterisk**
 
-**The L1 (Soil) and L2 (3D Printing & Coral) data is pre-filled in `questions-data.csv`** —
-paste it into your Questions tab to get started. Fill in L3–L6 yourself.
+`questions-data.csv` has stems only — **no answer keys**. Paste into Questions, then fill the **Correct** column on the sheet. Keys must not live in the public repo.
 
 ### Step 5: Deploy the web app
 
@@ -126,15 +129,14 @@ password, not the hash.
 Open your Google Sheet → **Results** tab. Columns:
 - Timestamp, Username, Lesson, Attempt (1 or 2), Score, then each answer
 
-### Give a student an extra try (manual)
-In the **Students** tab, find the student row and set their L1–L6 column back to 0.
-Example: to give hoku003 another try on Lesson 2, set the L2 cell to 0.
+### Give a student an extra try
+Use **Quiz Admin → Reset student tries**. That increments `CycleL*` and zeroes the sit cache. It does **not** delete Results rows.
 
-### Give a student an extra try (via script)
-In the Apps Script editor, run:
-```js
-resetTries('hoku003', 'L2')
-```
+Do not just zero the L1–L6 cell; eligibility is counted from Results for the current cycle.
+
+### Open / close a test
+Quiz Admin: Open now, Close now, Set window, Set attempts, Set time limit.
+Manual OPEN overrides CloseAt. Empty OpenAt + AUTO = hidden.
 
 ### Add more lessons
 1. Add rows to the Questions tab (use L3, L4, L5, or L6 in the Lesson column)

@@ -1,19 +1,16 @@
 Lesson,Q#,Question,A,B,C,D,E,F,Correct
-L1,1,"Put the following soil types in the correct order from largest particles to smallest:","Clay, human hair, sand, silt, cornstarch","Sand, human hair, silt, clay, cornstarch","Sand, human hair, clay, silt, cornstarch","Human hair, clay, sand, silt, cornstarch",,,B
-L1,2,Which statement is true?,"Water moves through sandy soil slower than silty soil.","Water moves through clayey soil faster than sandy soil.","Water moves through sandy soil faster than silty soil.","It doesn't make a difference. Water moves through all soils at the same rate.",,,C
-L1,3,"Which particle size is best for water-loving plants like rice, water lilies, cattails, and taro?","Soil with small particle sizes, such as clay","Soil with large particle sizes, such as sand","A 3-to-2 mixture of large particle sizes such as sand, and small particle sizes such as clay","Either small or large is good for water-loving plants",,,A
-L1,4,Which of the following is NOT a texture of soil?,Sandy,Clayey,Grainy,Sparkly,a & b,c & d,D
-L1,5,Which texture of soil gives the longest ribbon of soil?,Sandy,Silty loam,Clay loam,Clayey,,,D
-L2,1,What is coral?,"Coral is a plant because it uses photosynthesis to grow.","Coral is an animal because it does not make its own food.","Coral is both an animal and a plant because of symbiosis.","Coral is neither a plant nor an animal because of its unique characteristics and physical structures.",,,B
-L2,2,What scale is used to measure the acidity of a substance?,pH scale,Digital scale,Interval scale,Acidic scale,,,A
-L2,3,"True or False: Usually when there is a chemical change, the process can be undone.",True,False,,,,, B
-L2,4,What process does a 3D printer use?,Subtractive process,Continuous flow process,Selective process,Additive process,,,D
-L2,5,How can 3D printed coral be helpful for the ocean?,"It provides much needed food for some fish.","3D printed coral is bad for the ocean because it is made of plastic.","Eventually with enough 3D printed coral, we will no longer need real coral.","Marine life can live in the 3D printed coral.",,,D
-L3,1,What is the definition of an algorithm?,A command that repeats certain steps over and over,A list of steps that you can follow to finish a task,A device used for storing and processing data,A command given as an if-then statement,,,B
-L3,2,In computer science what is a program?,The study of computers and computing concepts,A series of actions completed in a specific order,A show that comes on TV,An algorithm coded into a computer language that can be run by a machine,,,D
-L3,3,"True or False: If a list of directions is incorrect, it is still an algorithm.",True,False,,,,,A
-L3,4,(See cs_q4_code.png) Correct degree values for TURN commands (blanks 3/6/9) to draw a diamond?,90° 90° 90°,45° 90° 120°,60° 120° 60°,120° 60° 120°,,,D
-L3,5,What command could shorten the repeated lines of code in question 4?,Loop,Conditional statement,Set color,None of the above,,,A
-L4,1,ADD QUESTION HERE,Option A,Option B,Option C,Option D,,,A
-L5,1,ADD QUESTION HERE,Option A,Option B,Option C,Option D,,,A
-L6,1,ADD QUESTION HERE,Option A,Option B,Option C,Option D,,,A
+SCI-SOIL,1,"Put the following soil types in the correct order from largest particles to smallest:","Clay, human hair, sand, silt, cornstarch","Sand, human hair, silt, clay, cornstarch","Sand, human hair, clay, silt, cornstarch","Human hair, clay, sand, silt, cornstarch",,,
+SCI-SOIL,2,Which statement is true?,"Water moves through sandy soil slower than silty soil.","Water moves through clayey soil faster than sandy soil.","Water moves through sandy soil faster than silty soil.","It doesn't make a difference. Water moves through all soils at the same rate.",,,
+SCI-SOIL,3,"Which particle size is best for water-loving plants like rice, water lilies, cattails, and taro?","Soil with small particle sizes, such as clay","Soil with large particle sizes, such as sand","A 3-to-2 mixture of large particle sizes such as sand, and small particle sizes such as clay","Either small or large is good for water-loving plants",,,
+SCI-SOIL,4,Which of the following is NOT a texture of soil?,Sandy,Clayey,Grainy,Sparkly,a & b,c & d,
+SCI-SOIL,5,Which texture of soil gives the longest ribbon of soil?,Sandy,Silty loam,Clay loam,Clayey,,,
+SCI-CORAL,1,What is coral?,"Coral is a plant because it uses photosynthesis to grow.","Coral is an animal because it does not make its own food.","Coral is both an animal and a plant because of symbiosis.","Coral is neither a plant nor an animal because of its unique characteristics and physical structures.",,,
+SCI-CORAL,2,What scale is used to measure the acidity of a substance?,pH scale,Digital scale,Interval scale,Acidic scale,,,
+SCI-CORAL,3,"True or False: Usually when there is a chemical change, the process can be undone.",True,False,,,,,
+SCI-CORAL,4,What process does a 3D printer use?,Subtractive process,Continuous flow process,Selective process,Additive process,,,
+SCI-CORAL,5,How can 3D printed coral be helpful for the ocean?,"It provides much needed food for some fish.","3D printed coral is bad for the ocean because it is made of plastic.","Eventually with enough 3D printed coral, we will no longer need real coral.","Marine life can live in the 3D printed coral.",,,
+SCI-CS,1,What is the definition of an algorithm?,A command that repeats certain steps over and over,A list of steps that you can follow to finish a task,A device used for storing and processing data,A command given as an if-then statement,,,
+SCI-CS,2,In computer science what is a program?,The study of computers and computing concepts,A series of actions completed in a specific order,A show that comes on TV,An algorithm coded into a computer language that can be run by a machine,,,
+SCI-CS,3,"True or False: If a list of directions is incorrect, it is still an algorithm.",True,False,,,,,
+SCI-CS,4,"In the image below, the Artist has a pencil and is ready to draw. Select the correct algorithm that allows the Artist to draw the diamond. (see cs_q4_diamond.png)",https://5ninefish.github.io/lesson-quiz/images/cs_q4_choice_a.svg,https://5ninefish.github.io/lesson-quiz/images/cs_q4_choice_b.svg,https://5ninefish.github.io/lesson-quiz/images/cs_q4_choice_c.svg,,,,
+SCI-CS,5,What command could shorten the repeated lines of code in question 4?,Loop,Conditional statement,Set color,None of the above,,,

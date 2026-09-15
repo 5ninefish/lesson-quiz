@@ -325,9 +325,9 @@ const ALL_LESSONS = ['L1','L2','L3','L4','L5','L6'];
 <!-- VIEW: Login -->
 <div class="card" id="view-login">
   <h1>Lesson Post-Tests</h1>
-  <p>Enter your username and password to continue.</p>
+  <p>Enter your email and password to continue.</p>
   <div id="login-error" class="error hidden"></div>
-  <label for="username">Username</label>
+  <label for="username">Email</label>
   <input type="text" id="username" autocomplete="username" autocapitalize="none" spellcheck="false">
   <label for="password">Password</label>
   <input type="password" id="password" autocomplete="current-password">
@@ -337,7 +337,7 @@ const ALL_LESSONS = ['L1','L2','L3','L4','L5','L6'];
 <!-- VIEW: Lesson selector -->
 <div class="card hidden" id="view-lessons">
   <h2 id="lessons-greeting">Select a Lesson</h2>
-  <p>Choose the test you'd like to take. You have <strong>2 attempts</strong> per lesson.</p>
+  <p>Choose the test you'd like to take.</p>
   <div id="lesson-select-error" class="error hidden"></div>
   <div class="lesson-grid" id="lesson-grid"></div>
   <button class="btn btn-outline btn-sm" onclick="logout()" style="margin-top:.5rem">Sign Out</button>
@@ -377,11 +377,16 @@ let state = {
   username: '',
   password: '',
   currentLesson: null,
-  tryCounts: {},    // { L1: 0, L2: 1, ... }
+  currentTestId: null,
+  submissionId: '',
+  tryCounts: {},
+  tests: [],
   questions: [],
   timerInterval: null,
   timeLimit: 0,
 };
+
+function sleep(ms) { return new Promise(r => setTimeout(r, ms)); }
 
 // ── View helpers ──────────────────────────────────────────────────────────────
 function show(id) {
@@ -397,13 +402,18 @@ function setError(id, msg) {
 }
 
 // ── API call ──────────────────────────────────────────────────────────────────
-async function api(body) {
+async function api(body, retries = 0) {
   const res = await fetch(API_URL, {
     method: 'POST',
     body: JSON.stringify(body),
     redirect: 'follow',
   });
-  return res.json();
+  const r = await res.json();
+  if (r.error === 'busy_try_again' && retries < 3) {
+    await sleep(400 * (retries + 1) + Math.random() * 200);
+    return api(body, retries + 1);
+  }
+  return r;
 }
 
 // ── Login ─────────────────────────────────────────────────────────────────────
@@ -427,6 +437,7 @@ async function login() {
     state.username = u;
     state.password = p;
     state.tryCounts = r.allTries || {};
+    state.tests = r.tests || [];
     showLessons();
   } catch (err) {
     setError('login-error', 'Connection error. Please try again.');
@@ -436,7 +447,8 @@ async function login() {
 
 function logout() {
   stopTimer();
-  state = { username:'', password:'', currentLesson:null, tryCounts:{}, questions:[], timerInterval:null, timeLimit:0 };
+  try { sessionStorage.removeItem('quizSubmissionId'); } catch (e) {}
+  state = { username:'', password:'', currentLesson:null, currentTestId:null, submissionId:'', tryCounts:{}, tests:[], questions:[], timerInterval:null, timeLimit:0 };
   document.getElementById('username').value = '';
   document.getElementById('password').value = '';
   show('view-login');
@@ -453,24 +465,44 @@ function showLessons() {
 function renderLessonGrid() {
   const grid = document.getElementById('lesson-grid');
   grid.innerHTML = '';
-  ALL_LESSONS.forEach(lid => {
-    const tries  = state.tryCounts[lid] ?? '?';
-    const maxed  = tries >= 2;
-    const untried = tries === 0 || tries === '?';
+  const tests = (state.tests && state.tests.length)
+    ? state.tests
+    : ALL_LESSONS.map(lid => ({
+        lesson: lid,
+        testId: lid,
+        title: (LESSON_NAMES[lid] || lid).replace(/^Lesson \d+ – /, ''),
+        state: 'open',
+        tries: state.tryCounts[lid] ?? 0,
+        maxTries: 2,
+      }));
+
+  tests.forEach(t => {
+    const lid = t.lesson || t.testId;
+    const tries = t.tries ?? state.tryCounts[lid] ?? 0;
+    const maxTries = t.maxTries || 2;
+    const done = t.state === 'done' || tries >= maxTries;
+    const upcoming = t.state === 'upcoming';
+    const locked = t.state === 'locked';
+    const blocked = done || upcoming || locked;
 
     const btn = document.createElement('button');
     btn.className = 'lesson-btn';
-    btn.disabled  = maxed;
-    btn.onclick   = () => startLesson(lid);
+    btn.disabled = blocked;
+    btn.onclick = () => startLesson(lid, t.testId);
 
     let badgeClass = 'badge-ok';
-    let badgeText  = tries === '?' ? '' : (tries === 0 ? 'Not started' : `${tries}/2 attempt${tries > 1 ? 's' : ''}`);
-    if (tries === 1)   badgeClass = 'badge-warn';
-    if (maxed)         badgeClass = 'badge-blocked';
-    if (maxed)         badgeText  = 'Complete';
+    let badgeText = tries === 0 ? 'Not started' : `${tries}/${maxTries}`;
+    if (tries > 0 && tries < maxTries) badgeClass = 'badge-warn';
+    if (done) { badgeClass = 'badge-blocked'; badgeText = 'Complete'; }
+    if (upcoming) { badgeClass = 'badge-warn'; badgeText = 'Upcoming'; }
+    if (locked && !done) { badgeClass = 'badge-blocked'; badgeText = 'Closed'; }
+
+    const label = t.title
+      ? ((LESSON_NAMES[lid] && LESSON_NAMES[lid].indexOf(t.title) >= 0) ? LESSON_NAMES[lid] : (LESSON_NAMES[lid] || t.title))
+      : (LESSON_NAMES[lid] || lid);
 
     btn.innerHTML = `
-      <span>${LESSON_NAMES[lid] || lid}</span>
+      <span>${label}</span>
       ${badgeText ? `<span class="lesson-badge ${badgeClass}">${badgeText}</span>` : ''}
     `;
     grid.appendChild(btn);
@@ -478,7 +510,19 @@ function renderLessonGrid() {
 }
 
 // ── Start a lesson ─────────────────────────────────────────────────────────────
-async function startLesson(lesson) {
+function friendlyError(code) {
+  if (code === 'not_released') return 'This test is not open right now.';
+  if (code === 'max_attempts_reached') return 'You have used all attempts for this test. Contact your instructor if you need another try.';
+  if (code === 'busy_try_again') return 'The server is busy. Please try again.';
+  if (code === 'time_expired') return 'Time is up. Your attempt was saved.';
+  if (code === 'invalid_attempt') return 'This attempt is no longer valid. Go back and start again.';
+  if (code === 'invalid_credentials') return 'Session expired. Please sign in again.';
+  if (code === 'bad_question_bank') return 'This test is not available (question bank). Contact your instructor.';
+  if (code === 'no_questions_found') return 'No questions found for this test.';
+  return code ? ('Could not load: ' + code) : 'Unknown error';
+}
+
+async function startLesson(lesson, testId) {
   setError('lesson-select-error', '');
   document.getElementById('quiz-title').textContent = LESSON_NAMES[lesson] || lesson;
   document.getElementById('quiz-info').classList.add('hidden');
@@ -489,35 +533,43 @@ async function startLesson(lesson) {
   show('view-quiz');
 
   try {
-    const r = await api({ action: 'auth_and_load', username: state.username, password: state.password, lesson });
+    const r = await api({
+      action: 'auth_and_load',
+      username: state.username,
+      password: state.password,
+      lesson,
+      testId: testId || lesson,
+    });
 
     document.getElementById('quiz-loading').classList.add('hidden');
 
-    if (r.error === 'max_attempts_reached') {
-      setError('quiz-error', 'You have used both attempts for this lesson. Contact your instructor if you need another try.');
-      return;
-    }
     if (r.error === 'invalid_credentials') {
-      setError('quiz-error', 'Session expired. Please sign in again.');
+      setError('quiz-error', friendlyError(r.error));
       setTimeout(logout, 2000);
       return;
     }
     if (r.error || !r.questions) {
-      setError('quiz-error', 'Could not load questions: ' + (r.error || 'unknown error'));
+      setError('quiz-error', friendlyError(r.error || 'unknown error'));
       return;
     }
 
-    state.currentLesson = lesson;
+    state.currentLesson = r.lesson || lesson;
+    state.currentTestId = r.testId || testId || lesson;
+    state.submissionId = r.submissionId || '';
+    try { if (state.submissionId) sessionStorage.setItem('quizSubmissionId', state.submissionId); } catch (e) {}
     state.questions = r.questions;
     if (r.allTries) state.tryCounts = Object.assign({}, state.tryCounts, r.allTries);
     else state.tryCounts[lesson] = r.tries;
+    if (r.tests) state.tests = r.tests;
     state.timeLimit = r.timeLimit || 0;
+    const maxTries = r.maxTries || 2;
 
     const info = document.getElementById('quiz-info');
-    let infoText = `Attempt ${r.tries + 1} of 2 — answer all questions then click Submit.`;
+    let infoText = `Attempt ${r.tries + 1} of ${maxTries} — answer all questions then click Submit.`;
     if (state.timeLimit > 0) {
       const m = Math.floor(state.timeLimit / 60);
-      infoText += ` You have ${m} minute${m !== 1 ? 's' : ''}.`;
+      const s = state.timeLimit % 60;
+      infoText += ` Time remaining: ${m}:${s.toString().padStart(2, '0')}.`;
     }
     info.textContent = infoText;
     info.classList.remove('hidden');
@@ -693,19 +745,33 @@ async function submitQuiz(force = false) {
       username: state.username,
       password: state.password,
       lesson:   state.currentLesson,
+      testId:   state.currentTestId || state.currentLesson,
+      submissionId: state.submissionId || (function(){ try { return sessionStorage.getItem('quizSubmissionId') || ''; } catch (e) { return ''; } })(),
       answers,
     });
 
     document.getElementById('quiz-loading').classList.add('hidden');
 
-    if (r.error) {
-      setError('quiz-error', 'Submission error: ' + r.error);
+    if (r.error && !r.ok) {
+      setError('quiz-error', 'Submission error: ' + friendlyError(r.error));
+      if (r.error === 'time_expired' && r.score !== undefined) {
+        state.tryCounts[state.currentLesson] = r.attempt;
+        showScore(r);
+        return;
+      }
       btn.textContent = 'Submit Answers'; btn.disabled = false;
       return;
     }
 
-    // Update cached try count
     state.tryCounts[state.currentLesson] = r.attempt;
+    if (state.tests) {
+      state.tests = state.tests.map(t => {
+        if ((t.lesson || t.testId) === state.currentLesson || t.testId === state.currentTestId) {
+          return Object.assign({}, t, { tries: r.attempt, state: (r.attempt >= (r.maxTries || t.maxTries) ? 'done' : t.state) });
+        }
+        return t;
+      });
+    }
 
     showScore(r);
   } catch (err) {
@@ -732,14 +798,17 @@ function showScore(r) {
   `;
 
   let msg = '';
-  if (r.isLastTry) {
+  if (r.status === 'time_expired') {
+    msg = 'Time expired. Your answers were saved.';
+  } else if (r.isLastTry) {
     msg = pass
-      ? 'Great work! You passed. Correct answers are shown below.'
-      : 'You\'ve used both attempts. Correct answers are shown below.';
+      ? 'Great work! You passed.'
+      : 'You\'ve used all attempts for this cycle.';
+    if (r.graded && r.graded.some(g => g.correct)) msg += ' Correct answers are shown below.';
   } else {
     msg = pass
       ? 'You passed! You can retake to try for a perfect score.'
-      : `You have one more attempt available.`;
+      : 'You have another attempt available.';
   }
   document.getElementById('score-msg').textContent = msg;
 

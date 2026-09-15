@@ -13,9 +13,12 @@ Student browser (GitHub Pages)
 Google Apps Script (Web App)
         │  read/write
         ▼
-Google Sheet
-  ├── Students tab  (username, hashed password, try counts per lesson)
-  └── Questions tab (question text, choices, correct answer, lesson ID)
+Google Sheet (one bound workbook per program)
+  ├── Students   (email, hashed password, L1–L6 sit cache, CycleL1–CycleL6)
+  ├── Questions  (canonical TestId, stems, choices, Correct — keys stay here)
+  ├── Releases   (open/close window, max tries, time limit)
+  ├── Attempts   (server submissionId, in_flight clock, snapshots)
+  └── Results    (attempt ledger: Cycle, LifetimeSeq, SubmissionId)
 ```
 
 **Key behaviors:**
@@ -66,9 +69,7 @@ Push to a GitHub repo and enable **GitHub Pages** (Settings → Pages → main b
 
 **Add lessons:** add a column to the Students sheet, add rows to the Questions sheet with the new lesson ID, update `LESSONS` and `LESSON_NAMES` in `index.html`.
 
-**Change attempt limit:** set `MAX_TRIES` in `Code.gs`.
-
-**Add a timer:** set `QUIZ_TIME_SECONDS` in `Code.gs` (e.g. `600` = 10 minutes).
+**Change attempt limit / timer:** Quiz Admin → Set attempts / Set time limit (Releases row). `MAX_TRIES` and `QUIZ_TIME_SECONDS` in `Code.gs` are fallbacks only when a Releases row is missing.
 
 **Add students:** add rows to the Students sheet with plaintext passwords → re-run `setup()` to hash them.
 
