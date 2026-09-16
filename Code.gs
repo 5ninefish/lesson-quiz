@@ -943,39 +943,51 @@ function showDashboard() {
   SpreadsheetApp.getUi().showModelessDialog(html, 'Quiz Admin');
 }
 
+function jsonSafe_(obj) {
+  return JSON.parse(JSON.stringify(obj));
+}
+
 function dashState() {
   try {
     const ss = ss_();
-    ensureRuntimeSchema_(ss);
     const now = new Date();
-    const live = collectNow_(ss, now);
-    const best = bestCompleteScores_(ss);
-    const missing = collectMissing_(ss, best);
-    const scores = collectScores_(best);
-    writeSheet_(ss, 'InProgress', [['Email', 'Test', 'Started HST', 'Time left']].concat(
-      live.rows.map(function (r) { return [r.user, r.test, r.started, r.left]; })
-    ));
-    writeSheet_(ss, 'BestScores', [['Email', 'Test', 'Best score', 'Out of', 'Complete sits']].concat(
-      scores.map(function (r) { return [r.user, r.test, r.score, r.total, r.sits]; })
-    ));
-    writeSheet_(ss, 'MissingTests', [['Email', 'Missing tests', 'Has complete']].concat(
-      missing.map(function (r) { return [r.user, r.missing.join(', '), r.has.join(', ')]; })
-    ));
-    return {
+    var live = { rows: [], skipped: 0 };
+    var best = {};
+    var missing = [];
+    var scores = [];
+    var tests = [];
+    var roster = { students: 0, importRows: 0, emails: [] };
+    try { live = collectNow_(ss, now); } catch (e1) { live = { rows: [], skipped: 1 }; }
+    try { best = bestCompleteScores_(ss); } catch (e2) { best = {}; }
+    try { missing = collectMissing_(ss, best); } catch (e3) { missing = []; }
+    try { scores = collectScores_(best); } catch (e4) { scores = []; }
+    try { tests = collectTests_(ss, now); } catch (e5) { tests = []; }
+    try { roster = collectRosterMeta_(ss); } catch (e6) { roster = { students: 0, importRows: 0, emails: [] }; }
+    const nowRows = (live.rows || []).map(function (r) {
+      return {
+        user: String(r.user || ''),
+        testId: String(r.testId || ''),
+        test: String(r.test || ''),
+        started: String(r.started || ''),
+        left: String(r.left || ''),
+        expired: !!r.expired,
+      };
+    });
+    return jsonSafe_({
       ok: true,
-      workbook: ss.getName(),
+      workbook: String(ss.getName() || 'This workbook'),
       updatedAt: Utilities.formatDate(now, TZ, 'HH:mm') + ' HST',
-      tests: collectTests_(ss, now),
-      now: live.rows,
-      nowSkipped: live.skipped,
+      tests: tests,
+      now: nowRows,
+      nowSkipped: Number(live.skipped) || 0,
       missing: missing,
       scores: scores,
-      roster: collectRosterMeta_(ss),
-    };
+      roster: roster,
+    });
   } catch (err) {
     const msg = String(err);
-    if (/lock|busy/i.test(msg)) return { ok: false, error: 'busy_try_again' };
-    return { ok: false, error: msg };
+    if (/lock|busy/i.test(msg)) return jsonSafe_({ ok: false, error: 'busy_try_again' });
+    return jsonSafe_({ ok: false, error: msg });
   }
 }
 
