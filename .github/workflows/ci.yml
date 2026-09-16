@@ -1,0 +1,30 @@
+name: ci
+on:
+  push:
+    branches: [main]
+  pull_request:
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+      - run: npm ci
+      - run: npm run typecheck
+      - run: npm test
+      - run: npm run build
+      - name: Preserve student entrypoint
+        run: test -f index.html && test -f admin-v2/index.html
+      - name: Scan build for secrets and live hashes
+        run: |
+          if grep -R -E "[A-Fa-f0-9]{64}" admin-v2 --include='*.js' | grep -v sourceMappingURL; then
+            echo "possible hash in build" >&2
+            exit 1
+          fi
+          if grep -R -i "client_secret" admin-v2 --include='*.js' --include='*.html'; then
+            echo "forbidden marker in build" >&2
+            exit 1
+          fi
