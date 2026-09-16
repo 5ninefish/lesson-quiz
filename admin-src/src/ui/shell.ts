@@ -1,5 +1,5 @@
 import { PROGRAM } from "../config";
-import { TEST_TITLES, type TestId } from "../ids";
+import { TEST_TITLES } from "../ids";
 import type { DashboardSnapshot } from "../types";
 import { toCsv, downloadCsv } from "../csv";
 
@@ -11,6 +11,30 @@ export type Screen =
   | "results"
   | "missing"
   | "health";
+
+type ShellOpts = {
+  snap: DashboardSnapshot | null;
+  screen: Screen;
+  bookName: string;
+  account: string;
+  canEdit: boolean;
+  banner: { kind: "ok" | "warn" | "err"; text: string } | null;
+  query: string;
+  onNav: (s: Screen) => void;
+  onRefresh: () => void;
+  onDemo: () => void;
+  onSignIn: () => void;
+  onSignOut: () => void;
+  onSearch: (q: string) => void;
+};
+
+let onSearchCb: (q: string) => void = () => {};
+let onNavCb: (s: Screen) => void = () => {};
+let onRefreshCb: () => void = () => {};
+let onDemoCb: () => void = () => {};
+let onSignInCb: () => void = () => {};
+let onSignOutCb: () => void = () => {};
+let chromeReady = false;
 
 function el<K extends keyof HTMLElementTagNameMap>(tag: K, attrs: Record<string, string> = {}, text?: string): HTMLElementTagNameMap[K] {
   const node = document.createElement(tag);
@@ -32,7 +56,7 @@ function applyFilter(query: string): void {
   const q = query.trim().toLowerCase();
   document.querySelectorAll<HTMLTableRowElement>("[data-filterable] tbody tr").forEach((tr) => {
     const hay = tr.dataset.search || "";
-    tr.hidden = Boolean(q) && !hay.includes(q);
+    tr.style.display = q && !hay.includes(q) ? "none" : "";
   });
 }
 
@@ -61,61 +85,39 @@ function liveQuery(fallback: string): string {
   return node ? node.value : fallback;
 }
 
-function searchBar(query: string, onSearch: (q: string) => void): HTMLInputElement {
-  const search = el("input", {
-    type: "search",
-    id: "instructor-search",
-    placeholder: "Search username",
-  }) as HTMLInputElement;
-  search.value = query;
-  search.oninput = () => {
-    onSearch(search.value);
-    applyFilter(search.value);
-  };
-  return search;
+function setText(id: string, text: string): void {
+  const node = document.getElementById(id);
+  if (node) node.textContent = text;
 }
 
-export function renderShell(opts: {
-  snap: DashboardSnapshot | null;
-  screen: Screen;
-  bookName: string;
-  account: string;
-  canEdit: boolean;
-  banner: { kind: "ok" | "warn" | "err"; text: string } | null;
-  query: string;
-  onNav: (s: Screen) => void;
-  onRefresh: () => void;
-  onDemo: () => void;
-  onSignIn: () => void;
-  onSignOut: () => void;
-  onSearch: (q: string) => void;
-}): void {
+function mountChrome(): void {
   const root = document.getElementById("app");
   if (!root) return;
-  root.innerHTML = "";
+  root.replaceChildren();
   const app = el("div", { class: "app" });
+
   const header = el("header");
-  header.append(el("div", { class: "brand" }, PROGRAM.title));
-  header.append(el("div", { class: "meta" }, opts.bookName));
-  header.append(el("div", { class: "meta" }, opts.account || "Not signed in"));
-  header.append(el("div", { class: "meta" }, opts.canEdit ? "Editor" : "Read only"));
-  if (opts.snap) header.append(el("div", { class: "meta" }, `Refreshed ${opts.snap.fetchedAt}`));
+  header.append(el("div", { class: "brand", id: "brand" }, PROGRAM.title));
+  header.append(el("div", { class: "meta", id: "book-name" }, ""));
+  header.append(el("div", { class: "meta", id: "account" }, "Not signed in"));
+  header.append(el("div", { class: "meta", id: "role" }, "Read only"));
+  header.append(el("div", { class: "meta", id: "stamp" }, ""));
   header.append(el("div", { class: "spacer" }));
-  const demo = el("button", {}, "Load demo workbook");
-  demo.onclick = opts.onDemo;
-  const signin = el("button", { class: "primary" }, "Sign in with UH Google");
-  signin.onclick = opts.onSignIn;
-  const refresh = el("button", {}, "Refresh");
-  refresh.onclick = opts.onRefresh;
-  const signout = el("button", {}, "Sign out");
-  signout.onclick = opts.onSignOut;
+  const demo = el("button", { type: "button", id: "btn-demo" }, "Load demo workbook");
+  demo.onclick = () => onDemoCb();
+  const signin = el("button", { type: "button", class: "primary", id: "btn-signin" }, "Sign in with UH Google");
+  signin.onclick = () => onSignInCb();
+  const refresh = el("button", { type: "button", id: "btn-refresh" }, "Refresh");
+  refresh.onclick = () => onRefreshCb();
+  const signout = el("button", { type: "button", id: "btn-signout" }, "Sign out");
+  signout.onclick = () => onSignOutCb();
   header.append(demo, signin, refresh, signout);
   app.append(header);
 
-  const banner = el("div", { class: `banner ${opts.banner ? "show " + opts.banner.kind : ""}` }, opts.banner?.text || "");
+  const banner = el("div", { class: "banner", id: "banner" });
   app.append(banner);
 
-  const nav = el("nav", { "aria-label": "Instructor sections" });
+  const nav = el("nav", { "aria-label": "Instructor sections", id: "nav" });
   const items: [Screen, string][] = [
     ["overview", "Overview"],
     ["roster", "Roster"],
@@ -126,13 +128,46 @@ export function renderShell(opts: {
     ["health", "Data Health"],
   ];
   for (const [id, label] of items) {
-    const b = el("button", id === opts.screen ? { "aria-current": "page" } : {}, label);
-    b.onclick = () => opts.onNav(id);
+    const b = el("button", { type: "button", "data-screen": id }, label);
+    b.onclick = () => onNavCb(id);
     nav.append(b);
   }
   app.append(nav);
 
-  const main = el("main");
+  const toolbar = el("div", { class: "toolbar", id: "search-toolbar" });
+  const search = el("input", {
+    type: "text",
+    id: "instructor-search",
+    name: "instructor-search",
+    placeholder: "Search username",
+    autocomplete: "off",
+    autocorrect: "off",
+    autocapitalize: "off",
+    spellcheck: "false",
+    inputmode: "search",
+  }) as HTMLInputElement;
+  search.addEventListener("input", () => {
+    onSearchCb(search.value);
+    applyFilter(search.value);
+  });
+  const exp = el("button", { type: "button", id: "btn-export" }, "Export CSV");
+  toolbar.append(search, exp);
+  app.append(toolbar);
+
+  app.append(el("main", { id: "main" }));
+  root.append(app);
+  chromeReady = true;
+}
+
+function renderMain(opts: ShellOpts): void {
+  const main = document.getElementById("main");
+  const toolbar = document.getElementById("search-toolbar");
+  const exportBtn = document.getElementById("btn-export") as HTMLButtonElement | null;
+  if (!main) return;
+  main.replaceChildren();
+  const showSearch = opts.screen === "roster" || opts.screen === "results";
+  if (toolbar) toolbar.style.display = showSearch && opts.snap ? "flex" : "none";
+
   if (!opts.snap) {
     main.append(el("h1", {}, "Instructor dashboard"));
     main.append(
@@ -142,20 +177,44 @@ export function renderShell(opts: {
         "Read-only. Sign in with a UH account that can open the program workbook, or load the synthetic demo. The live student quiz is unchanged.",
       ),
     );
-    app.append(main);
-    root.append(app);
     return;
   }
 
   const snap = opts.snap;
+  if (exportBtn) {
+    exportBtn.onclick = () => {
+      const q = liveQuery(opts.query);
+      if (opts.screen === "roster") {
+        const rows = snap.students.filter((s) => rowMatchesQuery([s.username], q));
+        downloadCsv("roster.csv", toCsv(["username", "row"], rows.map((s) => [s.username, String(s.rowNumber)])));
+      } else if (opts.screen === "results") {
+        const rows = snap.results.filter((r) => rowMatchesQuery([r.username, r.testId || r.rawTestId], q));
+        downloadCsv(
+          "results.csv",
+          toCsv(
+            ["username", "assessment", "score", "complete", "timestamp", "row"],
+            rows.map((r) => [
+              r.username,
+              r.testId || r.rawTestId,
+              r.scoreNum != null && r.scoreDen != null ? `${r.scoreNum}/${r.scoreDen}` : "",
+              r.complete ? "yes" : "no",
+              r.timestamp,
+              String(r.rowNumber),
+            ]),
+          ),
+        );
+      }
+    };
+  }
+
   if (opts.screen === "overview") {
     main.append(el("h1", {}, "Overview"));
     const cards = el("div", { class: "cards" });
     const add = (label: string, n: number, screen: Screen) => {
-      const c = el("button", { class: "card" });
+      const c = el("button", { type: "button", class: "card" });
       c.append(el("strong", {}, String(n)));
       c.append(el("span", {}, label));
-      c.onclick = () => opts.onNav(screen);
+      c.onclick = () => onNavCb(screen);
       cards.append(c);
     };
     add("Students", snap.students.length, "roster");
@@ -170,21 +229,6 @@ export function renderShell(opts: {
     main.append(el("p", { class: "muted" }, `Results parse mode: ${snap.resultsHeaderMode}`));
   } else if (opts.screen === "roster") {
     main.append(el("h1", {}, "Roster"));
-    const bar = el("div", { class: "toolbar" });
-    const search = searchBar(opts.query, opts.onSearch);
-    const exp = el("button", {}, "Export CSV");
-    exp.onclick = () => {
-      const rows = snap.students.filter((s) => rowMatchesQuery([s.username], liveQuery(opts.query)));
-      downloadCsv(
-        "roster.csv",
-        toCsv(
-          ["username", "row"],
-          rows.map((s) => [s.username, String(s.rowNumber)]),
-        ),
-      );
-    };
-    bar.append(search, exp);
-    main.append(bar);
     main.append(
       table(
         ["Username", "Row", "Cycles"],
@@ -225,41 +269,6 @@ export function renderShell(opts: {
     );
   } else if (opts.screen === "results") {
     main.append(el("h1", {}, "Results"));
-    const bar = el("div", { class: "toolbar" });
-    const search = searchBar(opts.query, opts.onSearch);
-    const exp = el("button", {}, "Export CSV");
-    exp.onclick = () => {
-      const rows = snap.results.filter((r) => rowMatchesQuery([r.username, r.testId || r.rawTestId], liveQuery(opts.query)));
-      downloadCsv(
-        "results.csv",
-        toCsv(
-          ["username", "assessment", "score", "complete", "timestamp", "row"],
-          rows.map((r) => [
-            r.username,
-            r.testId || r.rawTestId,
-            r.scoreNum != null && r.scoreDen != null ? `${r.scoreNum}/${r.scoreDen}` : "",
-            r.complete ? "yes" : "no",
-            r.timestamp,
-            String(r.rowNumber),
-          ]),
-        ),
-      );
-    };
-    bar.append(search, exp);
-    main.append(bar);
-    main.append(el("h2", {}, "Best complete scores"));
-    main.append(
-      table(
-        ["Student", "Assessment", "Best", "Complete sits"],
-        snap.bestScores.map((b) => [
-          b.username,
-          TEST_TITLES[b.testId as TestId],
-          `${b.scoreNum}/${b.scoreDen}`,
-          String(b.completeCount),
-        ]),
-      ),
-    );
-    main.append(el("h2", {}, "All results"));
     main.append(
       table(
         ["Student", "Assessment", "Score", "Complete", "When", "Row"],
@@ -292,7 +301,38 @@ export function renderShell(opts: {
       ),
     );
   }
-  app.append(main);
-  root.append(app);
-  applyFilter(opts.query);
+  applyFilter(liveQuery(opts.query));
+}
+
+export function renderShell(opts: ShellOpts): void {
+  onSearchCb = opts.onSearch;
+  onNavCb = opts.onNav;
+  onRefreshCb = opts.onRefresh;
+  onDemoCb = opts.onDemo;
+  onSignInCb = opts.onSignIn;
+  onSignOutCb = opts.onSignOut;
+
+  if (!chromeReady || !document.getElementById("instructor-search")) mountChrome();
+
+  setText("book-name", opts.bookName);
+  setText("account", opts.account || "Not signed in");
+  setText("role", opts.canEdit ? "Editor" : "Read only");
+  setText("stamp", opts.snap ? `Refreshed ${opts.snap.fetchedAt}` : "");
+
+  const banner = document.getElementById("banner");
+  if (banner) {
+    banner.className = `banner ${opts.banner ? "show " + opts.banner.kind : ""}`;
+    banner.textContent = opts.banner?.text || "";
+  }
+
+  document.querySelectorAll<HTMLButtonElement>("#nav button[data-screen]").forEach((b) => {
+    if (b.getAttribute("data-screen") === opts.screen) b.setAttribute("aria-current", "page");
+    else b.removeAttribute("aria-current");
+  });
+
+  renderMain(opts);
+}
+
+export function resetChromeForTests(): void {
+  chromeReady = false;
 }
