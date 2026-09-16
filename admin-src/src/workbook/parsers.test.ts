@@ -5,6 +5,7 @@ import { parseResults } from "./results";
 import { parseStudents } from "./students";
 import { evaluateRelease } from "./releases";
 import { toCsv } from "../csv";
+import { rowMatchesQuery } from "../ui/shell";
 import { canonicalTestId } from "../ids";
 
 describe("ids", () => {
@@ -77,6 +78,15 @@ describe("releases", () => {
     expect(evaluateRelease({ manual: "UNSET", openAt: "", closeAt: "" }, now).state).toBe("open");
     expect(evaluateRelease({ manual: "AUTO", openAt: "", closeAt: "" }, now).state).toBe("hidden");
     expect(evaluateRelease({ manual: "CLOSED", openAt: "", closeAt: "" }, now).state).toBe("closed");
+  });
+});
+
+describe("search filter", () => {
+  it("matches without requiring a full string", () => {
+    expect(rowMatchesQuery(["student.one@example.edu"], "s")).toBe(true);
+    expect(rowMatchesQuery(["student.one@example.edu"], "st")).toBe(true);
+    expect(rowMatchesQuery(["student.one@example.edu"], "zzz")).toBe(false);
+    expect(rowMatchesQuery(["student.one@example.edu"], "")).toBe(true);
   });
 });
 

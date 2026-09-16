@@ -22,8 +22,23 @@ function el<K extends keyof HTMLElementTagNameMap>(tag: K, attrs: Record<string,
   return node;
 }
 
-function table(headers: string[], rows: string[][]): HTMLElement {
+export function rowMatchesQuery(cells: string[], query: string): boolean {
+  const q = query.trim().toLowerCase();
+  if (!q) return true;
+  return cells.some((c) => c.toLowerCase().includes(q));
+}
+
+function applyFilter(query: string): void {
+  const q = query.trim().toLowerCase();
+  document.querySelectorAll<HTMLTableRowElement>("[data-filterable] tbody tr").forEach((tr) => {
+    const hay = tr.dataset.search || "";
+    tr.hidden = Boolean(q) && !hay.includes(q);
+  });
+}
+
+function table(headers: string[], rows: string[][], filterable = false): HTMLElement {
   const wrap = el("div", { class: "table-wrap" });
+  if (filterable) wrap.setAttribute("data-filterable", "true");
   const t = el("table");
   const thead = el("thead");
   const tr = el("tr");
@@ -32,12 +47,32 @@ function table(headers: string[], rows: string[][]): HTMLElement {
   const tb = el("tbody");
   for (const row of rows) {
     const r = el("tr");
+    if (filterable) r.dataset.search = row.join(" ").toLowerCase();
     for (const c of row) r.append(el("td", {}, c));
     tb.append(r);
   }
   t.append(thead, tb);
   wrap.append(t);
   return wrap;
+}
+
+function liveQuery(fallback: string): string {
+  const node = document.getElementById("instructor-search") as HTMLInputElement | null;
+  return node ? node.value : fallback;
+}
+
+function searchBar(query: string, onSearch: (q: string) => void): HTMLInputElement {
+  const search = el("input", {
+    type: "search",
+    id: "instructor-search",
+    placeholder: "Search username",
+  }) as HTMLInputElement;
+  search.value = query;
+  search.oninput = () => {
+    onSearch(search.value);
+    applyFilter(search.value);
+  };
+  return search;
 }
 
 export function renderShell(opts: {
@@ -113,7 +148,6 @@ export function renderShell(opts: {
   }
 
   const snap = opts.snap;
-  const q = opts.query.trim().toLowerCase();
   if (opts.screen === "overview") {
     main.append(el("h1", {}, "Overview"));
     const cards = el("div", { class: "cards" });
@@ -137,12 +171,10 @@ export function renderShell(opts: {
   } else if (opts.screen === "roster") {
     main.append(el("h1", {}, "Roster"));
     const bar = el("div", { class: "toolbar" });
-    const search = el("input", { type: "search", placeholder: "Search username" }) as HTMLInputElement;
-    search.value = opts.query;
-    search.oninput = () => opts.onSearch(search.value);
+    const search = searchBar(opts.query, opts.onSearch);
     const exp = el("button", {}, "Export CSV");
-    const rows = snap.students.filter((s) => !q || s.username.includes(q));
     exp.onclick = () => {
+      const rows = snap.students.filter((s) => rowMatchesQuery([s.username], liveQuery(opts.query)));
       downloadCsv(
         "roster.csv",
         toCsv(
@@ -156,7 +188,8 @@ export function renderShell(opts: {
     main.append(
       table(
         ["Username", "Row", "Cycles"],
-        rows.map((s) => [s.username, String(s.rowNumber), Object.values(s.cycles).join("/")]),
+        snap.students.map((s) => [s.username, String(s.rowNumber), Object.values(s.cycles).join("/")]),
+        true,
       ),
     );
   } else if (opts.screen === "releases") {
@@ -193,12 +226,10 @@ export function renderShell(opts: {
   } else if (opts.screen === "results") {
     main.append(el("h1", {}, "Results"));
     const bar = el("div", { class: "toolbar" });
-    const search = el("input", { type: "search", placeholder: "Search username" }) as HTMLInputElement;
-    search.value = opts.query;
-    search.oninput = () => opts.onSearch(search.value);
-    const rows = snap.results.filter((r) => !q || r.username.includes(q));
+    const search = searchBar(opts.query, opts.onSearch);
     const exp = el("button", {}, "Export CSV");
     exp.onclick = () => {
+      const rows = snap.results.filter((r) => rowMatchesQuery([r.username, r.testId || r.rawTestId], liveQuery(opts.query)));
       downloadCsv(
         "results.csv",
         toCsv(
@@ -232,7 +263,7 @@ export function renderShell(opts: {
     main.append(
       table(
         ["Student", "Assessment", "Score", "Complete", "When", "Row"],
-        rows.map((r) => [
+        snap.results.map((r) => [
           r.username,
           r.testId ? TEST_TITLES[r.testId] : r.rawTestId,
           r.scoreNum != null && r.scoreDen != null ? `${r.scoreNum}/${r.scoreDen}` : "—",
@@ -240,6 +271,7 @@ export function renderShell(opts: {
           r.timestamp,
           String(r.rowNumber),
         ]),
+        true,
       ),
     );
   } else if (opts.screen === "missing") {
@@ -262,4 +294,5 @@ export function renderShell(opts: {
   }
   app.append(main);
   root.append(app);
+  applyFilter(opts.query);
 }

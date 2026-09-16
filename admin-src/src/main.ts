@@ -33,7 +33,6 @@ function paint(): void {
     },
     onSearch: (q) => {
       query = q;
-      paint();
     },
     onRefresh: () => {
       void refreshLive();
