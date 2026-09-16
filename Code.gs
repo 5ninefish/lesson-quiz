@@ -63,6 +63,9 @@ function doPost(e) {
   try {
     const body = JSON.parse(e.postData.contents);
     const action = body.action;
+    if (action && String(action).indexOf('dash_') === 0) {
+      return dashPost_(action, body);
+    }
     const username = normalizeUsername_(body.username);
     const password = body.password;
     const testId = resolveTestId_(body.testId || body.lesson);
@@ -86,49 +89,70 @@ function doPost(e) {
 }
 
 function doGet(e) {
-  const view = e && e.parameter && e.parameter.view;
-  if (view === 'admin') return serveDashboard_();
+  if (e && e.parameter && e.parameter.config === '1') {
+    return respond({
+      ok: true,
+      googleClientId: PropertiesService.getScriptProperties().getProperty('GOOGLE_OAUTH_CLIENT_ID') || '',
+    });
+  }
   return respond({ ok: true, service: 'lesson-quiz' });
 }
 
-function serveDashboard_() {
-  if (!isSpreadsheetEditor_()) {
-    return HtmlService.createHtmlOutput(
-      '<!DOCTYPE html><html><body style="font:16px/1.4 Source Sans 3,Helvetica,sans-serif;padding:32px;max-width:40rem">' +
-      '<h1 style="font-size:22px">Not allowed</h1>' +
-      '<p>Quiz Admin is only for people who can <strong>edit</strong> this spreadsheet. Sign in with that Google account, then open it from <strong>Quiz Admin → Open dashboard</strong>.</p>' +
-      '<p>The student quiz URL must stay “Anyone” (no Google login). The dashboard needs a separate Web App deployment: Execute as Me, Who has access = Anyone with a Google account.</p>' +
-      '</body></html>'
-    ).setTitle('Quiz Admin — not allowed');
-  }
-  return HtmlService.createHtmlOutputFromFile('Dashboard')
-    .setTitle('Quiz Admin')
-    .addMetaTag('viewport', 'width=device-width, initial-scale=1');
-}
-
-function isSpreadsheetEditor_() {
-  const email = String(Session.getActiveUser().getEmail() || '').trim().toLowerCase();
-  if (!email) return false;
+function isSpreadsheetEditorEmail_(email) {
+  const want = String(email || '').trim().toLowerCase();
+  if (!want) return false;
   const ss = ss_();
   try {
     const owner = ss.getOwner();
-    if (owner && String(owner.getEmail() || '').toLowerCase() === email) return true;
+    if (owner && String(owner.getEmail() || '').toLowerCase() === want) return true;
   } catch (err) {}
   try {
     const editors = ss.getEditors();
     for (let i = 0; i < editors.length; i++) {
-      if (String(editors[i].getEmail() || '').toLowerCase() === email) return true;
+      if (String(editors[i].getEmail() || '').toLowerCase() === want) return true;
     }
   } catch (err2) {}
   return false;
 }
 
-function adminDashboardUrl_() {
-  const stored = PropertiesService.getScriptProperties().getProperty('ADMIN_WEBAPP_URL');
-  const base = String(stored || ScriptApp.getService().getUrl() || '').replace(/\/$/, '');
-  if (!base) return '';
-  return base + (base.indexOf('?') >= 0 ? '&' : '?') + 'view=admin';
+function verifyInstructorToken_(idToken) {
+  const clientId = PropertiesService.getScriptProperties().getProperty('GOOGLE_OAUTH_CLIENT_ID');
+  if (!clientId || !idToken) return '';
+  try {
+    const resp = UrlFetchApp.fetch(
+      'https://oauth2.googleapis.com/tokeninfo?id_token=' + encodeURIComponent(idToken),
+      { muteHttpExceptions: true }
+    );
+    if (resp.getResponseCode() !== 200) return '';
+    const data = JSON.parse(resp.getContentText());
+    if (String(data.aud || '') !== clientId) return '';
+    const verified = data.email_verified === true || String(data.email_verified) === 'true';
+    if (!verified) return '';
+    const email = String(data.email || '').trim().toLowerCase();
+    if (!isSpreadsheetEditorEmail_(email)) return '';
+    return email;
+  } catch (err) {
+    return '';
+  }
 }
+
+function dashPost_(action, body) {
+  const email = verifyInstructorToken_(body && body.idToken);
+  if (!email) return respond({ ok: false, error: 'not_allowed' });
+  if (action === 'dash_state') return respond(dashState());
+  if (action === 'dash_open') return respond(dashOpenNow(body.testId));
+  if (action === 'dash_close') return respond(dashCloseNow(body.testId));
+  if (action === 'dash_save_window') {
+    return respond(dashSaveWindow(body.testId, body.openAt, body.closeAt, body.maxTries, body.timeLimitMin));
+  }
+  if (action === 'dash_sync') return respond(dashSyncRoster());
+  if (action === 'dash_hash') return respond(dashHashPasswords());
+  if (action === 'dash_tabs') return respond(dashCreateTabs());
+  if (action === 'dash_reset') return respond(dashReset(body.username, body.lesson));
+  return respond({ ok: false, error: 'unknown_action' });
+}
+
+const ADMIN_PAGES_URL = 'https://5ninefish.github.io/lesson-quiz/admin.html';
 
 function ss_() {
   return SpreadsheetApp.getActiveSpreadsheet();
@@ -957,7 +981,7 @@ function onOpen() {
   SpreadsheetApp.getUi()
     .createMenu('Quiz Admin')
     .addItem('Open dashboard', 'showDashboard')
-    .addItem('Set dashboard URL…', 'setDashboardUrl')
+    .addItem('Set Google client ID…', 'setGoogleClientId')
     .addSeparator()
     .addItem('Reset student tries…', 'showResetDialog')
     .addItem('View attempt summary', 'showSummary')
@@ -978,43 +1002,33 @@ function onOpen() {
 }
 
 function showDashboard() {
-  const url = adminDashboardUrl_();
-  if (!url) {
-    SpreadsheetApp.getUi().alert(
-      'No Web App URL yet. Deploy → New deployment → Web app.\n\n' +
-      'Instructor dashboard (separate from the student quiz):\n' +
-      'Execute as: Me\n' +
-      'Who has access: Anyone with a Google account\n\n' +
-      'Copy that /exec URL, then Quiz Admin → Set dashboard URL.'
-    );
-    return;
-  }
+  const url = ADMIN_PAGES_URL;
   const html = HtmlService.createHtmlOutput(
     '<!DOCTYPE html><html><body style="font:16px/1.4 Helvetica,sans-serif;padding:20px">' +
-    '<p>Full-tab dashboard (not a sheet popup).</p>' +
-    '<p><a href="' + url.replace(/"/g, '') + '" target="_blank" rel="noopener" ' +
+    '<p><a href="' + url + '" target="_blank" rel="noopener" ' +
     'style="display:inline-block;padding:12px 16px;background:#1f4f3a;color:#fff;text-decoration:none;font-weight:700">Open Quiz Admin</a></p>' +
+    '<p style="color:#5c675f;font-size:13px">Full browser tab. Sign in with a Google account that can edit this sheet.</p>' +
     '<script>window.open(' + JSON.stringify(url) + ', "_blank");</script>' +
     '</body></html>'
-  ).setWidth(420).setHeight(160);
+  ).setWidth(420).setHeight(140);
   SpreadsheetApp.getUi().showModelessDialog(html, 'Quiz Admin');
 }
 
-function setDashboardUrl() {
+function setGoogleClientId() {
   const ui = SpreadsheetApp.getUi();
   const r = ui.prompt(
-    'Instructor dashboard URL',
-    'Paste the Web App /exec URL from the deployment whose access is “Anyone with a Google account”. Do not paste the student quiz URL if that one is “Anyone”.',
+    'Google OAuth client ID',
+    'Web application client ID from Google Cloud (ends in .apps.googleusercontent.com). Authorized JavaScript origin: https://5ninefish.github.io',
     ui.ButtonSet.OK_CANCEL
   );
   if (r.getSelectedButton() !== ui.Button.OK) return;
-  const url = String(r.getResponseText() || '').trim().replace(/\/$/, '');
-  if (url.indexOf('https://script.google.com/') !== 0) {
-    ui.alert('That does not look like a script.google.com /exec URL.');
+  const id = String(r.getResponseText() || '').trim();
+  if (id.indexOf('.apps.googleusercontent.com') < 0) {
+    ui.alert('That does not look like an OAuth client ID.');
     return;
   }
-  PropertiesService.getScriptProperties().setProperty('ADMIN_WEBAPP_URL', url);
-  ui.alert('Saved. Quiz Admin → Open dashboard will use a full browser tab.\n\n' + url + '?view=admin');
+  PropertiesService.getScriptProperties().setProperty('GOOGLE_OAUTH_CLIENT_ID', id);
+  ui.alert('Saved. Instructors sign in on ' + ADMIN_PAGES_URL);
 }
 
 function jsonSafe_(obj) {

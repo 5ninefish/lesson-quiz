@@ -78,7 +78,8 @@ Push to a GitHub repo and enable **GitHub Pages** (Settings → Pages → main b
 | File | Purpose |
 |---|---|
 | `Code.gs` | Apps Script backend — auth, question delivery, score submission, Quiz Admin |
-| `Dashboard.html` | Instructor dashboard (full browser tab). Paste as Apps Script file named `Dashboard`. Not on GitHub Pages. Gated to spreadsheet editors. |
+| `Dashboard.html` | Legacy Apps Script HTML copy. Prefer `admin.html`. |
+| `admin.html` | Instructor dashboard on GitHub Pages. Google sign-in; editors only. Sheet stays the database. |
 | `index.html` | Single-page quiz frontend (vanilla JS, no dependencies) |
 | `questions-data.csv` | Sample questions (import into the Questions tab) |
 | `SETUP.md` | Extended setup walkthrough |

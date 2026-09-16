@@ -21,7 +21,7 @@ Total time: ~30 minutes.
 
 Reopen the spreadsheet after Save so `onOpen` rebuilds the menu.
 
-The instructor dashboard is a **full browser tab**, not a sheet popup. That requires a Web App deployment (see Step 5b). Do not put the dashboard URL in public `index.html`.
+Instructor UI is **GitHub Pages** (`admin.html`), not an Apps Script popup. After the one-time Google client ID, dashboard layout changes are `git push` only. You still Deploy a new Web App version when `Code.gs` (the data API) changes.
 
 ### Step 3: Run the one-time setup
 
@@ -67,23 +67,20 @@ The Questions tab needs one row per question. Column layout:
 5. **Copy the web app URL** — it looks like:
    `https://script.google.com/macros/s/AKfy.../exec`
 
-Every time you change `Code.gs`, you must **Deploy → Manage deployments → Edit → New version → Deploy** on **each** Web App that should pick up the change (student quiz and instructor dashboard).
+Every time you change `Code.gs`, **Deploy → Manage deployments → Edit → New version → Deploy** on the existing student Web App (Anyone). Do not add a second deployment.
 
-### Step 5b: Instructor dashboard (full tab)
+### Step 5b: Instructor dashboard (once)
 
-Keep the student deployment as **Anyone** (no Google login). Do not change it.
+Keep the student deployment as **Anyone**. Do not change it.
 
-Then **Deploy → New deployment → Web app** (a second one):
+1. Google Cloud Console → APIs & Services → Credentials → Create **OAuth client ID** → Application type **Web application**
+2. Authorized JavaScript origins: `https://5ninefish.github.io`
+3. Copy the client ID (`….apps.googleusercontent.com`)
+4. Sheet → **Quiz Admin → Set Google client ID…** → paste
+5. Push `admin.html` to GitHub Pages (this repo)
+6. Open https://5ninefish.github.io/lesson-quiz/admin.html and sign in with an account that can **edit** the workbook
 
-- Description: Quiz Admin
-- Execute as: Me
-- Who has access: **Anyone with a Google account**
-
-Copy that `/exec` URL. In the sheet: **Quiz Admin → Set dashboard URL…** and paste it.
-
-**Quiz Admin → Open dashboard** opens a full tab (`?view=admin`). Only Google accounts that can **edit** this spreadsheet get in. Anonymous hits on the student URL with `?view=admin` are refused.
-
-Do not run `setup()` on the live Hōkūlani book during test week.
+Do not put the roster sheet ID in `admin.html`. Do not run `setup()` on the live Hōkūlani book during test week.
 
 ---
 
@@ -156,9 +153,9 @@ Use **Quiz Admin → Reset student tries**. That increments `CycleL*` and zeroes
 Do not just zero the L1–L6 cell; eligibility is counted from Results for the current cycle.
 
 ### Instructor dashboard
-**Quiz Admin → Open dashboard** opens a **full browser tab**. Now / Missing / Scores / Releases / Roster. Human titles (Computer Science — Science Lesson 3), not only SCI-CS.
+https://5ninefish.github.io/lesson-quiz/admin.html — full browser tab. Sign in with Google (must be able to edit the workbook). UI ships with `git push`. Data still lives in the sheet via the existing Web App.
 
-Paste `Dashboard.html` as an Apps Script HTML file named `Dashboard`. Deploy the instructor Web App (Step 5b) and Set dashboard URL once. Editors of this workbook only — not a public admin page.
+Quiz Admin → Open dashboard is a shortcut to that URL.
 
 ### Open / close a test
 Dashboard → Releases, or Quiz Admin: Open now, Close now, Set window, Set attempts, Set time limit.
