@@ -17,6 +17,9 @@ Total time: ~30 minutes.
 1. Delete everything in the editor (Ctrl+A, Delete)
 2. Paste the entire contents of `Code.gs` from this repo
 3. Click **Save** (Ctrl+S)
+4. Add the instructor dashboard file: **File → New → HTML file**, name it exactly `Dashboard` (Apps Script adds `.html`), paste `Dashboard.html` from this repo, Save.
+
+The Quiz Admin **Open dashboard** window is bound HtmlService. It uses the **saved** project, not the Web App deployment. Reopen the spreadsheet after Save so `onOpen` rebuilds the menu. You do **not** need Deploy → New version unless `Code.gs` student API (`doGet` / `doPost`) changed.
 
 ### Step 3: Run the one-time setup
 
@@ -134,8 +137,13 @@ Use **Quiz Admin → Reset student tries**. That increments `CycleL*` and zeroes
 
 Do not just zero the L1–L6 cell; eligibility is counted from Results for the current cycle.
 
+### Instructor dashboard
+**Quiz Admin → Open dashboard** opens a modeless window over this workbook (no public URL). Now / Missing / Scores / Releases / Roster. Human titles (Computer Science — Science Lesson 3), not only SCI-CS.
+
+Paste `Dashboard.html` as an Apps Script HTML file named `Dashboard`. Reopen the sheet after Save.
+
 ### Open / close a test
-Quiz Admin: Open now, Close now, Set window, Set attempts, Set time limit.
+Dashboard → Releases, or Quiz Admin: Open now, Close now, Set window, Set attempts, Set time limit.
 Manual OPEN overrides CloseAt. Empty OpenAt + AUTO = hidden.
 
 ### Scores and reports

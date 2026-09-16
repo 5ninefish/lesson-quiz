@@ -1,0 +1,521 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Quiz Admin</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Source+Sans+3:wght@400;600;700&family=Source+Serif+4:opsz,wght@8..60,600&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --paper: #f7f5f1;
+      --ink: #1f2a24;
+      --muted: #5c675f;
+      --line: #d8d3c8;
+      --rail: #eef1ec;
+      --open: #1f7a4d;
+      --open-bg: #e5f3ea;
+      --closed: #9b2c2c;
+      --closed-bg: #f6e4e4;
+      --auto: #3d5a73;
+      --unset: #7a7468;
+      --expired: #9a6700;
+      --expired-bg: #f8f1d8;
+      --accent: #1f4f3a;
+      --btn: #1f4f3a;
+      --btn-ink: #fff;
+      --banner: #f8f1d8;
+    }
+    * { box-sizing: border-box; }
+    html, body { margin: 0; height: 100%; }
+    body {
+      font: 16px/1.4 "Source Sans 3", "Helvetica Neue", Helvetica, sans-serif;
+      color: var(--ink);
+      background: var(--paper);
+    }
+    .app {
+      height: 100%;
+      display: grid;
+      grid-template-rows: auto auto auto 1fr auto;
+      grid-template-columns: 200px 1fr;
+    }
+    header {
+      grid-column: 1 / -1;
+      display: flex;
+      align-items: baseline;
+      gap: 16px;
+      padding: 12px 20px 8px;
+      border-bottom: 1px solid var(--line);
+    }
+    .brand {
+      font-family: "Source Serif 4", Georgia, serif;
+      font-size: 18px;
+      font-weight: 600;
+    }
+    .book { color: var(--muted); font-size: 14px; }
+    .spacer { flex: 1; }
+    .stamp { font-size: 13px; color: var(--muted); }
+    button, .btn, select {
+      font: 600 14px/1 "Source Sans 3", "Helvetica Neue", Helvetica, sans-serif;
+      background: #fff;
+      border: 1px solid var(--line);
+      color: var(--ink);
+      padding: 10px 14px;
+      min-height: 44px;
+      cursor: pointer;
+    }
+    button.primary, .btn.primary { background: var(--btn); color: var(--btn-ink); border-color: var(--btn); }
+    button.danger { color: var(--closed); border-color: #e2b6b6; background: #fff; }
+    button:disabled { opacity: .55; cursor: wait; }
+    .banner {
+      grid-column: 1 / -1;
+      display: none;
+      padding: 10px 20px;
+      background: var(--banner);
+      color: var(--expired);
+      font-weight: 600;
+    }
+    .banner.show { display: block; }
+    .banner.ok { background: var(--open-bg); color: var(--open); }
+    .switcher {
+      grid-column: 1 / -1;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      padding: 10px 20px;
+      border-bottom: 1px solid var(--line);
+      align-items: center;
+    }
+    .chip {
+      border: 1px solid var(--line);
+      background: #fff;
+      padding: 6px 10px;
+      font-size: 14px;
+      min-height: 36px;
+      font-weight: 400;
+    }
+    .chip.on { border-color: var(--accent); background: #e7eee9; font-weight: 600; }
+    .pill {
+      display: inline-block;
+      font-size: 11px;
+      letter-spacing: .04em;
+      font-weight: 700;
+      padding: 2px 6px;
+      margin-left: 4px;
+      background: var(--open-bg);
+      color: var(--open);
+    }
+    .pill.CLOSED { background: var(--closed-bg); color: var(--closed); }
+    .pill.AUTO { background: #e4eaf0; color: var(--auto); }
+    .pill.UNSET, .pill.MISSING { background: #eeeae2; color: var(--unset); }
+    .page-select {
+      display: none;
+      grid-column: 1 / -1;
+      padding: 8px 20px 0;
+    }
+    .page-select label { font-size: 14px; font-weight: 600; margin-right: 8px; }
+    nav {
+      background: var(--rail);
+      border-right: 1px solid var(--line);
+      padding: 12px 0;
+    }
+    nav button {
+      display: block;
+      width: 100%;
+      text-align: left;
+      border: 0;
+      background: transparent;
+      border-radius: 0;
+      min-height: 44px;
+    }
+    nav button[aria-current="page"] { font-weight: 700; background: #fff; }
+    main { padding: 18px 22px; overflow: auto; }
+    h1 { font-size: 22px; font-weight: 700; margin: 0 0 4px; }
+    .meta { color: var(--muted); margin: 0 0 16px; font-size: 14px; }
+    table { width: 100%; border-collapse: collapse; font-variant-numeric: tabular-nums; }
+    th {
+      text-align: left;
+      font-size: 12px;
+      letter-spacing: .04em;
+      text-transform: uppercase;
+      color: var(--muted);
+      font-weight: 600;
+      padding: 8px 8px 8px 0;
+      border-bottom: 1px solid var(--line);
+    }
+    td { padding: 10px 8px 10px 0; border-bottom: 1px solid var(--line); vertical-align: top; }
+    tr.expired td:last-child { color: var(--expired); font-weight: 600; background: var(--expired-bg); }
+    .skel td {
+      color: transparent;
+      background: linear-gradient(90deg, #efece6, #f7f5f1, #efece6);
+      background-size: 200% 100%;
+    }
+    .empty p { color: var(--muted); margin: 0 0 16px; max-width: 46ch; }
+    .status {
+      padding: 10px 12px;
+      margin-bottom: 16px;
+      font-weight: 600;
+      background: #eeeae2;
+    }
+    .status.OPEN { background: var(--open-bg); color: var(--open); }
+    .status.CLOSED { background: var(--closed-bg); color: var(--closed); }
+    .actions { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 20px; }
+    form.grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px 20px; max-width: 640px; }
+    label.field { display: flex; flex-direction: column; gap: 4px; font-weight: 600; font-size: 14px; }
+    label.field span { font-weight: 400; color: var(--muted); font-size: 13px; }
+    input {
+      font: 16px "Source Sans 3", "Helvetica Neue", Helvetica, sans-serif;
+      padding: 10px;
+      min-height: 44px;
+      border: 1px solid var(--line);
+      background: #fff;
+      color: var(--ink);
+    }
+    .legend { grid-column: 1 / -1; font-size: 13px; color: var(--muted); margin: 0; }
+    .roster-counts { margin: 0 0 16px; color: var(--muted); }
+    footer {
+      grid-column: 1 / -1;
+      border-top: 1px solid var(--line);
+      padding: 8px 20px;
+      font-size: 13px;
+      color: var(--muted);
+      display: flex;
+      justify-content: space-between;
+      gap: 16px;
+    }
+    .hidden { display: none !important; }
+    @media (max-width: 900px) {
+      .app { grid-template-columns: 1fr; grid-template-rows: auto auto auto auto 1fr auto; }
+      nav { display: none; }
+      .page-select { display: block; }
+    }
+  </style>
+</head>
+<body>
+  <div class="app" role="dialog" aria-label="Quiz Admin">
+    <header>
+      <div class="brand">Quiz Admin</div>
+      <div class="book" id="workbook">This workbook</div>
+      <div class="spacer"></div>
+      <span class="stamp" id="stamp">Loading…</span>
+      <button type="button" id="btnRefresh">Refresh</button>
+    </header>
+    <div class="banner" id="banner" role="status"></div>
+    <div class="switcher" id="switcher" role="tablist" aria-label="Tests"></div>
+    <div class="page-select">
+      <label for="pageSelect">Page</label>
+      <select id="pageSelect">
+        <option value="now">Now</option>
+        <option value="missing">Missing</option>
+        <option value="scores">Scores</option>
+        <option value="releases">Releases</option>
+        <option value="roster">Roster</option>
+      </select>
+    </div>
+    <nav id="nav" aria-label="Dashboard">
+      <button type="button" data-page="now" aria-current="page">Now</button>
+      <button type="button" data-page="missing">Missing</button>
+      <button type="button" data-page="scores">Scores</button>
+      <button type="button" data-page="releases">Releases</button>
+      <button type="button" data-page="roster">Roster</button>
+    </nav>
+    <main id="main"></main>
+    <footer>
+      <span>Opened from the bound sheet. No public admin URL.</span>
+      <span id="footHint"></span>
+    </footer>
+  </div>
+  <script>
+    var state = null;
+    var page = 'now';
+    var selectedTest = '';
+    var busy = false;
+    var lastGood = null;
+    var timer = null;
+
+    function $(id) { return document.getElementById(id); }
+
+    function banner(msg, ok) {
+      var el = $('banner');
+      if (!msg) { el.className = 'banner'; el.textContent = ''; return; }
+      el.className = 'banner show' + (ok ? ' ok' : '');
+      el.textContent = msg;
+    }
+
+    function run(name, args, onOk) {
+      if (busy) return;
+      busy = true;
+      google.script.run
+        .withSuccessHandler(function (data) {
+          busy = false;
+          if (!data || data.ok === false) {
+            var err = (data && data.error) || 'Could not update.';
+            if (err === 'busy_try_again') banner('Sheet is busy — try again.');
+            else banner(err);
+            if (lastGood) render(lastGood);
+            return;
+          }
+          lastGood = data;
+          state = data;
+          if (data.message) banner(data.message, true);
+          else banner('');
+          if (onOk) onOk(data);
+          render(data);
+        })
+        .withFailureHandler(function (err) {
+          busy = false;
+          var msg = String(err || '');
+          if (/lock|busy/i.test(msg)) banner('Sheet is busy — try again.');
+          else banner(msg || 'Could not reach the sheet.');
+          if (lastGood) render(lastGood);
+        })[name].apply(null, args || []);
+    }
+
+    function refresh() { run('dashState', []); }
+
+    function tests() { return (state && state.tests) || []; }
+    function currentTest() {
+      var list = tests();
+      if (selectedTest) {
+        for (var i = 0; i < list.length; i++) if (list[i].id === selectedTest) return list[i];
+      }
+      return list[0] || null;
+    }
+
+    function renderChips() {
+      var html = '<button type="button" class="chip' + (selectedTest === '' ? ' on' : '') + '" data-test="">All tests</button>';
+      tests().forEach(function (t) {
+        var on = selectedTest === t.id ? ' on' : '';
+        html += '<button type="button" class="chip' + on + '" data-test="' + t.id + '">' +
+          escapeHtml(t.short) + '<span class="pill ' + t.manual + '">' + t.manual + '</span></button>';
+      });
+      $('switcher').innerHTML = html;
+    }
+
+    function renderNav() {
+      var buttons = document.querySelectorAll('#nav button');
+      for (var i = 0; i < buttons.length; i++) {
+        var b = buttons[i];
+        if (b.getAttribute('data-page') === page) b.setAttribute('aria-current', 'page');
+        else b.removeAttribute('aria-current');
+      }
+      $('pageSelect').value = page;
+    }
+
+    function skeleton(cols) {
+      var row = '<tr class="skel">' + cols.map(function () { return '<td>loading</td>'; }).join('') + '</tr>';
+      return row + row + row + row;
+    }
+
+    function renderNow() {
+      var rows = ((state && state.now) || []).filter(function (r) {
+        return !selectedTest || r.testId === selectedTest;
+      });
+      var t = currentTest();
+      var title = selectedTest && t ? t.title : 'All tests';
+      var meta = selectedTest && t
+        ? (t.id + ' · ' + t.manual + ' · ' + t.maxTries + ' tries · ' + (t.timeLimitMin ? t.timeLimitMin + ':00 timer' : 'no timer') + ' · ' + rows.length + ' in progress')
+        : (rows.length + ' in progress');
+      $('footHint').textContent = 'Expired sits stay listed until a student starts or submits again.';
+      if (!state) {
+        return '<h1>' + escapeHtml(title) + '</h1><p class="meta">' + escapeHtml(meta) + '</p>' +
+          '<table><thead><tr><th>Email</th><th>Test</th><th>Started</th><th>Time left</th></tr></thead><tbody>' +
+          skeleton(['e','t','s','l']) + '</tbody></table>';
+      }
+      if (!rows.length) {
+        return '<div class="empty"><h1>No one is in a test</h1>' +
+          '<p>Open a window when you are ready for students to sit. This list only shows live attempts, not missing roster rows.</p>' +
+          '<button type="button" class="primary" id="jumpReleases">Open a test window</button></div>';
+      }
+      var extra = state.nowSkipped ? '<p class="meta">' + state.nowSkipped + ' rows skipped</p>' : '';
+      var body = rows.map(function (r) {
+        return '<tr class="' + (r.expired ? 'expired' : '') + '"><td>' + escapeHtml(r.user) + '</td><td>' +
+          escapeHtml(r.test) + '</td><td>' + escapeHtml(r.started) + '</td><td>' + escapeHtml(r.left) + '</td></tr>';
+      }).join('');
+      return '<h1>' + escapeHtml(title) + '</h1><p class="meta">' + escapeHtml(meta) + '</p>' + extra +
+        '<table><thead><tr><th>Email</th><th>Test</th><th>Started</th><th>Time left</th></tr></thead><tbody>' +
+        body + '</tbody></table>';
+    }
+
+    function renderMissing() {
+      $('footHint').textContent = 'Complete means every question answered. Best score is not shown here.';
+      var rows = ((state && state.missing) || []).filter(function (r) {
+        if (!selectedTest) return r.missing.length;
+        return r.missingIds && r.missingIds.indexOf(selectedTest) >= 0;
+      });
+      if (!state) {
+        return '<h1>Missing tests</h1><table><thead><tr><th>Email</th><th>Missing</th><th>Has complete</th></tr></thead><tbody>' +
+          skeleton(['e','m','h']) + '</tbody></table>';
+      }
+      if (!rows.length) {
+        return '<div class="empty"><h1>Everyone on the roster has a complete sit for the visible tests.</h1></div>';
+      }
+      var body = rows.map(function (r) {
+        return '<tr><td>' + escapeHtml(r.user) + '</td><td>' + escapeHtml(r.missing.join(', ') || '—') +
+          '</td><td>' + escapeHtml(r.has.join(', ') || 'none') + '</td></tr>';
+      }).join('');
+      return '<h1>Missing tests</h1><table><thead><tr><th>Email</th><th>Missing</th><th>Has complete</th></tr></thead><tbody>' +
+        body + '</tbody></table>';
+    }
+
+    function renderScores() {
+      $('footHint').textContent = 'Best score among complete sits only. Students never see this.';
+      var rows = ((state && state.scores) || []).filter(function (r) {
+        return !selectedTest || r.testId === selectedTest;
+      });
+      if (!state) {
+        return '<h1>Best scores</h1><table><thead><tr><th>Email</th><th>Test</th><th>Best score</th><th>Out of</th><th>Complete sits</th></tr></thead><tbody>' +
+          skeleton(['e','t','s','o','n']) + '</tbody></table>';
+      }
+      if (!rows.length) {
+        return '<div class="empty"><h1>No complete sits yet.</h1></div>';
+      }
+      var body = rows.map(function (r) {
+        return '<tr><td>' + escapeHtml(r.user) + '</td><td>' + escapeHtml(r.test) + '</td><td>' +
+          r.score + '</td><td>' + r.total + '</td><td>' + r.sits + '</td></tr>';
+      }).join('');
+      return '<h1>Best scores</h1><table><thead><tr><th>Email</th><th>Test</th><th>Best score</th><th>Out of</th><th>Complete sits</th></tr></thead><tbody>' +
+        body + '</tbody></table>';
+    }
+
+    function renderReleases() {
+      if (selectedTest === '' && tests().length) selectedTest = tests()[0].id;
+      var t = currentTest();
+      $('footHint').textContent = t
+        ? 'Close now asks: students already in it keep their remaining time.'
+        : '';
+      if (!t) return '<p>No tests on this book.</p>';
+      return '<h1>' + escapeHtml(t.title) + '</h1><p class="meta">' + escapeHtml(t.id) + '</p>' +
+        '<div class="status ' + t.manual + '">' + escapeHtml(t.meaning) + '</div>' +
+        '<div class="actions">' +
+        '<button type="button" id="btnOpen">Open now</button>' +
+        '<button type="button" class="danger" id="btnClose">Close now</button>' +
+        '<button type="button" class="primary" id="btnSave">Save window</button>' +
+        '</div>' +
+        '<form class="grid" id="relForm">' +
+        '<label class="field">Open at<input type="datetime-local" id="openAt" value="' + escapeAttr(t.openAtLocal) + '"></label>' +
+        '<label class="field">Close at<input type="datetime-local" id="closeAt" value="' + escapeAttr(t.closeAtLocal) + '"></label>' +
+        '<label class="field">Max tries<input type="number" id="maxTries" min="1" value="' + t.maxTries + '"></label>' +
+        '<label class="field">Time limit (minutes)<input type="number" id="timeMin" min="0" value="' + t.timeLimitMin + '">' +
+        '<span>0 means no timer. Stored as seconds on the sheet.</span></label>' +
+        '<p class="legend">UNSET = not gated yet, tests stay open. AUTO with empty Open at = hidden. OPEN/CLOSED = manual override. Saving a window sets AUTO.</p>' +
+        '</form>';
+    }
+
+    function renderRoster() {
+      var r = (state && state.roster) || { students: 0, importRows: 0, emails: [] };
+      $('footHint').textContent = 'Students type the roster password, never the hash.';
+      var opts = (r.emails || []).map(function (e) {
+        return '<option value="' + escapeAttr(e) + '">' + escapeHtml(e) + '</option>';
+      }).join('');
+      var lessonOpts = tests().map(function (t) {
+        return '<option value="' + t.lesson + '">' + escapeHtml(t.title) + '</option>';
+      }).join('') + '<option value="ALL">ALL lessons</option>';
+      return '<h1>Roster</h1>' +
+        '<p class="roster-counts">' + r.students + ' students on the sheet. ' + r.importRows + ' RosterImport rows with email + password.</p>' +
+        '<div class="actions">' +
+        '<button type="button" class="primary" id="btnSync">Sync roster from RosterImport</button>' +
+        '<button type="button" id="btnHash">Hash new passwords</button>' +
+        '<button type="button" id="btnTabs">Create missing tabs</button>' +
+        '</div>' +
+        '<h1 style="font-size:18px;margin-top:24px">Reset tries</h1>' +
+        '<p class="meta">Bumps the cycle. Does not delete Results.</p>' +
+        '<form class="grid">' +
+        '<label class="field">Student<select id="resetUser">' + opts + '</select></label>' +
+        '<label class="field">Lesson<select id="resetLesson">' + lessonOpts + '</select></label>' +
+        '</form>' +
+        '<div class="actions" style="margin-top:12px"><button type="button" class="danger" id="btnReset">Reset tries…</button></div>';
+    }
+
+    function render(data) {
+      if (data) {
+        $('workbook').textContent = data.workbook || 'This workbook';
+        $('stamp').textContent = data.updatedAt ? ('Updated ' + data.updatedAt) : '';
+      }
+      renderChips();
+      renderNav();
+      var html = '';
+      if (page === 'now') html = renderNow();
+      else if (page === 'missing') html = renderMissing();
+      else if (page === 'scores') html = renderScores();
+      else if (page === 'releases') html = renderReleases();
+      else html = renderRoster();
+      $('main').innerHTML = html;
+    }
+
+    function escapeHtml(s) {
+      return String(s == null ? '' : s)
+        .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+    }
+    function escapeAttr(s) {
+      return escapeHtml(s).replace(/"/g, '&quot;');
+    }
+
+    function setPage(next) {
+      page = next;
+      if (page !== 'now' && timer) { /* keep timer; tick no-ops off Now */ }
+      render(state);
+    }
+
+    document.getElementById('nav').addEventListener('click', function (e) {
+      var b = e.target.closest('button[data-page]');
+      if (b) setPage(b.getAttribute('data-page'));
+    });
+    $('pageSelect').addEventListener('change', function () { setPage(this.value); });
+    $('switcher').addEventListener('click', function (e) {
+      var b = e.target.closest('button[data-test]');
+      if (!b) return;
+      selectedTest = b.getAttribute('data-test') || '';
+      render(state);
+    });
+    $('btnRefresh').addEventListener('click', refresh);
+    $('main').addEventListener('click', function (e) {
+      var id = e.target && e.target.id;
+      if (id === 'jumpReleases') { setPage('releases'); return; }
+      if (id === 'btnOpen') {
+        var t = currentTest();
+        if (t) run('dashOpenNow', [t.id]);
+      }
+      if (id === 'btnClose') {
+        var t2 = currentTest();
+        if (!t2) return;
+        if (!confirm('Close ' + t2.title + '? Students already in it keep their remaining time.')) return;
+        run('dashCloseNow', [t2.id]);
+      }
+      if (id === 'btnSave') {
+        var t3 = currentTest();
+        if (!t3) return;
+        e.target.disabled = true;
+        e.target.textContent = 'Saving…';
+        run('dashSaveWindow', [
+          t3.id,
+          $('openAt').value,
+          $('closeAt').value,
+          $('maxTries').value,
+          $('timeMin').value
+        ]);
+      }
+      if (id === 'btnSync') run('dashSyncRoster', []);
+      if (id === 'btnHash') run('dashHashPasswords', []);
+      if (id === 'btnTabs') run('dashCreateTabs', []);
+      if (id === 'btnReset') {
+        var user = $('resetUser') && $('resetUser').value;
+        var lesson = $('resetLesson') && $('resetLesson').value;
+        if (!user) return;
+        var lessonLabel = lesson === 'ALL' ? 'ALL lessons' : lesson;
+        if (!confirm('Bump the cycle for ' + user + ' / ' + lessonLabel + '? Does not delete Results.')) return;
+        run('dashReset', [user, lesson]);
+      }
+    });
+
+    function tick() {
+      if (page !== 'now') return;
+      if (document.hidden) return;
+      refresh();
+    }
+    timer = setInterval(tick, 15000);
+    render(null);
+    refresh();
+  </script>
+</body>
+</html>

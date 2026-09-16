@@ -77,7 +77,8 @@ Push to a GitHub repo and enable **GitHub Pages** (Settings → Pages → main b
 
 | File | Purpose |
 |---|---|
-| `Code.gs` | Apps Script backend — auth, question delivery, score submission |
+| `Code.gs` | Apps Script backend — auth, question delivery, score submission, Quiz Admin |
+| `Dashboard.html` | Bound instructor dashboard (HtmlService). Paste as Apps Script file named `Dashboard`. Not on GitHub Pages. |
 | `index.html` | Single-page quiz frontend (vanilla JS, no dependencies) |
 | `questions-data.csv` | Sample questions (import into the Questions tab) |
 | `SETUP.md` | Extended setup walkthrough |

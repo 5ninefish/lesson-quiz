@@ -32,6 +32,14 @@ const LESSON_NAMES = {
   L5: 'Health — Science Lesson 5',
   L6: 'Digital Media — Science Lesson 6',
 };
+const LESSON_SHORT = {
+  L1: 'Soil',
+  L2: 'Coral',
+  L3: 'CS',
+  L4: 'Astronomy',
+  L5: 'Health',
+  L6: 'Digital Media',
+};
 const TEST_META = {
   'SCI-SOIL':  { strand: 'Science', title: 'Soil — Science Lesson 1' },
   'SCI-CORAL': { strand: 'Science', title: '3D Printing & Coral — Science Lesson 2' },
@@ -907,6 +915,8 @@ function respond(data) {
 function onOpen() {
   SpreadsheetApp.getUi()
     .createMenu('Quiz Admin')
+    .addItem('Open dashboard', 'showDashboard')
+    .addSeparator()
     .addItem('Reset student tries…', 'showResetDialog')
     .addItem('View attempt summary', 'showSummary')
     .addItem('Students in progress', 'showInProgress')
@@ -923,6 +933,250 @@ function onOpen() {
     .addItem('Hash new passwords', 'bulkHashPasswords_')
     .addItem('Create missing tabs (Releases, RosterImport)', 'createMissingTabs')
     .addToUi();
+}
+
+function showDashboard() {
+  const html = HtmlService.createHtmlOutputFromFile('Dashboard')
+    .setWidth(1080)
+    .setHeight(720)
+    .setTitle('Quiz Admin');
+  SpreadsheetApp.getUi().showModelessDialog(html, 'Quiz Admin');
+}
+
+function dashState() {
+  try {
+    const ss = ss_();
+    ensureRuntimeSchema_(ss);
+    const now = new Date();
+    const live = collectNow_(ss, now);
+    const best = bestCompleteScores_(ss);
+    const missing = collectMissing_(ss, best);
+    const scores = collectScores_(best);
+    writeSheet_(ss, 'InProgress', [['Email', 'Test', 'Started HST', 'Time left']].concat(
+      live.rows.map(function (r) { return [r.user, r.test, r.started, r.left]; })
+    ));
+    writeSheet_(ss, 'BestScores', [['Email', 'Test', 'Best score', 'Out of', 'Complete sits']].concat(
+      scores.map(function (r) { return [r.user, r.test, r.score, r.total, r.sits]; })
+    ));
+    writeSheet_(ss, 'MissingTests', [['Email', 'Missing tests', 'Has complete']].concat(
+      missing.map(function (r) { return [r.user, r.missing.join(', '), r.has.join(', ')]; })
+    ));
+    return {
+      ok: true,
+      workbook: ss.getName(),
+      updatedAt: Utilities.formatDate(now, TZ, 'HH:mm') + ' HST',
+      tests: collectTests_(ss, now),
+      now: live.rows,
+      nowSkipped: live.skipped,
+      missing: missing,
+      scores: scores,
+      roster: collectRosterMeta_(ss),
+    };
+  } catch (err) {
+    const msg = String(err);
+    if (/lock|busy/i.test(msg)) return { ok: false, error: 'busy_try_again' };
+    return { ok: false, error: msg };
+  }
+}
+
+function collectTests_(ss, now) {
+  return LESSONS.map(function (lesson) {
+    const id = LESSON_TO_TEST[lesson];
+    const rel = getRelease_(ss, id);
+    return {
+      id: id,
+      lesson: lesson,
+      short: LESSON_SHORT[lesson] || lesson,
+      title: testLabel_(id),
+      manual: rel.missing ? 'MISSING' : (rel.manual || 'UNSET'),
+      openAt: rel.openAt ? Utilities.formatDate(rel.openAt, TZ, 'yyyy-MM-dd HH:mm') : '',
+      closeAt: rel.closeAt ? Utilities.formatDate(rel.closeAt, TZ, 'yyyy-MM-dd HH:mm') : '',
+      openAtLocal: rel.openAt ? Utilities.formatDate(rel.openAt, TZ, "yyyy-MM-dd'T'HH:mm") : '',
+      closeAtLocal: rel.closeAt ? Utilities.formatDate(rel.closeAt, TZ, "yyyy-MM-dd'T'HH:mm") : '',
+      maxTries: rel.maxTries,
+      timeLimitSec: rel.timeLimitSec,
+      timeLimitMin: Math.round((Number(rel.timeLimitSec) || 0) / 60),
+      allowsStart: releaseAllowsStart_(rel, now),
+      meaning: releaseMeaning_(rel, now),
+    };
+  });
+}
+
+function releaseMeaning_(rel, now) {
+  if (!rel || rel.missing) return 'Missing Releases row — treated as open (legacy).';
+  if (rel.manual === 'UNSET') return 'UNSET — not gated yet, tests stay open.';
+  if (rel.manual === 'OPEN') return 'OPEN — students can start now (manual override).';
+  if (rel.manual === 'CLOSED') return 'CLOSED — students cannot start (manual override).';
+  if (rel.manual === 'AUTO' && !rel.openAt) return 'AUTO — hidden (no Open at).';
+  if (rel.manual === 'AUTO') {
+    return releaseAllowsStart_(rel, now)
+      ? 'AUTO — window is open.'
+      : 'AUTO — outside the window (hidden).';
+  }
+  return String(rel.manual || '');
+}
+
+function collectNow_(ss, now) {
+  const rows = [];
+  let skipped = 0;
+  const sheet = ss.getSheetByName('Attempts');
+  if (!sheet) return { rows: rows, skipped: 0 };
+  const data = sheet.getDataRange().getValues();
+  for (let i = 1; i < data.length; i++) {
+    try {
+      const a = attemptFromRow_(data[i], i + 1);
+      if (a.status !== 'in_flight') continue;
+      if (!a.username) { skipped++; continue; }
+      const rem = remainingSec_(a.startedAt, a.timeLimitSec, now);
+      const untimed = !(Number(a.timeLimitSec) > 0);
+      const expired = !untimed && rem <= 0;
+      rows.push({
+        user: a.username,
+        testId: a.testId,
+        test: testLabel_(a.testId),
+        started: Utilities.formatDate(asDate_(a.startedAt), TZ, 'HH:mm'),
+        left: untimed ? 'no timer' : (expired ? 'expired' : formatMmSs_(rem)),
+        expired: expired,
+        rem: untimed ? 999999 : rem,
+      });
+    } catch (e) {
+      skipped++;
+    }
+  }
+  rows.sort(function (a, b) {
+    if (a.expired !== b.expired) return a.expired ? -1 : 1;
+    if (a.rem !== b.rem) return a.rem - b.rem;
+    return String(a.user).localeCompare(String(b.user));
+  });
+  return { rows: rows, skipped: skipped };
+}
+
+function collectMissing_(ss, best) {
+  const students = ss.getSheetByName('Students');
+  const out = [];
+  if (!students) return out;
+  const data = students.getDataRange().getValues();
+  for (let i = 1; i < data.length; i++) {
+    const user = normalizeUsername_(data[i][0]);
+    if (!user) continue;
+    const missing = [];
+    const missingIds = [];
+    const has = [];
+    LESSONS.forEach(function (lesson) {
+      const testId = LESSON_TO_TEST[lesson];
+      if (best[user] && best[user][testId]) has.push(testLabel_(testId));
+      else {
+        missing.push(testLabel_(testId));
+        missingIds.push(testId);
+      }
+    });
+    out.push({ user: user, missing: missing, missingIds: missingIds, has: has });
+  }
+  return out;
+}
+
+function collectScores_(best) {
+  const out = [];
+  Object.keys(best).sort().forEach(function (user) {
+    Object.keys(best[user]).sort().forEach(function (testId) {
+      const b = best[user][testId];
+      out.push({
+        user: user,
+        testId: testId,
+        test: testLabel_(testId),
+        score: b.score,
+        total: b.total,
+        sits: b.sits,
+      });
+    });
+  });
+  return out;
+}
+
+function collectRosterMeta_(ss) {
+  const students = ss.getSheetByName('Students');
+  const emails = [];
+  if (students) {
+    const data = students.getDataRange().getValues();
+    for (let i = 1; i < data.length; i++) {
+      const u = normalizeUsername_(data[i][0]);
+      if (u) emails.push(u);
+    }
+  }
+  const src = ss.getSheetByName('RosterImport');
+  let importRows = 0;
+  if (src && src.getLastRow() > 1) {
+    const rows = src.getDataRange().getValues();
+    for (let i = 1; i < rows.length; i++) {
+      const email = normalizeUsername_(rows[i][0]);
+      const pass = String(rows[i][1] || '');
+      if (email && pass && email.indexOf('(paste') < 0) importRows++;
+    }
+  }
+  return { students: emails.length, importRows: importRows, emails: emails };
+}
+
+function dashOpenNow(testId) {
+  const id = resolveTestId_(testId);
+  if (!TEST_TO_LESSON[id]) return { ok: false, error: 'unknown_test' };
+  upsertRelease_(id, function (row) { row[5] = 'OPEN'; });
+  return dashState();
+}
+
+function dashCloseNow(testId) {
+  const id = resolveTestId_(testId);
+  if (!TEST_TO_LESSON[id]) return { ok: false, error: 'unknown_test' };
+  upsertRelease_(id, function (row) { row[5] = 'CLOSED'; });
+  return dashState();
+}
+
+function dashSaveWindow(testId, openAt, closeAt, maxTries, timeLimitMin) {
+  const id = resolveTestId_(testId);
+  if (!TEST_TO_LESSON[id]) return { ok: false, error: 'unknown_test' };
+  const nTries = Number(maxTries);
+  const nMin = Number(timeLimitMin);
+  if (!(nTries > 0)) return { ok: false, error: 'Max tries must be a positive integer.' };
+  if (isNaN(nMin) || nMin < 0) return { ok: false, error: 'Time limit must be 0 or more minutes.' };
+  upsertRelease_(id, function (row) {
+    row[3] = String(openAt || '').trim().replace('T', ' ');
+    row[4] = String(closeAt || '').trim().replace('T', ' ');
+    row[5] = 'AUTO';
+    row[6] = nTries;
+    row[7] = Math.round(nMin * 60);
+  });
+  return dashState();
+}
+
+function dashSyncRoster() {
+  const result = syncRosterCore_();
+  if (!result.ok) return result;
+  const state = dashState();
+  state.message = result.message;
+  return state;
+}
+
+function dashHashPasswords() {
+  const n = bulkHashPasswords_();
+  const state = dashState();
+  state.message = n + ' password' + (n === 1 ? '' : 's') + ' hashed.';
+  return state;
+}
+
+function dashCreateTabs() {
+  const ss = ss_();
+  ensureRuntimeSchema_(ss);
+  ensureAuditSheet_(ss);
+  const state = dashState();
+  state.message = 'Tabs ready: Releases, RosterImport, Attempts, report tabs.';
+  return state;
+}
+
+function dashReset(username, lesson) {
+  const msg = resetTriesFromDialog(username, lesson);
+  const state = dashState();
+  state.message = msg;
+  if (String(msg).indexOf('Student not found') === 0) state.ok = true;
+  return state;
 }
 
 function showResetDialog() {
@@ -968,25 +1222,8 @@ function adminDialog_(title, html, w, h) {
 function showInProgress() {
   const ss = ss_();
   ensureRuntimeSchema_(ss);
-  const now = new Date();
-  const sheet = ss.getSheetByName('Attempts');
-  const rows = [];
-  if (sheet) {
-    const data = sheet.getDataRange().getValues();
-    for (let i = 1; i < data.length; i++) {
-      const a = attemptFromRow_(data[i], i + 1);
-      if (a.status !== 'in_flight') continue;
-      const rem = remainingSec_(a.startedAt, a.timeLimitSec, now);
-      const expired = isTimerExpired_(a.startedAt, a.timeLimitSec, now);
-      const untimed = !(Number(a.timeLimitSec) > 0);
-      rows.push({
-        user: a.username,
-        test: testLabel_(a.testId),
-        started: Utilities.formatDate(asDate_(a.startedAt), TZ, 'HH:mm:ss'),
-        left: untimed ? 'no timer' : (expired ? 'expired' : formatMmSs_(rem)),
-      });
-    }
-  }
+  const live = collectNow_(ss, new Date());
+  const rows = live.rows;
   writeSheet_(ss, 'InProgress', [['Email', 'Test', 'Started HST', 'Time left']].concat(
     rows.map(function (r) { return [r.user, r.test, r.started, r.left]; })
   ));
@@ -1278,14 +1515,13 @@ function adminSetTimeLimit() {
   ui.alert('TimeLimitSec=' + n + ' for ' + testId);
 }
 
-function syncRoster() {
+function syncRosterCore_() {
   const ss = ss_();
   const src = ss.getSheetByName('RosterImport');
   if (!src) {
     const created = ss.insertSheet('RosterImport');
     created.getRange(1, 1, 1, 2).setValues([['Email', 'Password']]);
-    SpreadsheetApp.getUi().alert('Created RosterImport tab. Paste email + plaintext password, then run Sync roster again.');
-    return;
+    return { ok: true, added: 0, message: 'Created RosterImport tab. Paste email + plaintext password, then sync again.' };
   }
   const students = ss.getSheetByName('Students');
   ensureCycleHeaders_(students, students.getRange(1, 1, 1, 14).getValues()[0]);
@@ -1294,18 +1530,26 @@ function syncRoster() {
   for (let i = 1; i < existing.length; i++) have[normalizeUsername_(existing[i][0])] = true;
   const rows = src.getDataRange().getValues();
   let added = 0;
+  let skipped = 0;
   for (let i = 1; i < rows.length; i++) {
     const email = normalizeUsername_(rows[i][0]);
     const pass = String(rows[i][1] || '');
-    if (!email || !pass) continue;
-    if (have[email]) continue;
+    if (!email || !pass || email.indexOf('(paste') === 0) continue;
+    if (have[email]) { skipped++; continue; }
     students.appendRow([email, pass, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 1]);
     have[email] = true;
     added++;
   }
   bulkHashPasswords_();
   logAudit_('sync_roster', 'added ' + added);
-  SpreadsheetApp.getUi().alert('Roster sync: added ' + added + ' new students. Existing try counts left alone.');
+  let message = 'Roster sync: added ' + added + ' new students. Existing try counts left alone.';
+  if (skipped) message += ' Skipped ' + skipped + ' dupes.';
+  return { ok: true, added: added, skipped: skipped, message: message };
+}
+
+function syncRoster() {
+  const result = syncRosterCore_();
+  SpreadsheetApp.getUi().alert(result.message);
 }
 
 // ─── ONE-TIME SETUP ──────────────────────────────────────────────────────────
@@ -1374,6 +1618,7 @@ function bulkHashPasswords_() {
     }
   }
   Logger.log('Hashed ' + count + ' passwords');
+  return count;
 }
 
 function addLessonQuestions_(lessonId, rows) {
