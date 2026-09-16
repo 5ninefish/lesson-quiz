@@ -19,7 +19,9 @@ Total time: ~30 minutes.
 3. Click **Save** (Ctrl+S)
 4. Add the instructor dashboard file: **File → New → HTML file**, name it exactly `Dashboard` (Apps Script adds `.html`), paste `Dashboard.html` from this repo, Save.
 
-The Quiz Admin **Open dashboard** window is bound HtmlService. It uses the **saved** project, not the Web App deployment. Reopen the spreadsheet after Save so `onOpen` rebuilds the menu. You do **not** need Deploy → New version unless `Code.gs` student API (`doGet` / `doPost`) changed.
+Reopen the spreadsheet after Save so `onOpen` rebuilds the menu.
+
+The instructor dashboard is a **full browser tab**, not a sheet popup. That requires a Web App deployment (see Step 5b). Do not put the dashboard URL in public `index.html`.
 
 ### Step 3: Run the one-time setup
 
@@ -65,7 +67,23 @@ The Questions tab needs one row per question. Column layout:
 5. **Copy the web app URL** — it looks like:
    `https://script.google.com/macros/s/AKfy.../exec`
 
-Every time you change `Code.gs`, you must **Deploy → Manage deployments → Edit → New version → Deploy** to publish the update.
+Every time you change `Code.gs`, you must **Deploy → Manage deployments → Edit → New version → Deploy** on **each** Web App that should pick up the change (student quiz and instructor dashboard).
+
+### Step 5b: Instructor dashboard (full tab)
+
+Keep the student deployment as **Anyone** (no Google login). Do not change it.
+
+Then **Deploy → New deployment → Web app** (a second one):
+
+- Description: Quiz Admin
+- Execute as: Me
+- Who has access: **Anyone with a Google account**
+
+Copy that `/exec` URL. In the sheet: **Quiz Admin → Set dashboard URL…** and paste it.
+
+**Quiz Admin → Open dashboard** opens a full tab (`?view=admin`). Only Google accounts that can **edit** this spreadsheet get in. Anonymous hits on the student URL with `?view=admin` are refused.
+
+Do not run `setup()` on the live Hōkūlani book during test week.
 
 ---
 
@@ -138,9 +156,9 @@ Use **Quiz Admin → Reset student tries**. That increments `CycleL*` and zeroes
 Do not just zero the L1–L6 cell; eligibility is counted from Results for the current cycle.
 
 ### Instructor dashboard
-**Quiz Admin → Open dashboard** opens a modeless window over this workbook (no public URL). Now / Missing / Scores / Releases / Roster. Human titles (Computer Science — Science Lesson 3), not only SCI-CS.
+**Quiz Admin → Open dashboard** opens a **full browser tab**. Now / Missing / Scores / Releases / Roster. Human titles (Computer Science — Science Lesson 3), not only SCI-CS.
 
-Paste `Dashboard.html` as an Apps Script HTML file named `Dashboard`. Reopen the sheet after Save.
+Paste `Dashboard.html` as an Apps Script HTML file named `Dashboard`. Deploy the instructor Web App (Step 5b) and Set dashboard URL once. Editors of this workbook only — not a public admin page.
 
 ### Open / close a test
 Dashboard → Releases, or Quiz Admin: Open now, Close now, Set window, Set attempts, Set time limit.

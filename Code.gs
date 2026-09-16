@@ -85,8 +85,49 @@ function doPost(e) {
   }
 }
 
-function doGet() {
+function doGet(e) {
+  const view = e && e.parameter && e.parameter.view;
+  if (view === 'admin') return serveDashboard_();
   return respond({ ok: true, service: 'lesson-quiz' });
+}
+
+function serveDashboard_() {
+  if (!isSpreadsheetEditor_()) {
+    return HtmlService.createHtmlOutput(
+      '<!DOCTYPE html><html><body style="font:16px/1.4 Source Sans 3,Helvetica,sans-serif;padding:32px;max-width:40rem">' +
+      '<h1 style="font-size:22px">Not allowed</h1>' +
+      '<p>Quiz Admin is only for people who can <strong>edit</strong> this spreadsheet. Sign in with that Google account, then open it from <strong>Quiz Admin → Open dashboard</strong>.</p>' +
+      '<p>The student quiz URL must stay “Anyone” (no Google login). The dashboard needs a separate Web App deployment: Execute as Me, Who has access = Anyone with a Google account.</p>' +
+      '</body></html>'
+    ).setTitle('Quiz Admin — not allowed');
+  }
+  return HtmlService.createHtmlOutputFromFile('Dashboard')
+    .setTitle('Quiz Admin')
+    .addMetaTag('viewport', 'width=device-width, initial-scale=1');
+}
+
+function isSpreadsheetEditor_() {
+  const email = String(Session.getActiveUser().getEmail() || '').trim().toLowerCase();
+  if (!email) return false;
+  const ss = ss_();
+  try {
+    const owner = ss.getOwner();
+    if (owner && String(owner.getEmail() || '').toLowerCase() === email) return true;
+  } catch (err) {}
+  try {
+    const editors = ss.getEditors();
+    for (let i = 0; i < editors.length; i++) {
+      if (String(editors[i].getEmail() || '').toLowerCase() === email) return true;
+    }
+  } catch (err2) {}
+  return false;
+}
+
+function adminDashboardUrl_() {
+  const stored = PropertiesService.getScriptProperties().getProperty('ADMIN_WEBAPP_URL');
+  const base = String(stored || ScriptApp.getService().getUrl() || '').replace(/\/$/, '');
+  if (!base) return '';
+  return base + (base.indexOf('?') >= 0 ? '&' : '?') + 'view=admin';
 }
 
 function ss_() {
@@ -916,6 +957,7 @@ function onOpen() {
   SpreadsheetApp.getUi()
     .createMenu('Quiz Admin')
     .addItem('Open dashboard', 'showDashboard')
+    .addItem('Set dashboard URL…', 'setDashboardUrl')
     .addSeparator()
     .addItem('Reset student tries…', 'showResetDialog')
     .addItem('View attempt summary', 'showSummary')
@@ -936,11 +978,43 @@ function onOpen() {
 }
 
 function showDashboard() {
-  const html = HtmlService.createHtmlOutputFromFile('Dashboard')
-    .setWidth(1080)
-    .setHeight(720)
-    .setTitle('Quiz Admin');
+  const url = adminDashboardUrl_();
+  if (!url) {
+    SpreadsheetApp.getUi().alert(
+      'No Web App URL yet. Deploy → New deployment → Web app.\n\n' +
+      'Instructor dashboard (separate from the student quiz):\n' +
+      'Execute as: Me\n' +
+      'Who has access: Anyone with a Google account\n\n' +
+      'Copy that /exec URL, then Quiz Admin → Set dashboard URL.'
+    );
+    return;
+  }
+  const html = HtmlService.createHtmlOutput(
+    '<!DOCTYPE html><html><body style="font:16px/1.4 Helvetica,sans-serif;padding:20px">' +
+    '<p>Full-tab dashboard (not a sheet popup).</p>' +
+    '<p><a href="' + url.replace(/"/g, '') + '" target="_blank" rel="noopener" ' +
+    'style="display:inline-block;padding:12px 16px;background:#1f4f3a;color:#fff;text-decoration:none;font-weight:700">Open Quiz Admin</a></p>' +
+    '<script>window.open(' + JSON.stringify(url) + ', "_blank");</script>' +
+    '</body></html>'
+  ).setWidth(420).setHeight(160);
   SpreadsheetApp.getUi().showModelessDialog(html, 'Quiz Admin');
+}
+
+function setDashboardUrl() {
+  const ui = SpreadsheetApp.getUi();
+  const r = ui.prompt(
+    'Instructor dashboard URL',
+    'Paste the Web App /exec URL from the deployment whose access is “Anyone with a Google account”. Do not paste the student quiz URL if that one is “Anyone”.',
+    ui.ButtonSet.OK_CANCEL
+  );
+  if (r.getSelectedButton() !== ui.Button.OK) return;
+  const url = String(r.getResponseText() || '').trim().replace(/\/$/, '');
+  if (url.indexOf('https://script.google.com/') !== 0) {
+    ui.alert('That does not look like a script.google.com /exec URL.');
+    return;
+  }
+  PropertiesService.getScriptProperties().setProperty('ADMIN_WEBAPP_URL', url);
+  ui.alert('Saved. Quiz Admin → Open dashboard will use a full browser tab.\n\n' + url + '?view=admin');
 }
 
 function jsonSafe_(obj) {
