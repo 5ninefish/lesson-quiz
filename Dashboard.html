@@ -242,36 +242,44 @@
       el.textContent = msg;
     }
 
-    function run(name, args, onOk) {
-      if (busy) return;
-      busy = true;
-      google.script.run
-        .withSuccessHandler(function (data) {
-          busy = false;
-          if (!data || data.ok === false) {
-            var err = (data && data.error) || 'Could not update.';
-            if (err === 'busy_try_again') banner('Sheet is busy — try again.');
-            else banner(err);
-            if (lastGood) render(lastGood);
-            return;
-          }
-          lastGood = data;
-          state = data;
-          if (data.message) banner(data.message, true);
-          else banner('');
-          if (onOk) onOk(data);
-          render(data);
-        })
-        .withFailureHandler(function (err) {
-          busy = false;
-          var msg = String(err || '');
-          if (/lock|busy/i.test(msg)) banner('Sheet is busy — try again.');
-          else banner(msg || 'Could not reach the sheet.');
-          if (lastGood) render(lastGood);
-        })[name].apply(null, args || []);
+    function onDashOk(data, onOk) {
+      busy = false;
+      if (!data || data.ok === false) {
+        var err = (data && data.error) || 'Could not update.';
+        if (err === 'busy_try_again') banner('Sheet is busy — try again.');
+        else banner(err);
+        if (lastGood) render(lastGood);
+        return;
+      }
+      lastGood = data;
+      state = data;
+      if (data.message) banner(data.message, true);
+      else banner('');
+      if (onOk) onOk(data);
+      render(data);
     }
 
-    function refresh() { run('dashState', []); }
+    function onDashFail(err) {
+      busy = false;
+      var msg = (err && (err.message || err.toString)) ? (err.message || String(err)) : String(err || '');
+      if (/lock|busy/i.test(msg)) banner('Sheet is busy — try again.');
+      else banner(msg || 'Could not reach the sheet.');
+      if (lastGood) render(lastGood);
+    }
+
+    function runner() {
+      return google.script.run.withSuccessHandler(onDashOk).withFailureHandler(onDashFail);
+    }
+
+    function callDash(fn) {
+      if (busy) return;
+      busy = true;
+      fn(google.script.run.withSuccessHandler(onDashOk).withFailureHandler(onDashFail));
+    }
+
+    function refresh() {
+      callDash(function (r) { r.dashState(); });
+    }
 
     function tests() { return (state && state.tests) || []; }
     function currentTest() {
@@ -474,37 +482,35 @@
       if (id === 'jumpReleases') { setPage('releases'); return; }
       if (id === 'btnOpen') {
         var t = currentTest();
-        if (t) run('dashOpenNow', [t.id]);
+        if (t) callDash(function (r) { r.dashOpenNow(t.id); });
       }
       if (id === 'btnClose') {
         var t2 = currentTest();
         if (!t2) return;
         if (!confirm('Close ' + t2.title + '? Students already in it keep their remaining time.')) return;
-        run('dashCloseNow', [t2.id]);
+        callDash(function (r) { r.dashCloseNow(t2.id); });
       }
       if (id === 'btnSave') {
         var t3 = currentTest();
         if (!t3) return;
         e.target.disabled = true;
         e.target.textContent = 'Saving…';
-        run('dashSaveWindow', [
-          t3.id,
-          $('openAt').value,
-          $('closeAt').value,
-          $('maxTries').value,
-          $('timeMin').value
-        ]);
+        var openAt = $('openAt').value;
+        var closeAt = $('closeAt').value;
+        var maxTries = $('maxTries').value;
+        var timeMin = $('timeMin').value;
+        callDash(function (r) { r.dashSaveWindow(t3.id, openAt, closeAt, maxTries, timeMin); });
       }
-      if (id === 'btnSync') run('dashSyncRoster', []);
-      if (id === 'btnHash') run('dashHashPasswords', []);
-      if (id === 'btnTabs') run('dashCreateTabs', []);
+      if (id === 'btnSync') callDash(function (r) { r.dashSyncRoster(); });
+      if (id === 'btnHash') callDash(function (r) { r.dashHashPasswords(); });
+      if (id === 'btnTabs') callDash(function (r) { r.dashCreateTabs(); });
       if (id === 'btnReset') {
         var user = $('resetUser') && $('resetUser').value;
         var lesson = $('resetLesson') && $('resetLesson').value;
         if (!user) return;
         var lessonLabel = lesson === 'ALL' ? 'ALL lessons' : lesson;
         if (!confirm('Bump the cycle for ' + user + ' / ' + lessonLabel + '? Does not delete Results.')) return;
-        run('dashReset', [user, lesson]);
+        callDash(function (r) { r.dashReset(user, lesson); });
       }
     });
 

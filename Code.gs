@@ -947,6 +947,10 @@ function jsonSafe_(obj) {
   return JSON.parse(JSON.stringify(obj));
 }
 
+function dashPing() {
+  return { ok: true, workbook: String(ss_().getName() || ''), updatedAt: 'ping' };
+}
+
 function dashState() {
   try {
     const ss = ss_();
