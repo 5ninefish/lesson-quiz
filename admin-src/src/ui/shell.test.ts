@@ -68,8 +68,15 @@ describe("search input", () => {
   });
 
   it("keeps the demo button for staff walkthrough", () => {
-    opts({ snap: null, screen: "programs" });
+    opts({ snap: null, screen: "programs", account: "" });
     expect(document.getElementById("btn-demo")).toBeTruthy();
+    expect((document.getElementById("btn-signin") as HTMLButtonElement).style.display).not.toBe("none");
+  });
+
+  it("hides sign in after a Google login", () => {
+    opts({ account: "UH Google", canEdit: true, screen: "programs" });
+    expect((document.getElementById("btn-signin") as HTMLButtonElement).style.display).toBe("none");
+    expect((document.getElementById("btn-signout") as HTMLButtonElement).style.display).not.toBe("none");
   });
 
   it("does not render best complete scores", () => {

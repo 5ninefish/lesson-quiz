@@ -110,32 +110,49 @@ function paint(): void {
       }
     },
     onInitTables: () => {
-      if (!writeEnabled) {
-        banner = { kind: "warn", text: "Enable editing first, then initialize." };
-        paint();
+      const startInit = () => {
+        const planned = programTableInitMutations();
+        confirmDialog({
+          title: "Create program tabs on the copy",
+          body: `This adds four empty tabs to the copied workbook:\n${planned.addSheets.join(", ")}\n\nIt does not change Students, Questions, Releases, or the live student quiz.`,
+          confirmLabel: "Create tabs",
+          onConfirm: () => {
+            void (async () => {
+              const result = await executeBatchWrite({
+                addSheets: planned.addSheets,
+                valueUpdates: planned.headers.map((h) => ({ range: h.range, values: h.values })),
+              });
+              if (!result.ok) {
+                banner = { kind: "err", text: instructorMessage((result.code as ErrorCode) || "write_verify") };
+                paint();
+                return;
+              }
+              banner = { kind: "ok", text: "Program tabs created on the copy. Next: Seed Hōkūlani." };
+              await refreshLive();
+            })();
+          },
+        });
+      };
+      if (writeEnabled) {
+        startInit();
         return;
       }
-      const planned = programTableInitMutations();
-      confirmDialog({
-        title: "Initialize Program Launcher",
-        body: `Create tabs on the workbook COPY only:\n${planned.addSheets.join(", ")}\n\nDoes not touch Students, Questions, Releases, or the live student book. Never runs setup().`,
-        confirmLabel: "Create tabs",
-        onConfirm: () => {
-          void (async () => {
-            const result = await executeBatchWrite({
-              addSheets: planned.addSheets,
-              valueUpdates: planned.headers.map((h) => ({ range: h.range, values: h.values })),
-            });
-            if (!result.ok) {
-              banner = { kind: "err", text: instructorMessage((result.code as ErrorCode) || "write_verify") };
-              paint();
-              return;
-            }
-            banner = { kind: "ok", text: "Program tabs created on the copy. Next: Seed Hōkūlani." };
-            await refreshLive();
-          })();
+      banner = { kind: "ok", text: "Google will ask for permission to edit the copy." };
+      paint();
+      const ok = requestWriteScope(
+        () => {
+          writeEnabled = true;
+          startInit();
         },
-      });
+        (message) => {
+          banner = { kind: "err", text: message };
+          paint();
+        },
+      );
+      if (!ok) {
+        banner = { kind: "err", text: "Google is not ready yet. Wait a moment and click Initialize again." };
+        paint();
+      }
     },
     onSeedHokulani: () => {
       if (!writeEnabled || !snap) {

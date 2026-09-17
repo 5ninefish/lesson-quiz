@@ -24,6 +24,7 @@ export function renderPrograms(
   opts: {
     canEdit: boolean;
     writeEnabled: boolean;
+    signedIn: boolean;
     onOpen: (id: string) => void;
     onWizard: () => void;
     onArchive: (id: string) => void;
@@ -41,11 +42,17 @@ export function renderPrograms(
         `Missing tabs: ${snap.missingProgramTables.join(", ")}. Creates only those four tabs on the workbook copy. Never run setup() on the live student book.`,
       ),
     );
-    if (opts.canEdit && !opts.writeEnabled) {
-      main.append(el("p", { class: "muted" }, "Click Enable editing first (Google will ask for Sheets write access)."));
-    }
+    main.append(
+      el(
+        "p",
+        { class: "muted" },
+        opts.signedIn
+          ? "Click the button below. Google will ask for permission to edit the copy, then the four tabs are created."
+          : "Sign in first, then you can create the program tabs on the copy.",
+      ),
+    );
     const init = el("button", { type: "button", class: "primary" }, "Initialize Program Launcher");
-    init.disabled = !opts.canEdit || !opts.writeEnabled;
+    init.disabled = !opts.signedIn;
     init.onclick = () => opts.onInit();
     main.append(init);
     return;

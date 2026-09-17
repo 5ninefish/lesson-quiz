@@ -8,7 +8,7 @@ export type WorkbookMeta = { name: string; canEdit: boolean };
 export async function loadWorkbookMeta(signal?: AbortSignal): Promise<WorkbookMeta> {
   const token = getAccessToken();
   if (!token) throw Object.assign(new Error("sign_in"), { code: "sign_in" });
-  const url = `https://www.googleapis.com/drive/v3/files/${PROGRAM.spreadsheetId}?fields=name,capabilities/canEdit`;
+  const url = `https://www.googleapis.com/drive/v3/files/${PROGRAM.spreadsheetId}?fields=name,capabilities/canEdit&supportsAllDrives=true`;
   const res = await fetch(url, { signal, headers: { Authorization: `Bearer ${token}` } });
   if (res.status === 401) throw Object.assign(new Error("sign_in"), { code: "sign_in" });
   if (res.status === 403) throw Object.assign(new Error("permission"), { code: "permission" });

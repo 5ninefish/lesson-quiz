@@ -112,6 +112,11 @@ function setText(id: string, text: string): void {
   if (node) node.textContent = text;
 }
 
+function setShown(id: string, show: boolean): void {
+  const node = document.getElementById(id);
+  if (node) node.style.display = show ? "" : "none";
+}
+
 function mountChrome(): void {
   const root = document.getElementById("app");
   if (!root) return;
@@ -282,6 +287,7 @@ function renderMain(opts: ShellOpts): void {
     renderPrograms(main, opts.snap, opts.selectedProgramId, {
       canEdit: opts.canEdit,
       writeEnabled: opts.writeEnabled,
+      signedIn: Boolean(opts.account) && opts.account !== "demo",
       onOpen: (id) => {
         onSelectProgramCb(id);
         onNavCb("overview");
@@ -383,7 +389,15 @@ export function renderShell(opts: ShellOpts): void {
 
   setText("book-name", opts.bookName);
   setText("account", opts.account || "Not signed in");
-  setText("role", opts.writeEnabled ? "Editor (writes armed)" : opts.canEdit ? "Editor (read until Enable editing)" : "Read only");
+  const signedIn = Boolean(opts.account) && opts.account !== "demo";
+  setText(
+    "role",
+    !opts.account ? "Not signed in" : opts.account === "demo" ? "Demo" : opts.writeEnabled ? "Signed in, editing on" : "Signed in",
+  );
+  setShown("btn-signin", !signedIn);
+  setShown("btn-signout", Boolean(opts.account));
+  setShown("btn-enable-editing", signedIn && !opts.writeEnabled);
+  setShown("btn-refresh", Boolean(opts.snap));
   setText("stamp", opts.snap ? `Refreshed ${opts.snap.fetchedAt}` : "");
   const picker = document.getElementById("program-picker") as HTMLSelectElement | null;
   if (picker) {
