@@ -12,6 +12,7 @@ import { requestWriteScope } from "./auth/google-token";
 import { programTableInitMutations } from "./programs/mutations";
 import { seedHokulaniPlan } from "./programs/seed";
 import { appendRows, executeBatchWrite } from "./google/batch-write";
+import { applyLessonTitleNotes } from "./google/lesson-notes";
 import { confirmDialog } from "./ui/dialogs";
 import { duplicateConfig } from "./ui/programs";
 
@@ -21,6 +22,7 @@ let bookName: string = PROGRAM.title;
 let account = "";
 let canEdit = false;
 let writeEnabled = false;
+let lessonNotesApplied = false;
 let selectedProgramId: string = PROGRAM.legacyDefaultProgramId;
 let wizard: WizardState | null = null;
 let query = "";
@@ -115,6 +117,7 @@ function paint(): void {
           writeEnabled = true;
           banner = { kind: "ok", text: "Editing is on for this session. Confirm each change." };
           paint();
+          void maybeApplyLessonNotes();
         },
         (message) => {
           banner = { kind: "err", text: message };
@@ -145,6 +148,7 @@ function paint(): void {
                 return;
               }
               banner = { kind: "ok", text: "Program tabs created on the copy. Next: Seed Hōkūlani." };
+              await maybeApplyLessonNotes();
               await refreshLive();
             })();
           },
@@ -159,6 +163,7 @@ function paint(): void {
       const ok = requestWriteScope(
         () => {
           writeEnabled = true;
+          void maybeApplyLessonNotes();
           startInit();
         },
         (message) => {
@@ -209,6 +214,7 @@ function paint(): void {
               }
             }
             banner = { kind: "ok", text: "Hōkūlani seeded on the copy. Open dashboard to review." };
+            await maybeApplyLessonNotes();
             await refreshLive();
           })();
         },
@@ -228,6 +234,12 @@ function paint(): void {
       paint();
     },
   });
+}
+
+async function maybeApplyLessonNotes(): Promise<void> {
+  if (!writeEnabled || lessonNotesApplied) return;
+  const result = await applyLessonTitleNotes();
+  if (result.ok) lessonNotesApplied = true;
 }
 
 async function saveAssignments(): Promise<void> {

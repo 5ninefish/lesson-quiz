@@ -106,7 +106,32 @@ input[type="search"] {
 }
 .program-card.selected { outline: 2px solid var(--accent); }
 .picker-list { max-height: 360px; overflow: auto; border: 1px solid var(--line); background: var(--paper); }
-.picker-row { display: block; padding: 8px 10px; min-height: 44px; }
+.picker-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 4px 10px;
+  min-height: 32px;
+  font-size: 14px;
+}
+.picker-row input[type="checkbox"] {
+  display: inline-block;
+  width: 14px;
+  height: 14px;
+  min-height: 0;
+  min-width: 0;
+  margin: 0;
+  padding: 0;
+  flex: 0 0 14px;
+  vertical-align: middle;
+}
+.picker-row input[type="number"] {
+  width: 72px;
+  min-width: 72px;
+  min-height: 32px;
+  margin: 0;
+  padding: 4px 6px;
+}
 button.linkish { border: 0; background: none; color: var(--accent); text-decoration: underline; padding: 0; min-height: 44px; font: inherit; }
 .dialog-overlay {
   position: fixed; inset: 0; background: rgba(20,24,22,.45);
@@ -119,6 +144,17 @@ button.linkish { border: 0; background: none; color: var(--accent); text-decorat
 .dialog input, .dialog textarea, main input, main select, main textarea {
   display: block; width: min(520px, 100%); min-height: 44px; margin: 4px 0 12px;
   padding: 8px 10px; font: inherit;
+}
+.dialog input[type="checkbox"],
+main input[type="checkbox"] {
+  display: inline-block;
+  width: 14px;
+  height: 14px;
+  min-height: 0;
+  min-width: 0;
+  margin: 0 8px 0 0;
+  padding: 0;
+  vertical-align: middle;
 }
 .dialog textarea, main textarea { min-height: 180px; }
 .dialog-actions { display: flex; flex-wrap: wrap; gap: 8px; }

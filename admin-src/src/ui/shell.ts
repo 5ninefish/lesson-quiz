@@ -1,5 +1,6 @@
 import { PROGRAM } from "../config";
 import { TEST_TITLES } from "../ids";
+import { bestCompleteScores } from "../reports/best-scores";
 import { filterSnapshot } from "../programs/summaries";
 import type { DashboardSnapshot, LaunchPlan } from "../types";
 import { toCsv, downloadCsv } from "../csv";
@@ -278,19 +279,12 @@ function renderMain(opts: ShellOpts): void {
           ),
         );
       } else if (opts.screen === "results") {
-        const rows = snap.results.filter((r) => rowMatchesQuery([r.username, r.testId || r.rawTestId], q));
+        const rows = bestCompleteScores(snap.results).filter((r) => rowMatchesQuery([r.username, r.testId], q));
         downloadCsv(
           "results.csv",
           toCsv(
-            ["username", "assessment", "score", "complete", "timestamp", "row"],
-            rows.map((r) => [
-              r.username,
-              r.testId || r.rawTestId,
-              r.scoreNum != null && r.scoreDen != null ? `${r.scoreNum}/${r.scoreDen}` : "",
-              r.complete ? "yes" : "no",
-              r.timestamp,
-              String(r.rowNumber),
-            ]),
+            ["username", "assessment", "highest_score"],
+            rows.map((r) => [r.username, TEST_TITLES[r.testId], `${r.scoreNum}/${r.scoreDen}`]),
           ),
         );
       }
@@ -369,16 +363,14 @@ function renderMain(opts: ShellOpts): void {
     );
   } else if (opts.screen === "results") {
     main.append(el("h1", {}, "Results"));
+    main.append(el("p", { class: "muted" }, "Highest complete score for each student and test. Earlier sits are kept on the sheet but not listed here."));
     main.append(
       table(
-        ["Student", "Assessment", "Score", "Complete", "When", "Row"],
-        snap.results.map((r) => [
+        ["Student", "Assessment", "Highest score"],
+        bestCompleteScores(snap.results).map((r) => [
           r.username,
-          r.testId ? TEST_TITLES[r.testId] : r.rawTestId,
-          r.scoreNum != null && r.scoreDen != null ? `${r.scoreNum}/${r.scoreDen}` : "—",
-          r.complete ? "yes" : "no",
-          r.timestamp,
-          String(r.rowNumber),
+          TEST_TITLES[r.testId],
+          `${r.scoreNum}/${r.scoreDen}`,
         ]),
         true,
       ),

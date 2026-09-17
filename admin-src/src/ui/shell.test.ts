@@ -80,9 +80,17 @@ describe("search input", () => {
     expect((document.getElementById("btn-signout") as HTMLButtonElement).style.display).not.toBe("none");
   });
 
-  it("does not render best complete scores", () => {
+  it("does not render a separate best-complete-scores section", () => {
     opts({ screen: "results" });
     expect(document.body.textContent || "").not.toMatch(/Best complete scores/i);
+  });
+
+  it("results shows only the highest complete score per student and test", () => {
+    opts({ screen: "results" });
+    const body = document.querySelector("main")?.textContent || "";
+    expect(body).toMatch(/Highest score/);
+    expect(body).toMatch(/5\/5/);
+    expect(body).not.toMatch(/4\/5/);
   });
 
   it("roster shows assigned tests in a dropdown, not a crowded line", () => {
