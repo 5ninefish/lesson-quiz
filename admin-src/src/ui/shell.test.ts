@@ -20,7 +20,6 @@ function opts(over: Partial<Parameters<typeof renderShell>[0]> = {}) {
     query: "",
     onNav: () => {},
     onRefresh: () => {},
-    onDemo: () => {},
     onSignIn: () => {},
     onSignOut: () => {},
     onSearch: () => {},
@@ -71,11 +70,12 @@ describe("search input", () => {
     expect(document.body.textContent || "").not.toMatch(/Best complete scores/i);
   });
 
-  it("roster shows students and missing tests, not sheet row or cycles", () => {
+  it("roster shows assigned tests, not missing tests or sheet cycles", () => {
     opts({ screen: "roster" });
     const headers = [...document.querySelectorAll("main th")].map((h) => h.textContent);
-    expect(headers).toEqual(["Student", "Missing tests"]);
-    expect(document.body.textContent || "").not.toMatch(/\bCycles\b/);
+    expect(headers).toEqual(["Student", "Assigned tests"]);
+    expect(document.querySelector("main")?.textContent || "").toMatch(/Soil/);
+    expect(document.querySelector("main")?.textContent || "").not.toMatch(/Missing tests/);
   });
 
   it("renders program cards and missing-test links", () => {

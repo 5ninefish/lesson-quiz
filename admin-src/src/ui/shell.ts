@@ -33,7 +33,6 @@ export type ShellOpts = {
   query: string;
   onNav: (s: Screen) => void;
   onRefresh: () => void;
-  onDemo: () => void;
   onSignIn: () => void;
   onSignOut: () => void;
   onSearch: (q: string) => void;
@@ -49,7 +48,6 @@ export type ShellOpts = {
 let onSearchCb: (q: string) => void = () => {};
 let onNavCb: (s: Screen) => void = () => {};
 let onRefreshCb: () => void = () => {};
-let onDemoCb: () => void = () => {};
 let onSignInCb: () => void = () => {};
 let onSignOutCb: () => void = () => {};
 let onSelectProgramCb: (id: string) => void = () => {};
@@ -95,6 +93,11 @@ function table(headers: string[], rows: string[][], filterable = false): HTMLEle
   return wrap;
 }
 
+function assignedTestLabel(snap: DashboardSnapshot): string {
+  const fromProgram = snap.releases.map((r) => r.title).filter(Boolean);
+  return fromProgram.join("; ");
+}
+
 function liveQuery(fallback: string): string {
   const node = document.getElementById("instructor-search") as HTMLInputElement | null;
   return node ? node.value : fallback;
@@ -123,8 +126,6 @@ function mountChrome(): void {
   prog.append(sel);
   header.append(prog);
   header.append(el("div", { class: "spacer" }));
-  const demo = el("button", { type: "button", id: "btn-demo" }, "Load demo workbook");
-  demo.onclick = () => onDemoCb();
   const signin = el("button", { type: "button", class: "primary", id: "btn-signin" }, "Sign in with UH Google");
   signin.onclick = () => onSignInCb();
   const refresh = el("button", { type: "button", id: "btn-refresh" }, "Refresh");
@@ -133,7 +134,7 @@ function mountChrome(): void {
   signout.onclick = () => onSignOutCb();
   const edit = el("button", { type: "button", id: "btn-enable-editing" }, "Enable editing");
   edit.onclick = () => onEnableEditingCb();
-  header.append(demo, signin, refresh, edit, signout);
+  header.append(signin, refresh, edit, signout);
   app.append(header);
 
   const banner = el("div", { class: "banner", id: "banner" });
@@ -197,7 +198,7 @@ function renderMain(opts: ShellOpts): void {
       el(
         "p",
         { class: "muted" },
-        "Read-only. Sign in with a UH account that can open the program workbook, or load the synthetic demo. The live student quiz is unchanged.",
+        "Sign in with a UH Google account that can open the program workbook. The live student quiz is unchanged.",
       ),
     );
     return;
@@ -212,16 +213,13 @@ function renderMain(opts: ShellOpts): void {
     exportBtn.onclick = () => {
       const q = liveQuery(opts.query);
       if (opts.screen === "roster") {
-        const missingByUser = new Map(snap.missing.map((m) => [m.username, m.missing]));
+        const assigned = assignedTestLabel(snap);
         const rows = snap.students.filter((s) => rowMatchesQuery([s.username], q));
         downloadCsv(
           "roster.csv",
           toCsv(
-            ["username", "missing_count", "missing_tests"],
-            rows.map((s) => {
-              const missing = missingByUser.get(s.username) || [];
-              return [s.username, String(missing.length), missing.map((id) => TEST_TITLES[id]).join("; ")];
-            }),
+            ["username", "assigned_tests"],
+            rows.map((s) => [s.username, assigned]),
           ),
         );
       } else if (opts.screen === "results") {
@@ -266,14 +264,11 @@ function renderMain(opts: ShellOpts): void {
     main.append(el("p", { class: "muted" }, `Results parse mode: ${snap.resultsHeaderMode}`));
   } else if (opts.screen === "roster") {
     main.append(el("h1", {}, "Roster"));
-    const missingByUser = new Map(snap.missing.map((m) => [m.username, m.missing]));
+    const assigned = assignedTestLabel(snap);
     main.append(
       table(
-        ["Student", "Missing tests"],
-        snap.students.map((s) => {
-          const missing = missingByUser.get(s.username) || [];
-          return [s.username, missing.length ? missing.map((id) => TEST_TITLES[id]).join("; ") : "None"];
-        }),
+        ["Student", "Assigned tests"],
+        snap.students.map((s) => [s.username, assigned || "—"]),
         true,
       ),
     );
@@ -364,7 +359,6 @@ export function renderShell(opts: ShellOpts): void {
   onSearchCb = opts.onSearch;
   onNavCb = opts.onNav;
   onRefreshCb = opts.onRefresh;
-  onDemoCb = opts.onDemo;
   onSignInCb = opts.onSignIn;
   onSignOutCb = opts.onSignOut;
   onSelectProgramCb = opts.onSelectProgram;

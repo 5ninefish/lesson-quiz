@@ -22,7 +22,7 @@ let wizard: WizardState | null = null;
 let query = "";
 let banner: { kind: "ok" | "warn" | "err"; text: string } | null = {
   kind: "warn",
-  text: "Program Launcher is preview-first. Demo uses synthetic rows. Live Google reads need a UH OAuth client ID. Writes need a workbook copy.",
+  text: "Sign in with a UH Google account that can open the Hōkūlani workbook. Live reads need a UH OAuth client ID.",
 };
 
 function paint(): void {
@@ -48,9 +48,6 @@ function paint(): void {
     onRefresh: () => {
       void refreshLive();
     },
-    onDemo: () => {
-      void loadDemo();
-    },
     onSignIn: () => {
       const client = initTokenClient(() => {
         account = "UH Google";
@@ -61,7 +58,7 @@ function paint(): void {
           kind: "warn",
           text: oauthConfigured()
             ? "Google Identity script is not loaded yet."
-            : "UH OAuth client ID is not configured yet. Use Load demo workbook.",
+            : "UH OAuth client ID is not configured yet. Add it in admin-src/src/config.ts, rebuild, and push.",
         };
         paint();
         return;
@@ -136,21 +133,6 @@ function paint(): void {
       paint();
     },
   });
-}
-
-async function loadDemo(): Promise<void> {
-  const { observedWorkbook } = await import("./fixtures/observed");
-  snap = buildSnapshot(observedWorkbook());
-  bookName = "Synthetic demo (not the live Hōkūlani book)";
-  account = "demo";
-  canEdit = false;
-  writeEnabled = false;
-  selectedProgramId = snap.programs.find((p) => p.status === "ACTIVE")?.programId || PROGRAM.legacyDefaultProgramId;
-  banner = {
-    kind: "ok",
-    text: `Demo loaded. ${snap.programs.length} programs, ${snap.students.length} students, ${snap.legacyAttributedResults} legacy-attributed results. Writes disabled.`,
-  };
-  paint();
 }
 
 async function refreshLive(): Promise<void> {
