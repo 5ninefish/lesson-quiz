@@ -89,7 +89,55 @@ export function seedHokulaniPlan(opts: {
     students: memberships,
     tests,
     state,
-    rows: [],
+    rows: [
+      {
+        tab: "Programs",
+        values: [
+          PROGRAM.legacyDefaultProgramId,
+          "Hōkūlani",
+          "ACTIVE",
+          "",
+          "",
+          opts.nowHst,
+          opts.actor,
+          opts.nowHst,
+          opts.actor,
+        ],
+      },
+      ...memberships.map((s) => ({
+        tab: "ProgramStudents",
+        values: [s.programId, s.username, "TRUE", s.assignedAtHst, s.assignedBy],
+      })),
+      ...tests.map((t) => ({
+        tab: "ProgramTests",
+        values: [
+          t.programId,
+          t.testId,
+          "TRUE",
+          String(t.sortOrder),
+          t.manual,
+          t.openAt,
+          t.closeAt,
+          String(t.maxTries),
+          String(t.timeLimitSec),
+          t.updatedAtHst,
+          t.updatedBy,
+        ],
+      })),
+      ...state.map((s) => ({
+        tab: "ProgramStudentState",
+        values: [s.programId, s.username, s.testId, String(s.cycle), String(s.sitCache), s.updatedAtHst, s.updatedBy],
+      })),
+      {
+        tab: "Audit",
+        values: [
+          opts.nowHst,
+          opts.actor,
+          "seed_hokulani",
+          `students=${memberships.length} tests=${tests.length} state=${state.length}`,
+        ],
+      },
+    ],
     blocking,
     warnings: unknownTests ? [`${unknownTests} canonical tests have no Releases row.`] : [],
   };

@@ -23,11 +23,13 @@ export function renderPrograms(
   selectedProgramId: string,
   opts: {
     canEdit: boolean;
+    writeEnabled: boolean;
     onOpen: (id: string) => void;
     onWizard: () => void;
     onArchive: (id: string) => void;
     onDuplicate: (id: string) => void;
     onInit: () => void;
+    onSeed: () => void;
   },
 ): void {
   main.append(el("h1", {}, "Programs"));
@@ -36,11 +38,14 @@ export function renderPrograms(
       el(
         "p",
         { class: "muted" },
-        `Missing tabs: ${snap.missingProgramTables.join(", ")}. Create only those four tabs. Never run setup().`,
+        `Missing tabs: ${snap.missingProgramTables.join(", ")}. Creates only those four tabs on the workbook copy. Never run setup() on the live student book.`,
       ),
     );
+    if (opts.canEdit && !opts.writeEnabled) {
+      main.append(el("p", { class: "muted" }, "Click Enable editing first (Google will ask for Sheets write access)."));
+    }
     const init = el("button", { type: "button", class: "primary" }, "Initialize Program Launcher");
-    init.disabled = !opts.canEdit;
+    init.disabled = !opts.canEdit || !opts.writeEnabled;
     init.onclick = () => opts.onInit();
     main.append(init);
     return;
@@ -49,6 +54,13 @@ export function renderPrograms(
   const create = el("button", { type: "button", class: "primary program-create" }, "Create program");
   create.onclick = () => opts.onWizard();
   main.append(create);
+  const hasHokulani = snap.programs.some((p) => p.programId === "hokulani");
+  if (!hasHokulani) {
+    const seed = el("button", { type: "button", class: "program-create" }, "Seed Hōkūlani");
+    seed.disabled = !opts.writeEnabled;
+    seed.onclick = () => opts.onSeed();
+    main.append(seed);
+  }
 
   for (const program of snap.programs) {
     const sum = summarizeProgram(snap, program);

@@ -32,6 +32,7 @@ function opts(over: Partial<Parameters<typeof renderShell>[0]> = {}) {
     onLaunch: () => {},
     onEnableEditing: () => {},
     onInitTables: () => {},
+    onSeedHokulani: () => {},
     onArchive: () => {},
     onDuplicate: () => {},
     ...over,

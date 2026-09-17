@@ -45,7 +45,7 @@ export function requestWriteScope(onToken: (token: string) => void): boolean {
   if (!gis?.accounts?.oauth2) return false;
   const client = gis.accounts.oauth2.initTokenClient({
     client_id: PROGRAM.googleClientId,
-    scope: WRITE_SCOPE,
+    scope: `${READ_SCOPES} ${WRITE_SCOPE}`,
     callback: (resp: { access_token?: string }) => {
       if (resp.access_token) {
         setAccessToken(resp.access_token);

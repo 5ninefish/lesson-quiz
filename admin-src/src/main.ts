@@ -9,6 +9,9 @@ import type { DashboardSnapshot } from "./types";
 import { emptyWizard, type WizardState } from "./ui/program-wizard";
 import { requestWriteScope } from "./auth/google-token";
 import { programTableInitMutations } from "./programs/mutations";
+import { seedHokulaniPlan } from "./programs/seed";
+import { appendRows, executeBatchWrite } from "./google/batch-write";
+import { confirmDialog } from "./ui/dialogs";
 import { duplicateConfig } from "./ui/programs";
 
 let screen: Screen = "programs";
@@ -115,12 +118,75 @@ function paint(): void {
       }
     },
     onInitTables: () => {
+      if (!writeEnabled) {
+        banner = { kind: "warn", text: "Enable editing first, then initialize." };
+        paint();
+        return;
+      }
       const planned = programTableInitMutations();
-      banner = {
-        kind: "warn",
-        text: `Would create tabs ${planned.addSheets.join(", ")} on a workbook copy. Live book is not mutated from this session.`,
-      };
-      paint();
+      confirmDialog({
+        title: "Initialize Program Launcher",
+        body: `Create tabs on the workbook COPY only:\n${planned.addSheets.join(", ")}\n\nDoes not touch Students, Questions, Releases, or the live student book. Never runs setup().`,
+        confirmLabel: "Create tabs",
+        onConfirm: () => {
+          void (async () => {
+            const result = await executeBatchWrite({
+              addSheets: planned.addSheets,
+              valueUpdates: planned.headers.map((h) => ({ range: h.range, values: h.values })),
+            });
+            if (!result.ok) {
+              banner = { kind: "err", text: instructorMessage((result.code as ErrorCode) || "write_verify") };
+              paint();
+              return;
+            }
+            banner = { kind: "ok", text: "Program tabs created on the copy. Next: Seed Hōkūlani." };
+            await refreshLive();
+          })();
+        },
+      });
+    },
+    onSeedHokulani: () => {
+      if (!writeEnabled || !snap) {
+        banner = { kind: "warn", text: "Enable editing first, then seed." };
+        paint();
+        return;
+      }
+      const { plan, report } = seedHokulaniPlan({
+        students: snap.students,
+        releases: snap.releases,
+        actor: account || "instructor",
+        nowHst: new Date().toISOString(),
+      });
+      if (report.blocking.length) {
+        banner = { kind: "err", text: report.blocking[0] };
+        paint();
+        return;
+      }
+      confirmDialog({
+        title: "Seed Hōkūlani on the copy",
+        body: `Program hokulani ACTIVE\n${report.memberships} students\n${report.programTests} tests\n${report.stateRows} state rows\n\nWrites the copy only.`,
+        confirmLabel: "Seed copy",
+        onConfirm: () => {
+          void (async () => {
+            const grouped = new Map<string, string[][]>();
+            for (const row of plan.rows) {
+              const list = grouped.get(row.tab) || [];
+              list.push(row.values);
+              grouped.set(row.tab, list);
+            }
+            for (const [tab, values] of grouped) {
+              const result = await appendRows(tab, values);
+              if (!result.ok) {
+                banner = { kind: "err", text: instructorMessage((result.code as ErrorCode) || "write_verify") };
+                paint();
+                return;
+              }
+            }
+            banner = { kind: "ok", text: "Hōkūlani seeded on the copy. Open dashboard to review." };
+            await refreshLive();
+          })();
+        },
+      });
     },
     onArchive: (id) => {
       banner = { kind: "warn", text: `Archive of ${id} is preview-only until workbook-copy writes are enabled.` };

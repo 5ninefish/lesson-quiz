@@ -42,6 +42,7 @@ export type ShellOpts = {
   onLaunch: (plan: LaunchPlan) => void;
   onEnableEditing: () => void;
   onInitTables: () => void;
+  onSeedHokulani: () => void;
   onArchive: (id: string) => void;
   onDuplicate: (id: string) => void;
 };
@@ -57,6 +58,7 @@ let onWizardChangeCb: (w: WizardState) => void = () => {};
 let onLaunchCb: (plan: LaunchPlan) => void = () => {};
 let onEnableEditingCb: () => void = () => {};
 let onInitTablesCb: () => void = () => {};
+let onSeedHokulaniCb: () => void = () => {};
 let onArchiveCb: (id: string) => void = () => {};
 let onDuplicateCb: (id: string) => void = () => {};
 let chromeReady = false;
@@ -279,6 +281,7 @@ function renderMain(opts: ShellOpts): void {
   } else if (opts.screen === "programs") {
     renderPrograms(main, opts.snap, opts.selectedProgramId, {
       canEdit: opts.canEdit,
+      writeEnabled: opts.writeEnabled,
       onOpen: (id) => {
         onSelectProgramCb(id);
         onNavCb("overview");
@@ -287,6 +290,7 @@ function renderMain(opts: ShellOpts): void {
       onArchive: (id) => onArchiveCb(id),
       onDuplicate: (id) => onDuplicateCb(id),
       onInit: () => onInitTablesCb(),
+      onSeed: () => onSeedHokulaniCb(),
     });
   } else if (opts.screen === "wizard") {
     renderWizard(
@@ -371,6 +375,7 @@ export function renderShell(opts: ShellOpts): void {
   onLaunchCb = opts.onLaunch;
   onEnableEditingCb = opts.onEnableEditing;
   onInitTablesCb = opts.onInitTables;
+  onSeedHokulaniCb = opts.onSeedHokulani;
   onArchiveCb = opts.onArchive;
   onDuplicateCb = opts.onDuplicate;
 
