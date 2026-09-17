@@ -1,6 +1,6 @@
 import { PROGRAM } from "../config";
 import { TEST_TITLES } from "../ids";
-import { bestCompleteScores } from "../reports/best-scores";
+import { bestCompleteScores, formatScore } from "../reports/best-scores";
 import { filterSnapshot } from "../programs/summaries";
 import type { DashboardSnapshot, LaunchPlan } from "../types";
 import { toCsv, downloadCsv } from "../csv";
@@ -279,12 +279,21 @@ function renderMain(opts: ShellOpts): void {
           ),
         );
       } else if (opts.screen === "results") {
-        const rows = bestCompleteScores(snap.results).filter((r) => rowMatchesQuery([r.username, r.testId], q));
+        const rows = bestCompleteScores(snap.results, snap.questionCounts).filter((r) =>
+          rowMatchesQuery([r.username, r.testId], q),
+        );
         downloadCsv(
           "results.csv",
           toCsv(
-            ["username", "assessment", "highest_score"],
-            rows.map((r) => [r.username, TEST_TITLES[r.testId], `${r.scoreNum}/${r.scoreDen}`]),
+            ["username", "assessment", "highest_score", "when", "sits", "cycle"],
+            rows.map((r) => [
+              r.username,
+              TEST_TITLES[r.testId],
+              formatScore(r.scoreNum, r.scoreDen),
+              r.timestamp,
+              String(r.completeCount),
+              r.cycle == null ? "" : String(r.cycle),
+            ]),
           ),
         );
       }
@@ -363,14 +372,23 @@ function renderMain(opts: ShellOpts): void {
     );
   } else if (opts.screen === "results") {
     main.append(el("h1", {}, "Results"));
-    main.append(el("p", { class: "muted" }, "Highest complete score for each student and test. Earlier sits are kept on the sheet but not listed here."));
+    main.append(
+      el(
+        "p",
+        { class: "muted" },
+        "One row per student and test: the highest complete score, the date of that sit, and how many complete sits they have. Other sits stay on the sheet.",
+      ),
+    );
     main.append(
       table(
-        ["Student", "Assessment", "Highest score"],
-        bestCompleteScores(snap.results).map((r) => [
+        ["Student", "Assessment", "Highest score", "When", "Complete sits", "Cycle"],
+        bestCompleteScores(snap.results, snap.questionCounts).map((r) => [
           r.username,
           TEST_TITLES[r.testId],
-          `${r.scoreNum}/${r.scoreDen}`,
+          formatScore(r.scoreNum, r.scoreDen),
+          r.timestamp || "—",
+          String(r.completeCount),
+          r.cycle == null ? "—" : String(r.cycle),
         ]),
         true,
       ),

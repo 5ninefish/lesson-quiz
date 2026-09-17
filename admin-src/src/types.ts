@@ -96,6 +96,8 @@ export type BestScoreRow = {
   percent: number;
   timestamp: string;
   completeCount: number;
+  cycle: number | null;
+  complete: boolean;
 };
 
 export type MissingRow = {

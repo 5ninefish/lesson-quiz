@@ -1,4 +1,4 @@
-import { TEST_IDS, TEST_TITLES } from "../ids";
+import { TEST_IDS, TEST_TITLES, TEST_TO_LESSON } from "../ids";
 import { planAssignmentUpdate } from "../programs/assignment-save";
 import { buildLaunchPlan, defaultDraft, type WizardDraft } from "../programs/launcher";
 import { suggestProgramId } from "../programs/ids";
@@ -183,7 +183,7 @@ function readWizardDom(draft: WizardDraft): WizardDraft {
 
 function stepTests(main: HTMLElement, snap: DashboardSnapshot, wizard: WizardState, onChange: (next: WizardState) => void): void {
   const selected = new Map(wizard.draft.tests.map((t) => [t.testId, t]));
-  TEST_IDS.forEach((id, i) => {
+  TEST_IDS.forEach((id) => {
     const count = snap.questionCounts[id] || 0;
     const row = el("label", { class: "picker-row" });
     const cb = el("input", { type: "checkbox" }) as HTMLInputElement;
@@ -202,16 +202,10 @@ function stepTests(main: HTMLElement, snap: DashboardSnapshot, wizard: WizardSta
       } else selected.delete(id);
       onChange({ ...wizard, draft: { ...wizard.draft, tests: [...selected.values()] } });
     };
-    const order = el("input", { type: "number", min: "1", value: String(selected.get(id)?.sortOrder || i + 1) }) as HTMLInputElement;
-    order.onchange = () => {
-      const cur = selected.get(id);
-      if (cur) {
-        cur.sortOrder = Number(order.value) || i + 1;
-        onChange({ ...wizard, draft: { ...wizard.draft, tests: [...selected.values()] } });
-      }
-    };
-    row.append(cb, document.createTextNode(` ${TEST_TITLES[id]} (${id}, ${count} questions) `), order);
-    if (count === 0) row.append(el("span", { class: "sev-error" }, " no valid questions"));
+    const code = el("span", { class: "lesson-code" }, TEST_TO_LESSON[id]);
+    const title = el("span", { class: "picker-title" }, `${TEST_TITLES[id]} (${count} questions)`);
+    row.append(cb, code, title);
+    if (count === 0) row.append(el("span", { class: "sev-error" }, "no valid questions"));
     main.append(row);
   });
 }

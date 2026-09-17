@@ -125,13 +125,12 @@ input[type="search"] {
   flex: 0 0 14px;
   vertical-align: middle;
 }
-.picker-row input[type="number"] {
-  width: 72px;
-  min-width: 72px;
-  min-height: 32px;
-  margin: 0;
-  padding: 4px 6px;
+.lesson-code {
+  flex: 0 0 2.2em;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
 }
+.picker-title { flex: 1; }
 button.linkish { border: 0; background: none; color: var(--accent); text-decoration: underline; padding: 0; min-height: 44px; font: inherit; }
 .dialog-overlay {
   position: fixed; inset: 0; background: rgba(20,24,22,.45);

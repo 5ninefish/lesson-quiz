@@ -89,7 +89,9 @@ describe("search input", () => {
     opts({ screen: "results" });
     const body = document.querySelector("main")?.textContent || "";
     expect(body).toMatch(/Highest score/);
-    expect(body).toMatch(/5\/5/);
+    expect(body).toMatch(/When/);
+    expect(body).toMatch(/5 of 5/);
+    expect(body).not.toMatch(/4 of 5/);
     expect(body).not.toMatch(/4\/5/);
   });
 
