@@ -1,6 +1,6 @@
 import "./style.css";
 import { PROGRAM } from "./config";
-import { clearAccessToken, initTokenClient, oauthConfigured } from "./auth/google-token";
+import { clearAccessToken, initTokenClient, oauthConfigured, waitForGoogleSignIn } from "./auth/google-token";
 import { loadRawWorkbook, loadWorkbookMeta } from "./google/sheets-client";
 import { buildSnapshot } from "./workbook/snapshot";
 import { instructorMessage, type ErrorCode } from "./errors";
@@ -55,21 +55,7 @@ function paint(): void {
       void loadDemo();
     },
     onSignIn: () => {
-      const client = initTokenClient(() => {
-        account = "UH Google";
-        void refreshLive();
-      });
-      if (!client) {
-        banner = {
-          kind: "warn",
-          text: oauthConfigured()
-            ? "Google Identity script is not loaded yet."
-            : "UH OAuth client ID is not configured yet.",
-        };
-        paint();
-        return;
-      }
-      client.requestAccessToken();
+      void startSignIn();
     },
     onSignOut: () => {
       clearAccessToken();
@@ -107,13 +93,19 @@ function paint(): void {
         paint();
         return;
       }
-      const ok = requestWriteScope(() => {
-        writeEnabled = true;
-        banner = { kind: "ok", text: "Write scope granted in this browser session. Still confirm each mutation." };
-        paint();
-      });
+      const ok = requestWriteScope(
+        () => {
+          writeEnabled = true;
+          banner = { kind: "ok", text: "Editing is on for this session. Confirm each change." };
+          paint();
+        },
+        (message) => {
+          banner = { kind: "err", text: message };
+          paint();
+        },
+      );
       if (!ok) {
-        banner = { kind: "warn", text: "Could not request write scope. OAuth client ID is still required." };
+        banner = { kind: "warn", text: "Google sign-in is not ready yet. Wait a moment and try Enable editing again." };
         paint();
       }
     },
@@ -202,6 +194,41 @@ function paint(): void {
       paint();
     },
   });
+}
+
+async function startSignIn(): Promise<void> {
+  banner = { kind: "ok", text: "Opening Google sign-in…" };
+  paint();
+  const ready = await waitForGoogleSignIn();
+  if (!ready) {
+    banner = {
+      kind: "err",
+      text: "Google sign-in is still loading. Wait a couple of seconds and click Sign in again. If this keeps happening, allow accounts.google.com on this page.",
+    };
+    paint();
+    return;
+  }
+  const client = initTokenClient(
+    () => {
+      account = "UH Google";
+      void refreshLive();
+    },
+    (message) => {
+      banner = { kind: "err", text: message };
+      paint();
+    },
+  );
+  if (!client) {
+    banner = {
+      kind: "err",
+      text: oauthConfigured()
+        ? "Google sign-in did not start. Refresh the page once, wait for it to finish loading, then click Sign in."
+        : "Google sign-in is not configured yet.",
+    };
+    paint();
+    return;
+  }
+  client.requestAccessToken({ prompt: "select_account" });
 }
 
 async function loadDemo(): Promise<void> {
