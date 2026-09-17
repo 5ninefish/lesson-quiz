@@ -88,5 +88,68 @@ export function observedWorkbook(): RawWorkbook {
 
   const audit: RawWorkbook["audit"] = [["TimestampHST", "Actor", "Action", "Detail"]];
 
-  return { students, questions, releases, attempts, results, audit };
+  const programs: RawWorkbook["programs"] = [
+    ["ProgramId", "ProgramName", "Status", "StartAt", "EndAt", "CreatedAtHST", "CreatedBy", "UpdatedAtHST", "UpdatedBy"],
+    ["hokulani", "Hōkūlani", "ACTIVE", "", "", "2026-09-01T08:00:00-10:00", "demo", "2026-09-01T08:00:00-10:00", "demo"],
+    ["summer-2026", "Summer 2026", "DRAFT", "2026-06-01", "2026-08-01", "2026-09-10T08:00:00-10:00", "demo", "2026-09-10T08:00:00-10:00", "demo"],
+    ["old-2025", "Archived 2025", "ARCHIVED", "", "", "2025-06-01T08:00:00-10:00", "demo", "2025-08-01T08:00:00-10:00", "demo"],
+  ];
+
+  const programStudents: RawWorkbook["programStudents"] = [
+    ["ProgramId", "Username", "Active", "AssignedAtHST", "AssignedBy"],
+    ["hokulani", "student.one@example.edu", "TRUE", "2026-09-01T08:00:00-10:00", "demo"],
+    ["hokulani", "student.two@example.edu", "TRUE", "2026-09-01T08:00:00-10:00", "demo"],
+    ["hokulani", "student.three@example.edu", "TRUE", "2026-09-01T08:00:00-10:00", "demo"],
+    ["hokulani", "student.four@example.edu", "TRUE", "2026-09-01T08:00:00-10:00", "demo"],
+    ["hokulani", "student.five@example.edu", "TRUE", "2026-09-01T08:00:00-10:00", "demo"],
+    ["summer-2026", "student.one@example.edu", "TRUE", "2026-09-10T08:00:00-10:00", "demo"],
+    ["summer-2026", "student.two@example.edu", "TRUE", "2026-09-10T08:00:00-10:00", "demo"],
+    ["old-2025", "student.five@example.edu", "FALSE", "2025-06-01T08:00:00-10:00", "demo"],
+  ];
+
+  const programTests: RawWorkbook["programTests"] = [
+    ["ProgramId", "TestId", "Enabled", "SortOrder", "Manual", "OpenAt", "CloseAt", "MaxTries", "TimeLimitSec", "UpdatedAtHST", "UpdatedBy"],
+    ["hokulani", "SCI-SOIL", "TRUE", 1, "UNSET", "", "", 2, 0, "2026-09-01T08:00:00-10:00", "demo"],
+    ["hokulani", "SCI-CORAL", "TRUE", 2, "OPEN", "", "", 2, 0, "2026-09-01T08:00:00-10:00", "demo"],
+    ["hokulani", "SCI-CS", "TRUE", 3, "CLOSED", "", "", 2, 1800, "2026-09-01T08:00:00-10:00", "demo"],
+    ["hokulani", "SCI-ASTRO", "TRUE", 4, "AUTO", "2026-09-20T18:00:00-10:00", "2026-09-27T18:00:00-10:00", 2, 0, "2026-09-01T08:00:00-10:00", "demo"],
+    ["hokulani", "SCI-HEALTH", "TRUE", 5, "AUTO", "", "", 2, 0, "2026-09-01T08:00:00-10:00", "demo"],
+    ["hokulani", "SCI-DM", "TRUE", 6, "UNSET", "", "", 2, 0, "2026-09-01T08:00:00-10:00", "demo"],
+    ["summer-2026", "SCI-SOIL", "TRUE", 1, "OPEN", "", "", 2, 0, "2026-09-10T08:00:00-10:00", "demo"],
+    ["summer-2026", "SCI-CORAL", "TRUE", 2, "CLOSED", "", "", 3, 600, "2026-09-10T08:00:00-10:00", "demo"],
+  ];
+
+  const programStudentState: RawWorkbook["programStudentState"] = [
+    ["ProgramId", "Username", "TestId", "Cycle", "SitCache", "UpdatedAtHST", "UpdatedBy"],
+  ];
+  const hokStudents = [
+    "student.one@example.edu",
+    "student.two@example.edu",
+    "student.three@example.edu",
+    "student.four@example.edu",
+    "student.five@example.edu",
+  ];
+  const hokTests = ["SCI-SOIL", "SCI-CORAL", "SCI-CS", "SCI-ASTRO", "SCI-HEALTH", "SCI-DM"];
+  for (const u of hokStudents) {
+    for (const t of hokTests) {
+      programStudentState.push([ "hokulani", u, t, 1, 0, "2026-09-01T08:00:00-10:00", "demo"]);
+    }
+  }
+  for (const u of ["student.one@example.edu", "student.two@example.edu"]) {
+    programStudentState.push(["summer-2026", u, "SCI-SOIL", 1, 0, "2026-09-10T08:00:00-10:00", "demo"]);
+    programStudentState.push(["summer-2026", u, "SCI-CORAL", 1, 0, "2026-09-10T08:00:00-10:00", "demo"]);
+  }
+
+  return {
+    students,
+    questions,
+    releases,
+    attempts,
+    results,
+    audit,
+    programs,
+    programStudents,
+    programTests,
+    programStudentState,
+  };
 }

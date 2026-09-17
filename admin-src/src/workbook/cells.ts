@@ -14,6 +14,11 @@ export function asInt(raw: string): number | null {
   return n;
 }
 
+export function asBool(raw: string): boolean {
+  const v = raw.trim().toLowerCase();
+  return v === "true" || v === "1" || v === "yes" || v === "y" || v === "active";
+}
+
 export function headerIndex(headers: string[], name: string): number {
   const n = name.trim().toLowerCase();
   return headers.findIndex((h) => h.trim().toLowerCase() === n);

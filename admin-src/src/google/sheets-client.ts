@@ -21,9 +21,12 @@ export async function loadWorkbookMeta(signal?: AbortSignal): Promise<WorkbookMe
 export async function loadRawWorkbook(signal?: AbortSignal): Promise<RawWorkbook> {
   const token = getAccessToken();
   if (!token) throw Object.assign(new Error("sign_in"), { code: "sign_in" });
-  const ranges = Object.values(RANGES)
-    .map((r) => `ranges=${encodeURIComponent(r)}`)
-    .join("&");
+  const titles = await listSheetTitles(signal);
+  const wanted = Object.entries(RANGES).filter(([, range]) => {
+    const tab = range.split("!")[0];
+    return titles.length === 0 || titles.includes(tab);
+  });
+  const ranges = wanted.map(([, r]) => `ranges=${encodeURIComponent(r)}`).join("&");
   const url = `https://sheets.googleapis.com/v4/spreadsheets/${PROGRAM.spreadsheetId}/values:batchGet?${ranges}`;
   const res = await fetch(url, { signal, headers: { Authorization: `Bearer ${token}` } });
   if (res.status === 401) throw Object.assign(new Error("sign_in"), { code: "sign_in" });
@@ -44,5 +47,19 @@ export async function loadRawWorkbook(signal?: AbortSignal): Promise<RawWorkbook
     attempts: pick("attempts"),
     results: pick("results"),
     audit: pick("audit"),
+    programs: pick("programs"),
+    programStudents: pick("programStudents"),
+    programTests: pick("programTests"),
+    programStudentState: pick("programStudentState"),
   };
+}
+
+async function listSheetTitles(signal?: AbortSignal): Promise<string[]> {
+  const token = getAccessToken();
+  if (!token) return [];
+  const url = `https://sheets.googleapis.com/v4/spreadsheets/${PROGRAM.spreadsheetId}?fields=sheets.properties.title`;
+  const res = await fetch(url, { signal, headers: { Authorization: `Bearer ${token}` } });
+  if (!res.ok) return [];
+  const json = await res.json();
+  return ((json.sheets || []) as { properties?: { title?: string } }[]).map((s) => s.properties?.title || "").filter(Boolean);
 }

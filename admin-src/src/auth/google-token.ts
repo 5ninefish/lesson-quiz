@@ -1,4 +1,4 @@
-import { PROGRAM } from "../config";
+import { PROGRAM, READ_SCOPES, WRITE_SCOPE } from "../config";
 
 export type TokenClient = {
   requestAccessToken: () => void;
@@ -29,7 +29,7 @@ export function initTokenClient(onToken: (token: string) => void): TokenClient |
   if (!gis?.accounts?.oauth2) return null;
   return gis.accounts.oauth2.initTokenClient({
     client_id: PROGRAM.googleClientId,
-    scope: "openid email profile https://www.googleapis.com/auth/drive.metadata.readonly https://www.googleapis.com/auth/spreadsheets.readonly",
+    scope: READ_SCOPES,
     callback: (resp: { access_token?: string }) => {
       if (resp.access_token) {
         setAccessToken(resp.access_token);
@@ -37,4 +37,22 @@ export function initTokenClient(onToken: (token: string) => void): TokenClient |
       }
     },
   }) as TokenClient;
+}
+
+export function requestWriteScope(onToken: (token: string) => void): boolean {
+  if (!PROGRAM.googleClientId) return false;
+  const gis = (window as unknown as { google?: { accounts?: { oauth2?: { initTokenClient: Function } } } }).google;
+  if (!gis?.accounts?.oauth2) return false;
+  const client = gis.accounts.oauth2.initTokenClient({
+    client_id: PROGRAM.googleClientId,
+    scope: WRITE_SCOPE,
+    callback: (resp: { access_token?: string }) => {
+      if (resp.access_token) {
+        setAccessToken(resp.access_token);
+        onToken(resp.access_token);
+      }
+    },
+  });
+  client.requestAccessToken();
+  return true;
 }

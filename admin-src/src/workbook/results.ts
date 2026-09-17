@@ -171,6 +171,8 @@ export function parseResults(values: SheetValues): ResultsParse {
       status,
       rowNumber,
       source,
+      programId: "",
+      attribution: "unassigned",
     });
   }
 

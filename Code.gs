@@ -69,15 +69,16 @@ function doPost(e) {
     const username = normalizeUsername_(body.username);
     const password = body.password;
     const testId = resolveTestId_(body.testId || body.lesson);
+    const programId = normalizeProgramId_(body.programId);
 
     if (action === 'auth_and_load') {
-      return authAndLoad(username, password, testId);
+      return authAndLoad(username, password, testId, programId);
     }
     if (action === 'submit') {
-      return submit(username, password, testId, body.answers || {}, body.submissionId);
+      return submit(username, password, testId, body.answers || {}, body.submissionId, programId);
     }
     if (action === 'get_tries' || action === 'login') {
-      return getTries(username, password);
+      return getTries(username, password, programId);
     }
     if (action === 'lesson_list') {
       return respond({ error: 'unknown_action' });
@@ -153,24 +154,182 @@ function dashPost_(action, body) {
 }
 
 const ADMIN_PAGES_URL = 'https://5ninefish.github.io/lesson-quiz/admin.html';
+const LEGACY_DEFAULT_PROGRAM_ID = 'hokulani';
 
 function ss_() {
   return SpreadsheetApp.getActiveSpreadsheet();
 }
 
+function normalizeProgramId_(raw) {
+  return String(raw || '').trim().toLowerCase();
+}
+
+function programTablesReady_(ss) {
+  return !!(
+    ss.getSheetByName('Programs') &&
+    ss.getSheetByName('ProgramStudents') &&
+    ss.getSheetByName('ProgramTests') &&
+    ss.getSheetByName('ProgramStudentState')
+  );
+}
+
+function loadActiveMemberships_(ss, username) {
+  const sheet = ss.getSheetByName('ProgramStudents');
+  const programs = ss.getSheetByName('Programs');
+  if (!sheet || !programs) return [];
+  const archived = {};
+  const pdata = programs.getDataRange().getValues();
+  for (let i = 1; i < pdata.length; i++) {
+    if (String(pdata[i][2] || '').trim().toUpperCase() === 'ARCHIVED') {
+      archived[normalizeProgramId_(pdata[i][0])] = true;
+    }
+  }
+  const want = normalizeUsername_(username);
+  const data = sheet.getDataRange().getValues();
+  const out = [];
+  for (let i = 1; i < data.length; i++) {
+    if (normalizeUsername_(data[i][1]) !== want) continue;
+    const active = String(data[i][2]).toUpperCase();
+    if (active === 'FALSE' || active === '0' || active === 'NO') continue;
+    const id = normalizeProgramId_(data[i][0]);
+    if (!id || archived[id]) continue;
+    if (out.indexOf(id) < 0) out.push(id);
+  }
+  return out;
+}
+
+function resolveProgramContext_(ss, username, requested) {
+  if (!programTablesReady_(ss)) return { mode: 'legacy', programId: '', error: '', memberships: [] };
+  const memberships = loadActiveMemberships_(ss, username);
+  const req = normalizeProgramId_(requested);
+  if (req) {
+    if (memberships.indexOf(req) >= 0) return { mode: 'ok', programId: req, error: '', memberships: memberships };
+    return { mode: 'mismatch', programId: '', error: 'not_in_program', memberships: memberships };
+  }
+  if (memberships.length === 1) return { mode: 'ok', programId: memberships[0], error: '', memberships: memberships };
+  if (memberships.length > 1) return { mode: 'picker', programId: '', error: 'need_program', memberships: memberships };
+  return { mode: 'none', programId: '', error: 'no_program', memberships: [] };
+}
+
+function getProgramTestRow_(ss, programId, testId) {
+  const sheet = ss.getSheetByName('ProgramTests');
+  if (!sheet) return null;
+  const canon = resolveTestId_(testId);
+  const data = sheet.getDataRange().getValues();
+  for (let i = 1; i < data.length; i++) {
+    if (normalizeProgramId_(data[i][0]) !== programId) continue;
+    if (resolveTestId_(data[i][1]) !== canon) continue;
+    const enabled = String(data[i][2]).toUpperCase();
+    if (enabled === 'FALSE' || enabled === '0' || enabled === 'NO') return { assigned: false };
+    return {
+      assigned: true,
+      enabled: true,
+      sortOrder: Number(data[i][3]) || 1,
+      manual: String(data[i][4] || '').trim().toUpperCase() || 'UNSET',
+      openAt: parseSheetDate_(data[i][5]),
+      closeAt: parseSheetDate_(data[i][6]),
+      maxTries: Number(data[i][7]) > 0 ? Number(data[i][7]) : MAX_TRIES,
+      timeLimitSec: Number(data[i][8]) >= 0 ? Number(data[i][8]) : QUIZ_TIME_SECONDS,
+    };
+  }
+  return { assigned: false };
+}
+
+function releaseFromProgramTest_(row, testId) {
+  if (!row || !row.assigned) return { error: 'test_not_assigned' };
+  return {
+    missing: false,
+    testId: resolveTestId_(testId),
+    strand: '',
+    title: '',
+    openAt: row.openAt,
+    closeAt: row.closeAt,
+    manual: row.manual,
+    maxTries: row.maxTries,
+    timeLimitSec: row.timeLimitSec,
+  };
+}
+
+function getReleaseForContext_(ss, testId, programId) {
+  if (!programId) return getRelease_(ss, testId);
+  const row = getProgramTestRow_(ss, programId, testId);
+  if (!row || !row.assigned) return { error: 'test_not_assigned' };
+  return releaseFromProgramTest_(row, testId);
+}
+
+function getProgramState_(ss, programId, username, testId) {
+  const sheet = ss.getSheetByName('ProgramStudentState');
+  if (!sheet || !programId) return { cycle: 1, sitCache: 0, sheetRow: 0 };
+  const canon = resolveTestId_(testId);
+  const want = normalizeUsername_(username);
+  const data = sheet.getDataRange().getValues();
+  for (let i = 1; i < data.length; i++) {
+    if (normalizeProgramId_(data[i][0]) !== programId) continue;
+    if (normalizeUsername_(data[i][1]) !== want) continue;
+    if (resolveTestId_(data[i][2]) !== canon) continue;
+    const cycle = Number(data[i][3]) > 0 ? Number(data[i][3]) : 1;
+    const sitCache = Number(data[i][4]) || 0;
+    return { cycle: cycle, sitCache: sitCache, sheetRow: i + 1 };
+  }
+  return { cycle: 1, sitCache: 0, sheetRow: 0 };
+}
+
+function writeProgramSitCache_(ss, state, sits, actor) {
+  if (!state.sheetRow) return;
+  const sheet = ss.getSheetByName('ProgramStudentState');
+  sheet.getRange(state.sheetRow, 5).setValue(sits);
+  sheet.getRange(state.sheetRow, 6).setValue(new Date());
+  sheet.getRange(state.sheetRow, 7).setValue(actor || 'system');
+}
+
+function bumpProgramCycle_(ss, programId, username, testId) {
+  const state = getProgramState_(ss, programId, username, testId);
+  const sheet = ss.getSheetByName('ProgramStudentState');
+  if (!sheet || !state.sheetRow) return;
+  sheet.getRange(state.sheetRow, 4).setValue((state.cycle || 1) + 1);
+  sheet.getRange(state.sheetRow, 5).setValue(0);
+  SpreadsheetApp.flush();
+}
+
+function cycleSitsForContext_(ss, username, testId, cycle, programId, student) {
+  if (!programId) return cycleSits_(ss, username, testId, cycle);
+  const attempts = ss.getSheetByName('Attempts');
+  if (!attempts) return 0;
+  const data = attempts.getDataRange().getValues();
+  const want = normalizeUsername_(username);
+  const canon = resolveTestId_(testId);
+  let n = 0;
+  for (let i = 1; i < data.length; i++) {
+    if (normalizeUsername_(data[i][0]) !== want) continue;
+    if (resolveTestId_(data[i][1]) !== canon) continue;
+    if (Number(data[i][2]) !== Number(cycle)) continue;
+    const rowProgram = normalizeProgramId_(data[i][11] || '');
+    if (rowProgram && rowProgram !== programId) continue;
+    if (!rowProgram && programId !== LEGACY_DEFAULT_PROGRAM_ID) continue;
+    const status = String(data[i][9] || '').trim();
+    if (status === 'done' || status === 'submitted' || status === 'time_expired') n++;
+  }
+  return n;
+}
+
 // ─── HANDLERS ────────────────────────────────────────────────────────────────
-function getTries(username, password) {
+function getTries(username, password, programId) {
   const ss = ss_();
   const studentsData = ss.getSheetByName('Students').getDataRange().getValues();
   const student = findStudent(studentsData, username, password);
   if (!student) return respond({ error: 'invalid_credentials' });
-  const allTries = allTriesFor(student);
-  const tests = buildTestsPayload_(ss, student);
+  const ctx = resolveProgramContext_(ss, username, programId);
+  if (ctx.error === 'need_program') {
+    return respond({ ok: true, needProgram: true, programs: ctx.memberships, tests: [], allTries: {} });
+  }
+  if (ctx.error) return respond({ error: ctx.error, programs: ctx.memberships });
+  const tests = buildTestsPayload_(ss, student, ctx.programId);
   return respond({
     ok: true,
-    allTries: allTries,
+    allTries: allTriesFor(student),
     tests: tests,
     timeLimit: QUIZ_TIME_SECONDS,
+    programId: ctx.programId || '',
   });
 }
 
@@ -191,7 +350,7 @@ function getTries(username, password) {
           cycleSits >= max -> max_attempts_reached
           else mint snapshots + StartedAt
 */
-function authAndLoad(username, password, testId) {
+function authAndLoad(username, password, testId, programId) {
   if (!testId) return respond({ error: 'invalid_lesson' });
 
   const ss = ss_();
@@ -201,20 +360,25 @@ function authAndLoad(username, password, testId) {
   const student = findStudent(studentsData, username, password);
   if (!student) return respond({ error: 'invalid_credentials' });
 
+  const ctx = resolveProgramContext_(ss, username, programId);
+  if (ctx.error) return respond({ error: ctx.error, programs: ctx.memberships });
+  const resolvedProgramId = ctx.programId || '';
+
   const loaded = loadQuestions(ss, testId);
   if (loaded.error) return respond({ error: loaded.error });
 
-  const rel = getRelease_(ss, testId);
+  const rel = getReleaseForContext_(ss, testId, resolvedProgramId);
   if (rel.error) return respond({ error: rel.error });
 
   const now = new Date();
   const lockResult = withScriptLock_(START_LOCK_MS, function () {
-    const cycle = currentCycle_(student, testId);
+    const pstate = getProgramState_(ss, resolvedProgramId, username, testId);
+    const cycle = resolvedProgramId ? pstate.cycle : currentCycle_(student, testId);
     const maxTries = rel.missing ? MAX_TRIES : rel.maxTries;
     const timeLimitSec = rel.missing ? QUIZ_TIME_SECONDS : rel.timeLimitSec;
 
     const attemptsSheet = ss.getSheetByName('Attempts');
-    const inFlight = findInFlight_(attemptsSheet, username, testId, cycle);
+    const inFlight = findInFlight_(attemptsSheet, username, testId, cycle, resolvedProgramId);
 
     if (inFlight) {
       const startedAt = asDate_(inFlight.startedAt);
@@ -230,13 +394,14 @@ function authAndLoad(username, password, testId) {
       } else {
         const remaining = remainingSec_(startedAt, inFlight.timeLimitSec, now);
         const questions = parseQuestionsSnapshot_(inFlight.questionsSnapshot) || loaded.questions;
-        return joinPayload_(student, testId, inFlight.submissionId, questions, remaining, maxTries, ss);
+        return joinPayload_(student, testId, inFlight.submissionId, questions, remaining, maxTries, ss, resolvedProgramId);
       }
     }
 
     const studentNow = reloadStudent_(ss, username, password) || student;
-    const cycleNow = currentCycle_(studentNow, testId);
-    const sitsNow = cycleSits_(ss, username, testId, cycleNow);
+    const pstateNow = getProgramState_(ss, resolvedProgramId, username, testId);
+    const cycleNow = resolvedProgramId ? pstateNow.cycle : currentCycle_(studentNow, testId);
+    const sitsNow = cycleSitsForContext_(ss, username, testId, cycleNow, resolvedProgramId, studentNow);
 
     if (!releaseAllowsStart_(rel, now)) return { error: 'not_released' };
     if (sitsNow >= maxTries) {
@@ -246,8 +411,8 @@ function authAndLoad(username, password, testId) {
       return { error: 'no_questions_found' };
     }
 
-    const minted = mintAttempt_(ss, username, testId, cycleNow, loaded, maxTries, timeLimitSec, now);
-    return joinPayload_(studentNow, testId, minted.submissionId, loaded.questions, remainingSec_(now, timeLimitSec, now), maxTries, ss);
+    const minted = mintAttempt_(ss, username, testId, cycleNow, loaded, maxTries, timeLimitSec, now, resolvedProgramId);
+    return joinPayload_(studentNow, testId, minted.submissionId, loaded.questions, remainingSec_(now, timeLimitSec, now), maxTries, ss, resolvedProgramId);
   });
 
   if (lockResult && lockResult._busy) return respond({ error: 'busy_try_again' });
@@ -260,7 +425,7 @@ function authAndLoad(username, password, testId) {
   return respond(lockResult);
 }
 
-function submit(username, password, testId, answers, clientSubmissionId) {
+function submit(username, password, testId, answers, clientSubmissionId, programId) {
   if (!testId) return respond({ error: 'invalid_lesson' });
   const ss = ss_();
   ensureRuntimeSchema_(ss);
@@ -272,7 +437,11 @@ function submit(username, password, testId, answers, clientSubmissionId) {
     const student = findStudent(studentsData, username, password);
     if (!student) return { error: 'invalid_credentials' };
 
-    const rel = getRelease_(ss, testId);
+    const ctx = resolveProgramContext_(ss, username, programId);
+    if (ctx.error) return { error: ctx.error };
+    const resolvedProgramId = ctx.programId || '';
+
+    const rel = getReleaseForContext_(ss, testId, resolvedProgramId);
     if (rel.error) return { error: rel.error };
 
     const byId = clientSubmissionId ? findResultsBySubmissionId_(ss, clientSubmissionId) : null;
@@ -281,7 +450,8 @@ function submit(username, password, testId, answers, clientSubmissionId) {
       return storedSubmitResponse_(byId, rel, now, student, testId);
     }
 
-    const cycle = currentCycle_(student, testId);
+    const pstate = getProgramState_(ss, resolvedProgramId, username, testId);
+    const cycle = resolvedProgramId ? pstate.cycle : currentCycle_(student, testId);
     const attemptsSheet = ss.getSheetByName('Attempts');
     let inFlight = null;
     if (clientSubmissionId) {
@@ -297,8 +467,11 @@ function submit(username, password, testId, answers, clientSubmissionId) {
       if (inFlight && (inFlight.username !== username || inFlight.testId !== testId || Number(inFlight.cycle) !== Number(cycle))) {
         return { error: 'invalid_attempt' };
       }
+      if (inFlight && resolvedProgramId && inFlight.programId && inFlight.programId !== resolvedProgramId) {
+        return { error: 'invalid_attempt' };
+      }
     } else {
-      inFlight = findInFlight_(attemptsSheet, username, testId, cycle);
+      inFlight = findInFlight_(attemptsSheet, username, testId, cycle, resolvedProgramId);
     }
     if (!inFlight || inFlight.status !== 'in_flight') return { error: 'invalid_attempt' };
 
@@ -322,7 +495,7 @@ function submit(username, password, testId, answers, clientSubmissionId) {
   return respond(lockResult);
 }
 
-function joinPayload_(student, testId, submissionId, questions, remaining, maxTries, ss) {
+function joinPayload_(student, testId, submissionId, questions, remaining, maxTries, ss, programId) {
   const lesson = TEST_TO_LESSON[testId] || testId;
   const tries = Number(allTriesFor(student)[lesson]) || 0;
   return {
@@ -336,6 +509,7 @@ function joinPayload_(student, testId, submissionId, questions, remaining, maxTr
     testId: testId,
     allTries: allTriesFor(student),
     timeLimit: remaining,
+    programId: programId || '',
   };
 }
 
@@ -405,13 +579,19 @@ function reloadStudent_(ss, username, password) {
   return findStudent(data, username, password);
 }
 
-function buildTestsPayload_(ss, student) {
+function buildTestsPayload_(ss, student, programId) {
   const now = new Date();
-  return LESSONS.map(function (lesson) {
-    const testId = LESSON_TO_TEST[lesson];
-    const rel = getRelease_(ss, testId);
+  const lessons = programId ? programLessons_(ss, programId) : LESSONS.map(function (lesson) {
+    return { lesson: lesson, testId: LESSON_TO_TEST[lesson] };
+  });
+  return lessons.map(function (item) {
+    const lesson = item.lesson;
+    const testId = item.testId;
+    const rel = getReleaseForContext_(ss, testId, programId || '');
+    if (rel.error === 'test_not_assigned') return null;
     const maxTries = rel.missing ? MAX_TRIES : rel.maxTries;
-    const tries = Number(allTriesFor(student)[lesson]) || 0;
+    const pstate = programId ? getProgramState_(ss, programId, usernameFromStudent_(student), testId) : null;
+    const tries = pstate ? (pstate.sitCache || 0) : (Number(allTriesFor(student)[lesson]) || 0);
     let state = 'open';
     if (rel.error) state = 'locked';
     else if (rel.missing) state = tries >= maxTries ? 'done' : 'open';
@@ -437,7 +617,25 @@ function buildTestsPayload_(ss, student) {
       closeAt: rel.closeAt ? rel.closeAt.toISOString() : '',
       timeLimit: rel.missing ? QUIZ_TIME_SECONDS : rel.timeLimitSec,
     };
-  }).filter(function (t) { return t.state !== 'hidden'; });
+  }).filter(function (t) { return t && t.state !== 'hidden'; });
+}
+
+function programLessons_(ss, programId) {
+  const sheet = ss.getSheetByName('ProgramTests');
+  if (!sheet) return [];
+  const data = sheet.getDataRange().getValues();
+  const out = [];
+  for (let i = 1; i < data.length; i++) {
+    if (normalizeProgramId_(data[i][0]) !== programId) continue;
+    const enabled = String(data[i][2]).toUpperCase();
+    if (enabled === 'FALSE' || enabled === '0' || enabled === 'NO') continue;
+    const testId = resolveTestId_(data[i][1]);
+    const lesson = TEST_TO_LESSON[testId];
+    if (!lesson) continue;
+    out.push({ lesson: lesson, testId: testId, sort: Number(data[i][3]) || 0 });
+  }
+  out.sort(function (a, b) { return a.sort - b.sort; });
+  return out;
 }
 
 // ─── IDENTITY / QUESTIONS ────────────────────────────────────────────────────
@@ -686,16 +884,22 @@ function headerIndex_(headers, name) {
   return -1;
 }
 
-function findInFlight_(attemptsSheet, username, testId, cycle) {
+function findInFlight_(attemptsSheet, username, testId, cycle, programId) {
   if (!attemptsSheet) return null;
   const data = attemptsSheet.getDataRange().getValues();
   const want = normalizeUsername_(username);
   const canon = resolveTestId_(testId);
+  const wantProgram = normalizeProgramId_(programId);
   for (let i = 1; i < data.length; i++) {
     if (normalizeUsername_(data[i][0]) !== want) continue;
     if (resolveTestId_(data[i][1]) !== canon) continue;
     if (Number(data[i][2]) !== Number(cycle)) continue;
     if (String(data[i][9]).trim() !== 'in_flight') continue;
+    const rowProgram = normalizeProgramId_(data[i][11] || '');
+    if (wantProgram) {
+      if (rowProgram && rowProgram !== wantProgram) continue;
+      if (!rowProgram && wantProgram !== LEGACY_DEFAULT_PROGRAM_ID) continue;
+    }
     return attemptFromRow_(data[i], i + 1);
   }
   return null;
@@ -723,6 +927,7 @@ function attemptFromRow_(row, sheetRow) {
     correctSnapshot: String(row[8] || ''),
     status: String(row[9] || ''),
     questionsSnapshot: row[10] !== undefined ? String(row[10] || '') : '',
+    programId: normalizeProgramId_(row[11] || ''),
     sheetRow: sheetRow,
   };
 }
@@ -737,13 +942,13 @@ function parseQuestionsSnapshot_(raw) {
   }
 }
 
-function mintAttempt_(ss, username, testId, cycle, loaded, maxTries, timeLimitSec, now) {
+function mintAttempt_(ss, username, testId, cycle, loaded, maxTries, timeLimitSec, now, programId) {
   const sheet = ss.getSheetByName('Attempts');
   const submissionId = Utilities.getUuid();
   const correctSnapshot = correctSnapshotFrom_(loaded.corrects);
   const questionsSnapshot = JSON.stringify(loaded.questions);
   const fp = fingerprint_(loaded.questions, correctSnapshot);
-  sheet.appendRow([
+  const row = [
     username,
     testId,
     cycle,
@@ -755,7 +960,18 @@ function mintAttempt_(ss, username, testId, cycle, loaded, maxTries, timeLimitSe
     correctSnapshot,
     'in_flight',
     questionsSnapshot,
-  ]);
+  ];
+  if (programId) {
+    const last = Math.max(sheet.getLastColumn(), 12);
+    const headers = sheet.getRange(1, 1, 1, last).getValues()[0];
+    if (headerIndex_(headers, 'ProgramId') < 0 && last >= 12 && !String(headers[11] || '').trim()) {
+      sheet.getRange(1, 12).setValue('ProgramId');
+    } else if (headerIndex_(headers, 'ProgramId') < 0 && sheet.getLastColumn() < 12) {
+      sheet.getRange(1, 12).setValue('ProgramId');
+    }
+    row.push(programId);
+  }
+  sheet.appendRow(row);
   SpreadsheetApp.flush();
   return { submissionId: submissionId, correctSnapshot: correctSnapshot, questionsSnapshot: questionsSnapshot };
 }
@@ -800,6 +1016,11 @@ function finalizeAttempt_(ss, inFlight, answers, status, now) {
   setCol('Complete', null, complete ? 'YES' : 'NO');
   results.appendRow(row);
   ss.getSheetByName('Attempts').getRange(inFlight.sheetRow, 10).setValue('done');
+  if (inFlight.programId) {
+    const st = getProgramState_(ss, inFlight.programId, inFlight.username, inFlight.testId);
+    const sits = cycleSitsForContext_(ss, inFlight.username, inFlight.testId, inFlight.cycle, inFlight.programId, null);
+    writeProgramSitCache_(ss, st, sits, 'system');
+  }
   SpreadsheetApp.flush();
   return {
     score: graded.score,

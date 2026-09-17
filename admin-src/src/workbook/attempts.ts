@@ -82,6 +82,7 @@ export function parseAttempts(values: SheetValues, now = new Date()): AttemptsPa
       if (now.getTime() > deadline) displayStatus = "expired";
     }
 
+    const programId = cell(row, col("ProgramId", 11)).toLowerCase();
     const view: AttemptView = {
       username,
       testId,
@@ -95,6 +96,7 @@ export function parseAttempts(values: SheetValues, now = new Date()): AttemptsPa
       remainingSec,
       rowNumber,
       rawTestId,
+      programId,
     };
     const blob = JSON.stringify(view).toLowerCase();
     if (blob.includes("correctsnapshot") || /\bcorrect\b/.test(blob)) {

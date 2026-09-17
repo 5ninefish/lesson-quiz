@@ -369,12 +369,26 @@ const ALL_LESSONS = ['L1','L2','L3','L4','L5','L6'];
 <!-- ── App logic ───────────────────────────────────────────────────────────── -->
 <script>
 // ── State ─────────────────────────────────────────────────────────────────────
+function readQuizParams() {
+  try {
+    const p = new URLSearchParams(location.search || '');
+    return {
+      program: String(p.get('program') || '').trim().toLowerCase(),
+      test: String(p.get('test') || '').trim(),
+    };
+  } catch (e) {
+    return { program: '', test: '' };
+  }
+}
+
 let state = {
   username: '',
   password: '',
   currentLesson: null,
   currentTestId: null,
   submissionId: '',
+  programId: readQuizParams().program,
+  pendingTest: readQuizParams().test,
   tryCounts: {},
   tests: [],
   questions: [],
@@ -399,6 +413,7 @@ function setError(id, msg) {
 
 // ── API call ──────────────────────────────────────────────────────────────────
 async function api(body, retries = 0) {
+  if (state.programId && body.programId == null) body.programId = state.programId;
   const res = await fetch(API_URL, {
     method: 'POST',
     body: JSON.stringify(body),
@@ -430,11 +445,27 @@ async function login() {
       btn.textContent = 'Sign In'; btn.disabled = false;
       return;
     }
+    if (r.error === 'no_program') {
+      setError('login-error', 'You are not assigned to a program. Contact your instructor.');
+      btn.textContent = 'Sign In'; btn.disabled = false;
+      return;
+    }
+    if (r.error === 'not_in_program') {
+      setError('login-error', 'You are not in that program. Open the link your instructor sent.');
+      btn.textContent = 'Sign In'; btn.disabled = false;
+      return;
+    }
     state.username = u;
     state.password = p;
     state.tryCounts = r.allTries || {};
     state.tests = r.tests || [];
-    showLessons();
+    if (r.programId) state.programId = r.programId;
+    if (r.needProgram && r.programs && r.programs.length) {
+      showProgramPicker(r.programs);
+    } else {
+      showLessons();
+      maybeOpenPendingTest();
+    }
   } catch (err) {
     setError('login-error', 'Connection error. Please try again.');
   }
@@ -444,7 +475,8 @@ async function login() {
 function logout() {
   stopTimer();
   try { sessionStorage.removeItem('quizSubmissionId'); } catch (e) {}
-  state = { username:'', password:'', currentLesson:null, currentTestId:null, submissionId:'', tryCounts:{}, tests:[], questions:[], timerInterval:null, timeLimit:0 };
+  const params = readQuizParams();
+  state = { username:'', password:'', currentLesson:null, currentTestId:null, submissionId:'', programId: params.program, pendingTest: params.test, tryCounts:{}, tests:[], questions:[], timerInterval:null, timeLimit:0 };
   document.getElementById('username').value = '';
   document.getElementById('password').value = '';
   show('view-login');
@@ -456,6 +488,43 @@ function showLessons() {
   setError('lesson-select-error', '');
   renderLessonGrid();
   show('view-lessons');
+}
+
+function showProgramPicker(programs) {
+  document.getElementById('lessons-greeting').textContent = 'Choose a program';
+  setError('lesson-select-error', '');
+  const grid = document.getElementById('lesson-grid');
+  grid.innerHTML = '';
+  (programs || []).forEach(function (id) {
+    const btn = document.createElement('button');
+    btn.className = 'lesson-btn';
+    btn.textContent = id;
+    btn.onclick = async function () {
+      state.programId = id;
+      const r = await api({ action: 'get_tries', username: state.username, password: state.password, programId: id });
+      if (r.error) { setError('lesson-select-error', friendlyError(r.error)); return; }
+      state.tests = r.tests || [];
+      state.tryCounts = r.allTries || {};
+      showLessons();
+      maybeOpenPendingTest();
+    };
+    grid.appendChild(btn);
+  });
+  show('view-lessons');
+}
+
+function maybeOpenPendingTest() {
+  const pending = state.pendingTest;
+  if (!pending) return;
+  state.pendingTest = '';
+  const hit = (state.tests || []).find(function (t) {
+    return t.testId === pending || t.lesson === pending || String(t.testId).toUpperCase() === String(pending).toUpperCase();
+  });
+  if (!hit) {
+    setError('lesson-select-error', 'That test is not available in this program.');
+    return;
+  }
+  startLesson(hit.lesson || hit.testId, hit.testId);
 }
 
 function renderLessonGrid() {
@@ -515,6 +584,10 @@ function friendlyError(code) {
   if (code === 'invalid_credentials') return 'Session expired. Please sign in again.';
   if (code === 'bad_question_bank') return 'This test is not available (question bank). Contact your instructor.';
   if (code === 'no_questions_found') return 'No questions found for this test.';
+  if (code === 'not_in_program') return 'You are not in that program.';
+  if (code === 'no_program') return 'You are not assigned to a program.';
+  if (code === 'need_program') return 'Choose which program to open.';
+  if (code === 'test_not_assigned') return 'This test is not assigned in this program.';
   return code ? ('Could not load: ' + code) : 'Unknown error';
 }
 

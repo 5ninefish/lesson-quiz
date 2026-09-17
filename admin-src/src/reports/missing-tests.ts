@@ -10,7 +10,7 @@ export function missingTests(students: StudentView[], results: ResultView[], onl
   const rows: MissingRow[] = [];
   for (const s of students) {
     const missing = tests.filter((id) => !complete.has(`${s.username}::${id}`));
-    if (missing.length) rows.push({ username: s.username, missing });
+    if (missing.length) rows.push({ username: s.username, missing, availability: "" });
   }
   return rows.sort((a, b) => b.missing.length - a.missing.length || a.username.localeCompare(b.username));
 }

@@ -1,10 +1,18 @@
 import { PROGRAM } from "../config";
 import { TEST_TITLES } from "../ids";
-import type { DashboardSnapshot } from "../types";
+import { filterSnapshot } from "../programs/summaries";
+import type { DashboardSnapshot, LaunchPlan } from "../types";
 import { toCsv, downloadCsv } from "../csv";
+import { el } from "./dom";
+import { renderPrograms } from "./programs";
+import { emptyWizard, renderWizard, type WizardState } from "./program-wizard";
+import { renderReleases } from "./releases";
+import { renderMissing } from "./missing";
 
 export type Screen =
   | "overview"
+  | "programs"
+  | "wizard"
   | "roster"
   | "releases"
   | "attempts"
@@ -12,12 +20,15 @@ export type Screen =
   | "missing"
   | "health";
 
-type ShellOpts = {
+export type ShellOpts = {
   snap: DashboardSnapshot | null;
   screen: Screen;
   bookName: string;
   account: string;
   canEdit: boolean;
+  writeEnabled: boolean;
+  selectedProgramId: string;
+  wizard: WizardState | null;
   banner: { kind: "ok" | "warn" | "err"; text: string } | null;
   query: string;
   onNav: (s: Screen) => void;
@@ -26,6 +37,13 @@ type ShellOpts = {
   onSignIn: () => void;
   onSignOut: () => void;
   onSearch: (q: string) => void;
+  onSelectProgram: (id: string) => void;
+  onWizardChange: (w: WizardState) => void;
+  onLaunch: (plan: LaunchPlan) => void;
+  onEnableEditing: () => void;
+  onInitTables: () => void;
+  onArchive: (id: string) => void;
+  onDuplicate: (id: string) => void;
 };
 
 let onSearchCb: (q: string) => void = () => {};
@@ -34,17 +52,14 @@ let onRefreshCb: () => void = () => {};
 let onDemoCb: () => void = () => {};
 let onSignInCb: () => void = () => {};
 let onSignOutCb: () => void = () => {};
+let onSelectProgramCb: (id: string) => void = () => {};
+let onWizardChangeCb: (w: WizardState) => void = () => {};
+let onLaunchCb: (plan: LaunchPlan) => void = () => {};
+let onEnableEditingCb: () => void = () => {};
+let onInitTablesCb: () => void = () => {};
+let onArchiveCb: (id: string) => void = () => {};
+let onDuplicateCb: (id: string) => void = () => {};
 let chromeReady = false;
-
-function el<K extends keyof HTMLElementTagNameMap>(tag: K, attrs: Record<string, string> = {}, text?: string): HTMLElementTagNameMap[K] {
-  const node = document.createElement(tag);
-  for (const [k, v] of Object.entries(attrs)) {
-    if (k === "class") node.className = v;
-    else node.setAttribute(k, v);
-  }
-  if (text != null) node.textContent = text;
-  return node;
-}
 
 export function rowMatchesQuery(cells: string[], query: string): boolean {
   const q = query.trim().toLowerCase();
@@ -102,6 +117,11 @@ function mountChrome(): void {
   header.append(el("div", { class: "meta", id: "account" }, "Not signed in"));
   header.append(el("div", { class: "meta", id: "role" }, "Read only"));
   header.append(el("div", { class: "meta", id: "stamp" }, ""));
+  const prog = el("label", { class: "meta", id: "program-picker-wrap" }, "Program ");
+  const sel = el("select", { id: "program-picker" }) as HTMLSelectElement;
+  sel.onchange = () => onSelectProgramCb(sel.value);
+  prog.append(sel);
+  header.append(prog);
   header.append(el("div", { class: "spacer" }));
   const demo = el("button", { type: "button", id: "btn-demo" }, "Load demo workbook");
   demo.onclick = () => onDemoCb();
@@ -111,7 +131,9 @@ function mountChrome(): void {
   refresh.onclick = () => onRefreshCb();
   const signout = el("button", { type: "button", id: "btn-signout" }, "Sign out");
   signout.onclick = () => onSignOutCb();
-  header.append(demo, signin, refresh, signout);
+  const edit = el("button", { type: "button", id: "btn-enable-editing" }, "Enable editing");
+  edit.onclick = () => onEnableEditingCb();
+  header.append(demo, signin, refresh, edit, signout);
   app.append(header);
 
   const banner = el("div", { class: "banner", id: "banner" });
@@ -119,6 +141,7 @@ function mountChrome(): void {
 
   const nav = el("nav", { "aria-label": "Instructor sections", id: "nav" });
   const items: [Screen, string][] = [
+    ["programs", "Programs"],
     ["overview", "Overview"],
     ["roster", "Roster"],
     ["releases", "Releases"],
@@ -180,7 +203,11 @@ function renderMain(opts: ShellOpts): void {
     return;
   }
 
-  const snap = opts.snap;
+  const scoped =
+    opts.snap.programTablesPresent && opts.selectedProgramId && opts.screen !== "programs" && opts.screen !== "wizard"
+      ? filterSnapshot(opts.snap, opts.selectedProgramId)
+      : opts.snap;
+  const snap = scoped;
   if (exportBtn) {
     exportBtn.onclick = () => {
       const q = liveQuery(opts.query);
@@ -223,7 +250,7 @@ function renderMain(opts: ShellOpts): void {
     add("Active attempts", snap.attempts.filter((a) => a.displayStatus === "in_flight").length, "attempts");
     add("Expired (display)", snap.attempts.filter((a) => a.displayStatus === "expired").length, "attempts");
     add("Missing rows", snap.missing.length, "missing");
-    add("Parse warnings", snap.issues.length, "health");
+    add("Parse warnings", opts.snap.issues.length, "health");
     add("Blank students skipped", snap.skippedBlankStudents, "health");
     main.append(cards);
     main.append(el("p", { class: "muted" }, `Results parse mode: ${snap.resultsHeaderMode}`));
@@ -236,22 +263,35 @@ function renderMain(opts: ShellOpts): void {
         true,
       ),
     );
-  } else if (opts.screen === "releases") {
-    main.append(el("h1", {}, "Releases"));
-    main.append(
-      table(
-        ["Assessment", "State", "Manual", "Window (as stored)", "Max tries", "Timer sec", "Row"],
-        snap.releases.map((r) => [
-          r.title,
-          r.stateLabel,
-          r.manual,
-          `${r.openAt || "—"} → ${r.closeAt || "—"}`,
-          r.maxTries == null ? "—" : String(r.maxTries),
-          r.timeLimitSec == null ? "—" : String(r.timeLimitSec),
-          String(r.rowNumber),
-        ]),
-      ),
+  } else if (opts.screen === "programs") {
+    renderPrograms(main, opts.snap, opts.selectedProgramId, {
+      canEdit: opts.canEdit,
+      onOpen: (id) => {
+        onSelectProgramCb(id);
+        onNavCb("overview");
+      },
+      onWizard: () => onNavCb("wizard"),
+      onArchive: (id) => onArchiveCb(id),
+      onDuplicate: (id) => onDuplicateCb(id),
+      onInit: () => onInitTablesCb(),
+    });
+  } else if (opts.screen === "wizard") {
+    renderWizard(
+      main,
+      opts.snap,
+      opts.wizard || emptyWizard(),
+      (w) => onWizardChangeCb(w),
+      () => onNavCb("programs"),
+      (plan) => onLaunchCb(plan),
     );
+  } else if (opts.screen === "releases") {
+    renderReleases(main, snap, opts.selectedProgramId || PROGRAM.legacyDefaultProgramId, opts.writeEnabled, (text) => {
+      const banner = document.getElementById("banner");
+      if (banner) {
+        banner.className = "banner show ok";
+        banner.textContent = `Preview only: ${text}`;
+      }
+    });
   } else if (opts.screen === "attempts") {
     main.append(el("h1", {}, "Attempts"));
     main.append(
@@ -284,16 +324,18 @@ function renderMain(opts: ShellOpts): void {
       ),
     );
   } else if (opts.screen === "missing") {
-    main.append(el("h1", {}, "Missing tests"));
-    main.append(
-      table(
-        ["Student", "Missing"],
-        snap.missing.map((m) => [m.username, m.missing.map((id) => TEST_TITLES[id]).join("; ")]),
-      ),
-    );
+    const program = opts.snap.programs.find((p) => p.programId === opts.selectedProgramId);
+    renderMissing(main, snap, opts.selectedProgramId || PROGRAM.legacyDefaultProgramId, program?.programName || PROGRAM.title);
   } else {
     main.append(el("h1", {}, "Data Health"));
     main.append(el("p", { class: "muted" }, "Diagnostic only. There is no fix-everything action."));
+    main.append(
+      el(
+        "p",
+        {},
+        `Legacy Hōkūlani result attributions: ${opts.snap.legacyAttributedResults}. Results not rewritten. Program tables present: ${opts.snap.programTablesPresent ? "yes" : "no"}.`,
+      ),
+    );
     main.append(
       table(
         ["Severity", "Tab", "Row", "Issue"],
@@ -311,13 +353,40 @@ export function renderShell(opts: ShellOpts): void {
   onDemoCb = opts.onDemo;
   onSignInCb = opts.onSignIn;
   onSignOutCb = opts.onSignOut;
+  onSelectProgramCb = opts.onSelectProgram;
+  onWizardChangeCb = opts.onWizardChange;
+  onLaunchCb = opts.onLaunch;
+  onEnableEditingCb = opts.onEnableEditing;
+  onInitTablesCb = opts.onInitTables;
+  onArchiveCb = opts.onArchive;
+  onDuplicateCb = opts.onDuplicate;
 
   if (!chromeReady || !document.getElementById("instructor-search")) mountChrome();
 
   setText("book-name", opts.bookName);
   setText("account", opts.account || "Not signed in");
-  setText("role", opts.canEdit ? "Editor" : "Read only");
+  setText("role", opts.writeEnabled ? "Editor (writes armed)" : opts.canEdit ? "Editor (read until Enable editing)" : "Read only");
   setText("stamp", opts.snap ? `Refreshed ${opts.snap.fetchedAt}` : "");
+  const picker = document.getElementById("program-picker") as HTMLSelectElement | null;
+  if (picker) {
+    picker.replaceChildren();
+    if (opts.snap?.programs.length) {
+      for (const p of opts.snap.programs) {
+        const o = document.createElement("option");
+        o.value = p.programId;
+        o.textContent = `${p.programName} (${p.status})`;
+        picker.append(o);
+      }
+      picker.value = opts.selectedProgramId;
+      picker.disabled = false;
+    } else {
+      const o = document.createElement("option");
+      o.value = PROGRAM.legacyDefaultProgramId;
+      o.textContent = "Hōkūlani (legacy)";
+      picker.append(o);
+      picker.disabled = true;
+    }
+  }
 
   const banner = document.getElementById("banner");
   if (banner) {

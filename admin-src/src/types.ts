@@ -56,7 +56,10 @@ export type AttemptView = {
   remainingSec: number | null;
   rowNumber: number;
   rawTestId: string;
+  programId: string;
 };
+
+export type ResultAttribution = "attempt" | "legacy_default" | "unassigned";
 
 export type ResultView = {
   username: string;
@@ -73,6 +76,8 @@ export type ResultView = {
   status: string;
   rowNumber: number;
   source: "headered" | "positional";
+  programId: string;
+  attribution: ResultAttribution;
 };
 
 export type AuditView = {
@@ -96,6 +101,98 @@ export type BestScoreRow = {
 export type MissingRow = {
   username: string;
   missing: TestId[];
+  availability: string;
+};
+
+export type ProgramStatus = "DRAFT" | "ACTIVE" | "ARCHIVED";
+
+export type ProgramView = {
+  programId: string;
+  programName: string;
+  status: ProgramStatus;
+  startAt: string;
+  endAt: string;
+  createdAtHst: string;
+  createdBy: string;
+  updatedAtHst: string;
+  updatedBy: string;
+  rowNumber: number;
+};
+
+export type ProgramStudentView = {
+  programId: string;
+  username: string;
+  active: boolean;
+  assignedAtHst: string;
+  assignedBy: string;
+  rowNumber: number;
+};
+
+export type ProgramTestView = {
+  programId: string;
+  testId: TestId;
+  enabled: boolean;
+  sortOrder: number;
+  manual: ReleaseManual;
+  openAt: string;
+  closeAt: string;
+  maxTries: number;
+  timeLimitSec: number;
+  updatedAtHst: string;
+  updatedBy: string;
+  rowNumber: number;
+  title: string;
+  state: ReleaseView["state"];
+  stateLabel: string;
+};
+
+export type ProgramStateView = {
+  programId: string;
+  username: string;
+  testId: TestId;
+  cycle: number;
+  sitCache: number;
+  updatedAtHst: string;
+  updatedBy: string;
+  rowNumber: number;
+};
+
+export type ProgramSummary = {
+  program: ProgramView;
+  assignedStudents: number;
+  activeStudents: number;
+  assignedTests: number;
+  enabledTests: number;
+  openTests: number;
+  scheduledTests: number;
+  closedTests: number;
+  hiddenTests: number;
+  activeAttempts: number;
+  missingStudents: number;
+  studentUrl: string;
+  instructorUrl: string;
+};
+
+export type LaunchPlanRow = { tab: string; values: string[] };
+
+export type LaunchPlan = {
+  program: ProgramView;
+  students: ProgramStudentView[];
+  tests: ProgramTestView[];
+  state: ProgramStateView[];
+  rows: LaunchPlanRow[];
+  blocking: string[];
+  warnings: string[];
+};
+
+export type MutationPreview = {
+  id: string;
+  tab: string;
+  range: string;
+  before: string[];
+  after: string[];
+  description: string;
+  rowNumber: number;
 };
 
 export type DashboardSnapshot = {
@@ -112,4 +209,12 @@ export type DashboardSnapshot = {
   questionCounts: Record<TestId, number>;
   skippedBlankStudents: number;
   resultsHeaderMode: "header" | "positional" | "empty";
+  programs: ProgramView[];
+  programStudents: ProgramStudentView[];
+  programTests: ProgramTestView[];
+  programState: ProgramStateView[];
+  programTablesPresent: boolean;
+  missingProgramTables: string[];
+  legacyAttributedResults: number;
+  unassignedResults: number;
 };

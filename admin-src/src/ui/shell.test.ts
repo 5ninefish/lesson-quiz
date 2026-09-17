@@ -24,6 +24,16 @@ function opts(over: Partial<Parameters<typeof renderShell>[0]> = {}) {
     onSignIn: () => {},
     onSignOut: () => {},
     onSearch: () => {},
+    writeEnabled: false,
+    selectedProgramId: "hokulani",
+    wizard: null,
+    onSelectProgram: () => {},
+    onWizardChange: () => {},
+    onLaunch: () => {},
+    onEnableEditing: () => {},
+    onInitTables: () => {},
+    onArchive: () => {},
+    onDuplicate: () => {},
     ...over,
   };
   renderShell(o);
@@ -59,5 +69,27 @@ describe("search input", () => {
   it("does not render best complete scores", () => {
     opts({ screen: "results" });
     expect(document.body.textContent || "").not.toMatch(/Best complete scores/i);
+  });
+
+  it("renders program cards and missing-test links", () => {
+    opts({ screen: "programs" });
+    expect(document.body.textContent || "").toMatch(/Summer 2026/);
+    opts({ screen: "missing", selectedProgramId: "hokulani" });
+    const links = document.querySelectorAll("main a[href*='program=hokulani']");
+    expect(links.length).toBeGreaterThan(0);
+    expect([...links].every((a) => !a.getAttribute("href")?.includes("username="))).toBe(true);
+  });
+
+  it("opens the student email dialog with the required sentence and no date", () => {
+    opts({ screen: "missing", selectedProgramId: "hokulani" });
+    const compose = document.querySelector("main button");
+    const emailBtn = [...document.querySelectorAll("main button")].find((b) => b.textContent === "Compose");
+    expect(emailBtn).toBeTruthy();
+    (emailBtn as HTMLButtonElement).click();
+    const body = (document.getElementById("email-body") as HTMLTextAreaElement | null)?.value || "";
+    expect(body).toContain("Please complete these assessments this week.");
+    expect(body).not.toMatch(/\b20\d{2}-\d{2}-\d{2}\b/);
+    expect(document.getElementById("dialog-overlay")).toBeTruthy();
+    void compose;
   });
 });

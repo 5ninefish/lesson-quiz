@@ -96,6 +96,31 @@ input[type="search"] {
 .sev-error { color: var(--err); }
 .sev-warn { color: var(--warn); }
 .toolbar { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin-bottom: 12px; }
+.mono { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 12px; word-break: break-all; }
+.program-card, .release-card {
+  background: var(--paper);
+  border: 1px solid var(--line);
+  padding: 12px;
+  margin: 0 0 12px;
+}
+.program-card.selected { outline: 2px solid var(--accent); }
+.picker-list { max-height: 360px; overflow: auto; border: 1px solid var(--line); background: var(--paper); }
+.picker-row { display: block; padding: 8px 10px; min-height: 44px; }
+button.linkish { border: 0; background: none; color: var(--accent); text-decoration: underline; padding: 0; min-height: 44px; font: inherit; }
+.dialog-overlay {
+  position: fixed; inset: 0; background: rgba(20,24,22,.45);
+  display: flex; align-items: center; justify-content: center; padding: 16px; z-index: 20;
+}
+.dialog {
+  background: var(--paper); color: var(--ink); max-width: 640px; width: min(640px, 100%);
+  max-height: 90vh; overflow: auto; padding: 16px; border: 1px solid var(--line);
+}
+.dialog input, .dialog textarea, main input, main select, main textarea {
+  display: block; width: min(520px, 100%); min-height: 44px; margin: 4px 0 12px;
+  padding: 8px 10px; font: inherit;
+}
+.dialog textarea, main textarea { min-height: 180px; }
+.dialog-actions { display: flex; flex-wrap: wrap; gap: 8px; }
 @media (max-width: 900px) {
   .app { grid-template-columns: 1fr; grid-template-rows: auto auto auto auto 1fr; }
   nav { grid-row: auto; display: flex; flex-wrap: wrap; border-right: 0; border-bottom: 1px solid var(--line); }
