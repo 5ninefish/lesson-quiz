@@ -1,8 +1,11 @@
 export const PROGRAM = {
   code: "hokulani",
   title: "Hōkūlani Post-Test Portal",
-  spreadsheetId: "1wFjzB6PgjhZjHWBcgLLVOa1TtBvaEDqoV8PGFYoX3EI",
-  googleClientId: "",
+  /** Student quiz still uses the original live book. Do not point students here. */
+  liveStudentSpreadsheetId: "1wFjzB6PgjhZjHWBcgLLVOa1TtBvaEDqoV8PGFYoX3EI",
+  /** Instructor dashboard reads this copy until cutover. */
+  spreadsheetId: "1n5wfSq9HCkXZwX7xzJTYdR3BS8SUNiahpO3oXc7j-Tg",
+  googleClientId: "920320221741-sdr3g7lcijko53f7tu7t0e225801pvu4.apps.googleusercontent.com",
   timezone: "Pacific/Honolulu",
   /** Existing Pages origin until Dalen approves the custom-domain cutover. */
   publicOrigin: "https://5ninefish.github.io/lesson-quiz",

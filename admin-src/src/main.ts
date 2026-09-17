@@ -22,7 +22,7 @@ let wizard: WizardState | null = null;
 let query = "";
 let banner: { kind: "ok" | "warn" | "err"; text: string } | null = {
   kind: "warn",
-  text: "Sign in with a UH Google account that can open the Hōkūlani workbook. Live reads need a UH OAuth client ID.",
+  text: "Sign in with UH Google to read the workbook copy, or load the demo to show staff. Student quiz still uses the original live book.",
 };
 
 function paint(): void {
@@ -48,6 +48,9 @@ function paint(): void {
     onRefresh: () => {
       void refreshLive();
     },
+    onDemo: () => {
+      void loadDemo();
+    },
     onSignIn: () => {
       const client = initTokenClient(() => {
         account = "UH Google";
@@ -58,7 +61,7 @@ function paint(): void {
           kind: "warn",
           text: oauthConfigured()
             ? "Google Identity script is not loaded yet."
-            : "UH OAuth client ID is not configured yet. Add it in admin-src/src/config.ts, rebuild, and push.",
+            : "UH OAuth client ID is not configured yet.",
         };
         paint();
         return;
@@ -135,6 +138,21 @@ function paint(): void {
   });
 }
 
+async function loadDemo(): Promise<void> {
+  const { observedWorkbook } = await import("./fixtures/observed");
+  snap = buildSnapshot(observedWorkbook());
+  bookName = "Demo (synthetic; not a Google Sheet)";
+  account = "demo";
+  canEdit = false;
+  writeEnabled = false;
+  selectedProgramId = snap.programs.find((p) => p.status === "ACTIVE")?.programId || PROGRAM.legacyDefaultProgramId;
+  banner = {
+    kind: "ok",
+    text: `Demo loaded for staff walkthrough. ${snap.programs.length} programs, ${snap.students.length} students. Not the Hōkūlani book.`,
+  };
+  paint();
+}
+
 async function refreshLive(): Promise<void> {
   try {
     const meta = await loadWorkbookMeta();
@@ -142,7 +160,13 @@ async function refreshLive(): Promise<void> {
     canEdit = meta.canEdit;
     const raw = await loadRawWorkbook();
     snap = buildSnapshot(raw);
-    banner = { kind: "ok", text: "Workbook refreshed." };
+    selectedProgramId = snap.programs.find((p) => p.status === "ACTIVE")?.programId || PROGRAM.legacyDefaultProgramId;
+    banner = {
+      kind: snap.programTablesPresent ? "ok" : "warn",
+      text: snap.programTablesPresent
+        ? `Workbook copy loaded: ${snap.students.length} students.`
+        : "Workbook copy loaded. Program tabs are missing — use Initialize Program Launcher on this copy, never setup() on the live student book.",
+    };
   } catch (err) {
     const code = (err as { code?: ErrorCode }).code || "network";
     banner = { kind: "err", text: instructorMessage(code) };

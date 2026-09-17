@@ -20,6 +20,7 @@ function opts(over: Partial<Parameters<typeof renderShell>[0]> = {}) {
     query: "",
     onNav: () => {},
     onRefresh: () => {},
+    onDemo: () => {},
     onSignIn: () => {},
     onSignOut: () => {},
     onSearch: () => {},
@@ -63,6 +64,11 @@ describe("search input", () => {
     input.dispatchEvent(new Event("input", { bubbles: true }));
     expect(document.getElementById("instructor-search")).toBe(input);
     expect(state.q).toBe("st");
+  });
+
+  it("keeps the demo button for staff walkthrough", () => {
+    opts({ snap: null, screen: "programs" });
+    expect(document.getElementById("btn-demo")).toBeTruthy();
   });
 
   it("does not render best complete scores", () => {

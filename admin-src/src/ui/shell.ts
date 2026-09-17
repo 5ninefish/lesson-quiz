@@ -33,6 +33,7 @@ export type ShellOpts = {
   query: string;
   onNav: (s: Screen) => void;
   onRefresh: () => void;
+  onDemo: () => void;
   onSignIn: () => void;
   onSignOut: () => void;
   onSearch: (q: string) => void;
@@ -48,6 +49,7 @@ export type ShellOpts = {
 let onSearchCb: (q: string) => void = () => {};
 let onNavCb: (s: Screen) => void = () => {};
 let onRefreshCb: () => void = () => {};
+let onDemoCb: () => void = () => {};
 let onSignInCb: () => void = () => {};
 let onSignOutCb: () => void = () => {};
 let onSelectProgramCb: (id: string) => void = () => {};
@@ -126,6 +128,8 @@ function mountChrome(): void {
   prog.append(sel);
   header.append(prog);
   header.append(el("div", { class: "spacer" }));
+  const demo = el("button", { type: "button", id: "btn-demo" }, "Load demo workbook");
+  demo.onclick = () => onDemoCb();
   const signin = el("button", { type: "button", class: "primary", id: "btn-signin" }, "Sign in with UH Google");
   signin.onclick = () => onSignInCb();
   const refresh = el("button", { type: "button", id: "btn-refresh" }, "Refresh");
@@ -134,7 +138,7 @@ function mountChrome(): void {
   signout.onclick = () => onSignOutCb();
   const edit = el("button", { type: "button", id: "btn-enable-editing" }, "Enable editing");
   edit.onclick = () => onEnableEditingCb();
-  header.append(signin, refresh, edit, signout);
+  header.append(demo, signin, refresh, edit, signout);
   app.append(header);
 
   const banner = el("div", { class: "banner", id: "banner" });
@@ -198,7 +202,7 @@ function renderMain(opts: ShellOpts): void {
       el(
         "p",
         { class: "muted" },
-        "Sign in with a UH Google account that can open the program workbook. The live student quiz is unchanged.",
+        "Sign in with a UH account that can open the program workbook, or load the demo to walk staff through the dashboard. The live student quiz is unchanged.",
       ),
     );
     return;
@@ -359,6 +363,7 @@ export function renderShell(opts: ShellOpts): void {
   onSearchCb = opts.onSearch;
   onNavCb = opts.onNav;
   onRefreshCb = opts.onRefresh;
+  onDemoCb = opts.onDemo;
   onSignInCb = opts.onSignIn;
   onSignOutCb = opts.onSignOut;
   onSelectProgramCb = opts.onSelectProgram;
