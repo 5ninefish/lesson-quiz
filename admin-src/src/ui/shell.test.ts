@@ -29,6 +29,7 @@ function opts(over: Partial<Parameters<typeof renderShell>[0]> = {}) {
     wizard: null,
     onSelectProgram: () => {},
     onWizardChange: () => {},
+    onEditAssignments: () => {},
     onLaunch: () => {},
     onEnableEditing: () => {},
     onInitTables: () => {},
@@ -84,11 +85,13 @@ describe("search input", () => {
     expect(document.body.textContent || "").not.toMatch(/Best complete scores/i);
   });
 
-  it("roster shows assigned tests, not missing tests or sheet cycles", () => {
+  it("roster shows assigned tests in a dropdown, not a crowded line", () => {
     opts({ screen: "roster" });
     const headers = [...document.querySelectorAll("main th")].map((h) => h.textContent);
     expect(headers).toEqual(["Student", "Assigned tests"]);
-    expect(document.querySelector("main")?.textContent || "").toMatch(/Soil/);
+    const select = document.querySelector("main select") as HTMLSelectElement | null;
+    expect(select).toBeTruthy();
+    expect([...select!.options].some((o) => /Soil/.test(o.text))).toBe(true);
     expect(document.querySelector("main")?.textContent || "").not.toMatch(/Missing tests/);
   });
 

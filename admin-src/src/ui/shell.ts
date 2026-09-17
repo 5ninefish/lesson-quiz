@@ -6,6 +6,7 @@ import { toCsv, downloadCsv } from "../csv";
 import { el } from "./dom";
 import { renderPrograms } from "./programs";
 import { emptyWizard, renderWizard, type WizardState } from "./program-wizard";
+import { studentTestUrl } from "../programs/urls";
 import { renderReleases } from "./releases";
 import { renderMissing } from "./missing";
 
@@ -39,6 +40,7 @@ export type ShellOpts = {
   onSearch: (q: string) => void;
   onSelectProgram: (id: string) => void;
   onWizardChange: (w: WizardState) => void;
+  onEditAssignments: (programId: string) => void;
   onLaunch: (plan: LaunchPlan) => void;
   onEnableEditing: () => void;
   onInitTables: () => void;
@@ -55,6 +57,7 @@ let onSignInCb: () => void = () => {};
 let onSignOutCb: () => void = () => {};
 let onSelectProgramCb: (id: string) => void = () => {};
 let onWizardChangeCb: (w: WizardState) => void = () => {};
+let onEditAssignmentsCb: (programId: string) => void = () => {};
 let onLaunchCb: (plan: LaunchPlan) => void = () => {};
 let onEnableEditingCb: () => void = () => {};
 let onInitTablesCb: () => void = () => {};
@@ -97,9 +100,50 @@ function table(headers: string[], rows: string[][], filterable = false): HTMLEle
   return wrap;
 }
 
+function assignedTests(snap: DashboardSnapshot) {
+  return snap.releases.map((r) => ({ id: r.testId, title: r.title })).filter((t) => t.title);
+}
+
 function assignedTestLabel(snap: DashboardSnapshot): string {
-  const fromProgram = snap.releases.map((r) => r.title).filter(Boolean);
-  return fromProgram.join("; ");
+  return assignedTests(snap)
+    .map((t) => t.title)
+    .join("; ");
+}
+
+function renderRoster(main: HTMLElement, snap: DashboardSnapshot, programId: string): void {
+  main.append(el("h1", {}, "Roster"));
+  main.append(el("p", { class: "muted" }, "Tests on this program. Open the list next to a student to see them without crowding the row."));
+  const wrap = el("div", { class: "table-wrap" });
+  wrap.setAttribute("data-filterable", "true");
+  const t = el("table");
+  const thead = el("thead");
+  const hr = el("tr");
+  hr.append(el("th", {}, "Student"), el("th", {}, "Assigned tests"));
+  thead.append(hr);
+  const tb = el("tbody");
+  const tests = assignedTests(snap);
+  for (const s of snap.students) {
+    const tr = el("tr");
+    tr.dataset.search = `${s.username} ${tests.map((x) => x.title).join(" ")}`.toLowerCase();
+    tr.append(el("td", {}, s.username));
+    const td = el("td");
+    const sel = el("select", { "aria-label": `Assigned tests for ${s.username}` }) as HTMLSelectElement;
+    sel.append(new Option(tests.length ? `${tests.length} assigned tests` : "No tests assigned", ""));
+    for (const test of tests) {
+      sel.append(new Option(test.title, test.id));
+    }
+    sel.onchange = () => {
+      if (!sel.value) return;
+      window.open(studentTestUrl(programId, sel.value), "_blank", "noopener");
+      sel.selectedIndex = 0;
+    };
+    td.append(sel);
+    tr.append(td);
+    tb.append(tr);
+  }
+  t.append(thead, tb);
+  wrap.append(t);
+  main.append(wrap);
 }
 
 function liveQuery(fallback: string): string {
@@ -274,15 +318,7 @@ function renderMain(opts: ShellOpts): void {
     main.append(cards);
     main.append(el("p", { class: "muted" }, `Results parse mode: ${snap.resultsHeaderMode}`));
   } else if (opts.screen === "roster") {
-    main.append(el("h1", {}, "Roster"));
-    const assigned = assignedTestLabel(snap);
-    main.append(
-      table(
-        ["Student", "Assigned tests"],
-        snap.students.map((s) => [s.username, assigned || "—"]),
-        true,
-      ),
-    );
+    renderRoster(main, snap, opts.selectedProgramId || PROGRAM.legacyDefaultProgramId);
   } else if (opts.screen === "programs") {
     renderPrograms(main, opts.snap, opts.selectedProgramId, {
       canEdit: opts.canEdit,
@@ -293,6 +329,7 @@ function renderMain(opts: ShellOpts): void {
         onNavCb("overview");
       },
       onWizard: () => onNavCb("wizard"),
+      onEdit: (id) => onEditAssignmentsCb(id),
       onArchive: (id) => onArchiveCb(id),
       onDuplicate: (id) => onDuplicateCb(id),
       onInit: () => onInitTablesCb(),
@@ -378,6 +415,7 @@ export function renderShell(opts: ShellOpts): void {
   onSignOutCb = opts.onSignOut;
   onSelectProgramCb = opts.onSelectProgram;
   onWizardChangeCb = opts.onWizardChange;
+  onEditAssignmentsCb = opts.onEditAssignments;
   onLaunchCb = opts.onLaunch;
   onEnableEditingCb = opts.onEnableEditing;
   onInitTablesCb = opts.onInitTables;

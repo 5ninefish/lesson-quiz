@@ -27,6 +27,7 @@ export function renderPrograms(
     signedIn: boolean;
     onOpen: (id: string) => void;
     onWizard: () => void;
+    onEdit: (programId: string) => void;
     onArchive: (id: string) => void;
     onDuplicate: (id: string) => void;
     onInit: () => void;
@@ -94,7 +95,7 @@ export function renderPrograms(
     const copyI = el("button", { type: "button" }, "Copy instructor link");
     copyI.onclick = () => void copyText(instructorProgramUrl(program.programId));
     const edit = el("button", { type: "button" }, "Edit assignments");
-    edit.onclick = () => opts.onWizard();
+    edit.onclick = () => opts.onEdit(program.programId);
     const arch = el("button", { type: "button" }, "Archive");
     arch.disabled = program.status === "ARCHIVED";
     arch.onclick = () => {

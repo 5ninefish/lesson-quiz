@@ -6,7 +6,8 @@ import { buildSnapshot } from "./workbook/snapshot";
 import { instructorMessage, type ErrorCode } from "./errors";
 import { renderShell, type Screen } from "./ui/shell";
 import type { DashboardSnapshot } from "./types";
-import { emptyWizard, type WizardState } from "./ui/program-wizard";
+import { emptyWizard, wizardFromProgram, type WizardState } from "./ui/program-wizard";
+import { planAssignmentUpdate } from "./programs/assignment-save";
 import { requestWriteScope } from "./auth/google-token";
 import { programTableInitMutations } from "./programs/mutations";
 import { seedHokulaniPlan } from "./programs/seed";
@@ -74,15 +75,31 @@ function paint(): void {
       wizard = w;
       paint();
     },
+    onEditAssignments: (programId) => {
+      if (!snap) return;
+      const next = wizardFromProgram(snap, programId);
+      if (!next) {
+        banner = { kind: "err", text: "That program is not on this workbook." };
+        paint();
+        return;
+      }
+      wizard = next;
+      screen = "wizard";
+      paint();
+    },
     onLaunch: (plan) => {
       if (plan.blocking.length) {
         banner = { kind: "err", text: plan.blocking[0] };
         paint();
         return;
       }
+      if (wizard?.mode === "edit" && snap) {
+        void saveAssignments();
+        return;
+      }
       banner = {
         kind: "warn",
-        text: `Launch plan ready for ${plan.program.programId}: ${plan.students.length} students, ${plan.tests.length} tests, ${plan.state.length} state rows. Live writes are blocked until a workbook copy is approved.`,
+        text: `Launch plan ready for ${plan.program.programId}: ${plan.students.length} students, ${plan.tests.length} tests. Creating a brand-new program on the copy still needs a confirm on the review screen after editing is on.`,
       };
       screen = "programs";
       paint();
@@ -209,6 +226,77 @@ function paint(): void {
       wizard.draft.programId = hint.idHint;
       screen = "wizard";
       paint();
+    },
+  });
+}
+
+async function saveAssignments(): Promise<void> {
+  if (!snap || !wizard || wizard.mode !== "edit") return;
+  const draft = { ...wizard.draft, nowHst: new Date().toISOString(), actor: account || "instructor" };
+  const update = planAssignmentUpdate({
+    programId: draft.programId,
+    draft,
+    memberships: snap.programStudents,
+    programTests: snap.programTests,
+  });
+  if (update.blocking.length) {
+    banner = { kind: "err", text: update.blocking[0] };
+    paint();
+    return;
+  }
+  if (!writeEnabled) {
+    const ok = requestWriteScope(
+      () => {
+        writeEnabled = true;
+        void saveAssignments();
+      },
+      (message) => {
+        banner = { kind: "err", text: message };
+        paint();
+      },
+    );
+    if (!ok) {
+      banner = { kind: "err", text: "Google is not ready to save yet. Wait a moment and try Save assignments again." };
+      paint();
+    }
+    return;
+  }
+  confirmDialog({
+    title: "Save assignments",
+    body: [
+      `Program: ${draft.programName}`,
+      `Add students: ${update.addedStudents.length || "none"}`,
+      `Remove students: ${update.removedStudents.length || "none"}`,
+      `Add tests: ${update.addedTests.length || "none"}`,
+      `Remove tests: ${update.removedTests.length || "none"}`,
+      "",
+      "Writes the copy only.",
+    ].join("\n"),
+    confirmLabel: "Save",
+    onConfirm: () => {
+      void (async () => {
+        if (update.updates.length) {
+          const wrote = await executeBatchWrite({
+            valueUpdates: update.updates.map((u) => ({ range: u.range, values: u.values })),
+          });
+          if (!wrote.ok) {
+            banner = { kind: "err", text: instructorMessage((wrote.code as ErrorCode) || "write_verify") };
+            paint();
+            return;
+          }
+        }
+        for (const block of update.appends) {
+          const wrote = await appendRows(block.tab, block.values);
+          if (!wrote.ok) {
+            banner = { kind: "err", text: instructorMessage((wrote.code as ErrorCode) || "write_verify") };
+            paint();
+            return;
+          }
+        }
+        banner = { kind: "ok", text: "Assignments saved on the copy." };
+        screen = "programs";
+        await refreshLive();
+      })();
     },
   });
 }

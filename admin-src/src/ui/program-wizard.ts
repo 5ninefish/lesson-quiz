@@ -1,4 +1,5 @@
 import { TEST_IDS, TEST_TITLES } from "../ids";
+import { planAssignmentUpdate } from "../programs/assignment-save";
 import { buildLaunchPlan, defaultDraft, type WizardDraft } from "../programs/launcher";
 import { suggestProgramId } from "../programs/ids";
 import { instructorProgramUrl, studentProgramUrl } from "../programs/urls";
@@ -7,11 +8,45 @@ import { el } from "./dom";
 
 export type WizardState = {
   step: 1 | 2 | 3 | 4 | 5;
+  mode: "create" | "edit";
   draft: WizardDraft;
 };
 
 export function emptyWizard(name = ""): WizardState {
-  return { step: 1, draft: defaultDraft(name) };
+  return { step: 1, mode: "create", draft: defaultDraft(name) };
+}
+
+export function wizardFromProgram(snap: DashboardSnapshot, programId: string): WizardState | null {
+  const program = snap.programs.find((p) => p.programId === programId);
+  if (!program) return null;
+  const usernames = snap.programStudents.filter((m) => m.programId === programId && m.active).map((m) => m.username);
+  const tests = snap.programTests
+    .filter((t) => t.programId === programId && t.enabled)
+    .sort((a, b) => a.sortOrder - b.sortOrder)
+    .map((t) => ({
+      testId: t.testId,
+      sortOrder: t.sortOrder,
+      manual: t.manual,
+      openAt: t.openAt,
+      closeAt: t.closeAt,
+      maxTries: t.maxTries,
+      timeLimitMinutes: t.timeLimitSec / 60,
+    }));
+  return {
+    step: 2,
+    mode: "edit",
+    draft: {
+      programName: program.programName,
+      programId: program.programId,
+      startAt: program.startAt,
+      endAt: program.endAt,
+      status: program.status === "ARCHIVED" ? "DRAFT" : program.status,
+      usernames,
+      tests,
+      actor: "",
+      nowHst: "",
+    },
+  };
 }
 
 export function renderWizard(
@@ -22,7 +57,7 @@ export function renderWizard(
   onCancel: () => void,
   onLaunch: (plan: LaunchPlan) => void,
 ): void {
-  main.append(el("h1", {}, "Create program"));
+  main.append(el("h1", {}, wizard.mode === "edit" ? `Edit assignments — ${wizard.draft.programName}` : "Create program"));
   const steps = el("p", { class: "muted" }, `Step ${wizard.step} of 5`);
   main.append(steps);
 
@@ -53,6 +88,10 @@ function stepInfo(main: HTMLElement, wizard: WizardState, _onChange: (next: Wiza
   const name = field(main, "Program name", wizard.draft.programName, () => {}, "wizard-name");
   name.autocomplete = "off";
   const slug = field(main, "Program ID (slug)", wizard.draft.programId, () => {}, "wizard-id");
+  if (wizard.mode === "edit") {
+    slug.readOnly = true;
+    main.append(el("p", { class: "muted" }, "Program ID cannot change after launch. Archived IDs cannot be reused."));
+  }
   let slugTouched = Boolean(wizard.draft.programId) && wizard.draft.programId !== suggestProgramId(wizard.draft.programName);
   name.addEventListener("input", () => {
     if (!slugTouched) slug.value = suggestProgramId(name.value);
@@ -201,7 +240,7 @@ function stepConfig(main: HTMLElement, wizard: WizardState, onChange: (next: Wiz
 function stepReview(main: HTMLElement, snap: DashboardSnapshot, wizard: WizardState, onLaunch: (plan: LaunchPlan) => void): void {
   const plan = buildLaunchPlan({
     draft: { ...wizard.draft, nowHst: new Date().toISOString(), actor: "instructor" },
-    existingProgramIds: snap.programs.map((p) => p.programId),
+    existingProgramIds: snap.programs.map((p) => p.programId).filter((id) => wizard.mode === "create" || id !== wizard.draft.programId),
     students: snap.students,
     questions: snap.questions,
   });
@@ -218,13 +257,32 @@ function stepReview(main: HTMLElement, snap: DashboardSnapshot, wizard: WizardSt
       ),
     );
   }
-  main.append(el("h2", {}, "Sheet rows to add"));
-  for (const row of plan.rows) {
-    main.append(el("p", { class: "mono" }, `${row.tab}: ${row.values.join(" | ")}`));
+  if (wizard.mode === "edit") {
+    const update = planAssignmentUpdate({
+      programId: wizard.draft.programId,
+      draft: { ...wizard.draft, nowHst: new Date().toISOString(), actor: "instructor" },
+      memberships: snap.programStudents,
+      programTests: snap.programTests,
+    });
+    main.append(el("h2", {}, "Changes"));
+    main.append(el("p", {}, `Add students: ${update.addedStudents.join(", ") || "none"}`));
+    main.append(el("p", {}, `Remove students: ${update.removedStudents.join(", ") || "none"}`));
+    main.append(el("p", {}, `Add tests: ${update.addedTests.join(", ") || "none"}`));
+    main.append(el("p", {}, `Remove tests: ${update.removedTests.join(", ") || "none"}`));
+    for (const b of update.blocking) main.append(el("p", { class: "sev-error" }, b));
+  } else {
+    main.append(el("h2", {}, "Sheet rows to add"));
+    for (const row of plan.rows) {
+      main.append(el("p", { class: "mono" }, `${row.tab}: ${row.values.join(" | ")}`));
+    }
   }
   for (const w of plan.warnings) main.append(el("p", { class: "sev-warn" }, w));
   for (const b of plan.blocking) main.append(el("p", { class: "sev-error" }, b));
-  const launch = el("button", { type: "button", class: "primary", id: "btn-launch-program" }, "Launch Program");
+  const launch = el(
+    "button",
+    { type: "button", class: "primary", id: "btn-launch-program" },
+    wizard.mode === "edit" ? "Save assignments" : "Launch Program",
+  );
   launch.disabled = plan.blocking.length > 0;
   launch.onclick = () => onLaunch(plan);
   main.append(launch);
