@@ -46,7 +46,7 @@ export function renderPrograms(
     return;
   }
 
-  const create = el("button", { type: "button", class: "primary" }, "Create program");
+  const create = el("button", { type: "button", class: "primary program-create" }, "Create program");
   create.onclick = () => opts.onWizard();
   main.append(create);
 

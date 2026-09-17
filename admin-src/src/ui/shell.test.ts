@@ -71,6 +71,13 @@ describe("search input", () => {
     expect(document.body.textContent || "").not.toMatch(/Best complete scores/i);
   });
 
+  it("roster shows students and missing tests, not sheet row or cycles", () => {
+    opts({ screen: "roster" });
+    const headers = [...document.querySelectorAll("main th")].map((h) => h.textContent);
+    expect(headers).toEqual(["Student", "Missing tests"]);
+    expect(document.body.textContent || "").not.toMatch(/\bCycles\b/);
+  });
+
   it("renders program cards and missing-test links", () => {
     opts({ screen: "programs" });
     expect(document.body.textContent || "").toMatch(/Summer 2026/);

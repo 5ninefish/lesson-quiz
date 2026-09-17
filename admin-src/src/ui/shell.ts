@@ -212,8 +212,18 @@ function renderMain(opts: ShellOpts): void {
     exportBtn.onclick = () => {
       const q = liveQuery(opts.query);
       if (opts.screen === "roster") {
+        const missingByUser = new Map(snap.missing.map((m) => [m.username, m.missing]));
         const rows = snap.students.filter((s) => rowMatchesQuery([s.username], q));
-        downloadCsv("roster.csv", toCsv(["username", "row"], rows.map((s) => [s.username, String(s.rowNumber)])));
+        downloadCsv(
+          "roster.csv",
+          toCsv(
+            ["username", "missing_count", "missing_tests"],
+            rows.map((s) => {
+              const missing = missingByUser.get(s.username) || [];
+              return [s.username, String(missing.length), missing.map((id) => TEST_TITLES[id]).join("; ")];
+            }),
+          ),
+        );
       } else if (opts.screen === "results") {
         const rows = snap.results.filter((r) => rowMatchesQuery([r.username, r.testId || r.rawTestId], q));
         downloadCsv(
@@ -256,10 +266,14 @@ function renderMain(opts: ShellOpts): void {
     main.append(el("p", { class: "muted" }, `Results parse mode: ${snap.resultsHeaderMode}`));
   } else if (opts.screen === "roster") {
     main.append(el("h1", {}, "Roster"));
+    const missingByUser = new Map(snap.missing.map((m) => [m.username, m.missing]));
     main.append(
       table(
-        ["Username", "Row", "Cycles"],
-        snap.students.map((s) => [s.username, String(s.rowNumber), Object.values(s.cycles).join("/")]),
+        ["Student", "Missing tests"],
+        snap.students.map((s) => {
+          const missing = missingByUser.get(s.username) || [];
+          return [s.username, missing.length ? missing.map((id) => TEST_TITLES[id]).join("; ") : "None"];
+        }),
         true,
       ),
     );
