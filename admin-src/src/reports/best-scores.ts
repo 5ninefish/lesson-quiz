@@ -53,5 +53,5 @@ export function bestCompleteScores(results: ResultView[], questionCounts: Partia
 }
 
 export function formatScore(num: number, den: number): string {
-  return `${num} of ${den}`;
+  return `${num}/${den}`;
 }
