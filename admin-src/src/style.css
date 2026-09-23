@@ -170,6 +170,8 @@ main input[type="checkbox"] {
   padding: 0;
   vertical-align: middle;
 }
+td.time-left { font-variant-numeric: tabular-nums; white-space: nowrap; }
+td.time-left.up { font-weight: 650; }
 .dialog textarea, main textarea { min-height: 180px; }
 .dialog-actions { display: flex; flex-wrap: wrap; gap: 8px; }
 @media (max-width: 900px) {

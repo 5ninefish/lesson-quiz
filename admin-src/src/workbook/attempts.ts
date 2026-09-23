@@ -106,3 +106,36 @@ export function parseAttempts(values: SheetValues, now = new Date()): AttemptsPa
   }
   return { attempts, issues };
 }
+
+export function formatClock(totalSec: number): string {
+  const sec = Math.max(0, Math.floor(totalSec));
+  const h = Math.floor(sec / 3600);
+  const m = Math.floor((sec % 3600) / 60);
+  const s = sec % 60;
+  if (h > 0) return `${h}:${String(m).padStart(2, "0")}:${String(s).padStart(2, "0")}`;
+  return `${m}:${String(s).padStart(2, "0")}`;
+}
+
+/** Deadline for a timed sit. Null when the test has no time limit or the start time cannot be read. */
+export function attemptDeadlineMs(startedAt: string, timeLimitSec: number | null): number | null {
+  const cap = timeLimitSec ?? 0;
+  if (!(cap > 0)) return null;
+  const started = Date.parse(startedAt);
+  if (Number.isNaN(started)) return null;
+  return started + cap * 1000;
+}
+
+export function timeLeftText(
+  attempt: Pick<AttemptView, "status" | "displayStatus" | "startedAt" | "timeLimitSec">,
+  now = new Date(),
+): string {
+  if (attempt.displayStatus === "done" || attempt.status === "done") return "Submitted";
+  const deadline = attemptDeadlineMs(attempt.startedAt, attempt.timeLimitSec);
+  if (deadline == null) {
+    if (attempt.displayStatus === "in_flight" || attempt.status === "in_flight") return "No time limit";
+    return "—";
+  }
+  const left = Math.floor((deadline - now.getTime()) / 1000);
+  if (left <= 0 || attempt.displayStatus === "expired") return "Time is up";
+  return formatClock(left);
+}

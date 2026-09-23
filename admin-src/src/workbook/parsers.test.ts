@@ -3,6 +3,7 @@ import { observedWorkbook } from "../fixtures/observed";
 import { buildSnapshot } from "./snapshot";
 import { parseResults } from "./results";
 import { parseStudents } from "./students";
+import { timeLeftText } from "./attempts";
 import { evaluateRelease } from "./releases";
 import { toCsv } from "../csv";
 import { rowMatchesQuery } from "../ui/shell";
@@ -24,6 +25,36 @@ describe("students", () => {
     expect(parsed.issues.some((i) => i.id.startsWith("students-blank-user"))).toBe(false);
     expect(parsed.issues.some((i) => i.message.includes("Duplicate"))).toBe(true);
     expect(JSON.stringify(parsed.students).toLowerCase()).not.toContain("password");
+  });
+});
+
+describe("attempt time left", () => {
+  const now = new Date("2026-09-16T12:00:00-10:00");
+  it("counts down a timed sit and says when there is no limit", () => {
+    expect(
+      timeLeftText(
+        { status: "in_flight", displayStatus: "in_flight", startedAt: "2026-09-16T11:50:00-10:00", timeLimitSec: 600 },
+        now,
+      ),
+    ).toBe("Time is up");
+    expect(
+      timeLeftText(
+        { status: "in_flight", displayStatus: "in_flight", startedAt: "2026-09-16T11:52:00-10:00", timeLimitSec: 600 },
+        now,
+      ),
+    ).toBe("2:00");
+    expect(
+      timeLeftText(
+        { status: "in_flight", displayStatus: "in_flight", startedAt: "2026-09-15T12:00:00-10:00", timeLimitSec: 0 },
+        now,
+      ),
+    ).toBe("No time limit");
+    expect(
+      timeLeftText(
+        { status: "done", displayStatus: "done", startedAt: "2026-09-16T11:52:00-10:00", timeLimitSec: 600 },
+        now,
+      ),
+    ).toBe("Submitted");
   });
 });
 

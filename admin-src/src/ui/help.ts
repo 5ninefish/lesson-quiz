@@ -102,6 +102,7 @@ const HELP: Record<HelpTopic, { title: string; body: string }> = {
       "Someone has started a test and has not finished, or the sit already closed.",
       "",
       "In flight — still going.",
+      "Time left — countdown for this sit. No time limit means it stays open until they submit, even overnight. Time is up means the clock finished. The row stays until they submit or open that test again.",
       "Expired — the timer ran out on screen. The sheet still has the row.",
       "Done — they submitted.",
       "",

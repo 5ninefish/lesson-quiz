@@ -110,6 +110,13 @@ describe("search input", () => {
     expect((document.getElementById("btn-signout") as HTMLButtonElement).style.display).not.toBe("none");
   });
 
+  it("shows a time-left countdown on Attempts", () => {
+    opts({ screen: "attempts" });
+    const headers = [...document.querySelectorAll("main th")].map((h) => h.textContent);
+    expect(headers).toContain("Time left");
+    expect(document.querySelector("main")?.textContent || "").toMatch(/No time limit means the sit stays open/);
+  });
+
   it("does not list blank student rows as parse warnings", () => {
     opts({ screen: "overview" });
     const overview = document.querySelector("main")?.textContent || "";

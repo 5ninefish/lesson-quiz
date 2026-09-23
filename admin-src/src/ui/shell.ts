@@ -12,6 +12,7 @@ import { studentTestUrl } from "../programs/urls";
 import { renderReleases } from "./releases";
 import { renderMissing } from "./missing";
 import { warnIfBrowserRefreshSignedOut } from "./relogin-warning";
+import { attemptDeadlineMs, formatClock, timeLeftText } from "../workbook/attempts";
 
 export type Screen =
   | "overview"
@@ -246,7 +247,41 @@ function mountChrome(): void {
   chromeReady = true;
 }
 
+let attemptClock: ReturnType<typeof setInterval> | null = null;
+
+function stopAttemptClock(): void {
+  if (attemptClock) clearInterval(attemptClock);
+  attemptClock = null;
+}
+
+function paintTimeLeft(node: HTMLElement, now = new Date()): void {
+  const deadline = Number(node.dataset.deadline || "");
+  if (!deadline) {
+    node.textContent = node.dataset.fallback || "No time limit";
+    node.classList.remove("up");
+    return;
+  }
+  const left = Math.floor((deadline - now.getTime()) / 1000);
+  if (left <= 0) {
+    node.textContent = "Time is up";
+    node.classList.add("up");
+    return;
+  }
+  node.classList.remove("up");
+  node.textContent = formatClock(left);
+}
+
+function startAttemptClock(root: ParentNode): void {
+  stopAttemptClock();
+  const nodes = [...root.querySelectorAll<HTMLElement>("[data-time-left]")];
+  if (!nodes.some((n) => n.dataset.deadline)) return;
+  const tick = () => nodes.forEach((n) => paintTimeLeft(n));
+  tick();
+  attemptClock = setInterval(tick, 1000);
+}
+
 function renderMain(opts: ShellOpts): void {
+  stopAttemptClock();
   const main = document.getElementById("main");
   const toolbar = document.getElementById("search-toolbar");
   const exportBtn = document.getElementById("btn-export") as HTMLButtonElement | null;
@@ -365,18 +400,44 @@ function renderMain(opts: ShellOpts): void {
   } else if (opts.screen === "attempts") {
     pageHeading(main, "Attempts", "attempts");
     main.append(
-      table(
-        ["Student", "Assessment", "Status", "Started", "Submission", "Row"],
-        snap.attempts.map((a) => [
-          a.username,
-          a.testId ? TEST_TITLES[a.testId] : a.rawTestId,
-          a.displayStatus,
-          a.startedAt,
-          a.submissionId,
-          String(a.rowNumber),
-        ]),
+      el(
+        "p",
+        { class: "muted" },
+        "Time left counts down from when they started. No time limit means the sit stays open until they submit. Time is up means the clock finished; the row stays until they submit or open that test again.",
       ),
     );
+    const wrap = el("div", { class: "table-wrap" });
+    const t = el("table");
+    const thead = el("thead");
+    const hr = el("tr");
+    for (const h of ["Student", "Assessment", "Status", "Time left", "Started", "Submission"]) {
+      hr.append(el("th", {}, h));
+    }
+    thead.append(hr);
+    const tb = el("tbody");
+    for (const a of snap.attempts) {
+      const r = el("tr");
+      const deadline = attemptDeadlineMs(a.startedAt, a.timeLimitSec);
+      const timeCell = el("td", { class: "time-left" });
+      timeCell.dataset.timeLeft = "1";
+      timeCell.dataset.fallback = timeLeftText(a);
+      if (deadline && a.displayStatus === "in_flight") timeCell.dataset.deadline = String(deadline);
+      timeCell.textContent = timeLeftText(a);
+      if (timeCell.textContent === "Time is up") timeCell.classList.add("up");
+      r.append(
+        el("td", {}, a.username),
+        el("td", {}, a.testId ? TEST_TITLES[a.testId] : a.rawTestId),
+        el("td", {}, a.displayStatus),
+        timeCell,
+        el("td", {}, a.startedAt),
+        el("td", {}, a.submissionId),
+      );
+      tb.append(r);
+    }
+    t.append(thead, tb);
+    wrap.append(t);
+    main.append(wrap);
+    startAttemptClock(main);
   } else if (opts.screen === "results") {
     pageHeading(main, "Results", "results");
     main.append(
@@ -493,4 +554,5 @@ export function renderShell(opts: ShellOpts): void {
 
 export function resetChromeForTests(): void {
   chromeReady = false;
+  stopAttemptClock();
 }
