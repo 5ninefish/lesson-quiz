@@ -112,7 +112,7 @@ const HELP: Record<HelpTopic, { title: string; body: string }> = {
   results: {
     title: "Results",
     body: [
-      "One row per student and test: their highest finished score, written as 5/5.",
+      "One row per student and test: their highest finished score, written as 5/5. Click the score to see which questions were right and which were wrong on that sit.",
       "",
       "When — date and time of that best sit.",
       "Complete sits — how many finished attempts they have. Only the best is shown.",

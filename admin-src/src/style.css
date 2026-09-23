@@ -170,6 +170,21 @@ main input[type="checkbox"] {
   padding: 0;
   vertical-align: middle;
 }
+button.score-link {
+  min-height: 0;
+  padding: 0 2px;
+  border: 0;
+  background: transparent;
+  color: var(--accent);
+  text-decoration: underline;
+  font: inherit;
+  cursor: pointer;
+}
+.score-list { max-height: 60vh; overflow: auto; }
+.score-item { margin: 0 0 14px; }
+.score-item p { margin: 4px 0; }
+.mark-right { color: var(--ok); }
+.mark-wrong { color: var(--err); }
 td.time-left { font-variant-numeric: tabular-nums; white-space: nowrap; }
 td.time-left.up { font-weight: 650; }
 .dialog textarea, main textarea { min-height: 180px; }

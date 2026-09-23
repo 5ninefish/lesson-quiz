@@ -15,12 +15,24 @@ export function observedWorkbook(): RawWorkbook {
   for (let i = 0; i < 8; i++) students.push([...blankStudent]);
 
   const questions: RawWorkbook["questions"] = [
-    ["Lesson", "Q#", "Question", "A", "B", "C", "D", "E", "F"],
+    ["Lesson", "Q#", "Question", "A", "B", "C", "D", "E", "F", "Correct"],
   ];
   const lessons = ["L1", "L2", "L3", "L4", "L5", "L6"];
+  const l1Keys = ["A", "B", "C", "D", "A"];
   for (const lesson of lessons) {
     for (let q = 1; q <= 5; q++) {
-      questions.push([lesson, String(q), `${lesson} prompt ${q}`, "A1", "B1", "C1", "D1", "", ""]);
+      questions.push([
+        lesson,
+        String(q),
+        `${lesson} prompt ${q}`,
+        "A1",
+        "B1",
+        "C1",
+        "D1",
+        "",
+        "",
+        lesson === "L1" ? l1Keys[q - 1] : "A",
+      ]);
     }
   }
 

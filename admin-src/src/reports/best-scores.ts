@@ -34,6 +34,7 @@ export function bestCompleteScores(results: ResultView[], questionCounts: Partia
       completeCount: 1,
       cycle: r.cycle,
       complete: r.complete,
+      answers: r.answers,
     };
     if (!prev) {
       map.set(key, next);

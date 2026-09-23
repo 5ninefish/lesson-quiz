@@ -23,6 +23,8 @@ export type QuestionView = {
   number: string;
   prompt: string;
   options: string[];
+  /** Letter from the Questions sheet. Empty when that cell is blank. */
+  keyLetter: string;
   rowNumber: number;
 };
 
@@ -99,6 +101,7 @@ export type BestScoreRow = {
   completeCount: number;
   cycle: number | null;
   complete: boolean;
+  answers: string[];
 };
 
 export type MissingRow = {

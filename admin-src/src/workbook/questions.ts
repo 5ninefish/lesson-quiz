@@ -21,6 +21,7 @@ export function parseQuestions(values: SheetValues): QuestionsParse {
   const numCol = headered && headerIndex(headers, "Q#") >= 0 ? headerIndex(headers, "Q#") : 1;
   const promptCol = headered && headerIndex(headers, "Question") >= 0 ? headerIndex(headers, "Question") : 2;
   const optStart = headered && headerIndex(headers, "A") >= 0 ? headerIndex(headers, "A") : 3;
+  const keyCol = headered && headerIndex(headers, "Correct") >= 0 ? headerIndex(headers, "Correct") : optStart + 6;
 
   const seenBoth = new Set<string>();
 
@@ -52,6 +53,7 @@ export function parseQuestions(values: SheetValues): QuestionsParse {
       number: cell(row, numCol) || String(questions.filter((q) => q.testId === testId).length + 1),
       prompt: cell(row, promptCol),
       options,
+      keyLetter: cell(row, keyCol).trim().toUpperCase(),
       rowNumber,
     });
     counts[testId] = (counts[testId] || 0) + 1;

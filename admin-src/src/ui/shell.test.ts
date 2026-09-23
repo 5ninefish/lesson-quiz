@@ -114,6 +114,7 @@ describe("search input", () => {
     opts({ screen: "attempts" });
     const headers = [...document.querySelectorAll("main th")].map((h) => h.textContent);
     expect(headers).toContain("Time left");
+    expect(headers).not.toContain("Submission");
     expect(document.querySelector("main")?.textContent || "").toMatch(/No time limit means the sit stays open/);
   });
 
@@ -131,6 +132,21 @@ describe("search input", () => {
   it("does not render a separate best-complete-scores section", () => {
     opts({ screen: "results" });
     expect(document.body.textContent || "").not.toMatch(/Best complete scores/i);
+  });
+
+  it("opens right and wrong questions when a score is clicked", () => {
+    opts({ screen: "results" });
+    const row = [...document.querySelectorAll("main tbody tr")].find((tr) =>
+      (tr.textContent || "").includes("student.two@example.edu"),
+    );
+    const btn = row?.querySelector("button.score-link") as HTMLButtonElement | null;
+    expect(btn?.textContent).toBe("5/5");
+    btn?.click();
+    const dialog = document.getElementById("dialog-overlay")?.textContent || "";
+    expect(dialog).toMatch(/Right/);
+    expect(dialog).toMatch(/Wrong/);
+    expect(dialog).toMatch(/L2 prompt 2/);
+    expect(dialog).toMatch(/The right answer is A/);
   });
 
   it("results shows only the highest complete score per student and test", () => {

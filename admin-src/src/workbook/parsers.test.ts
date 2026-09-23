@@ -4,6 +4,8 @@ import { buildSnapshot } from "./snapshot";
 import { parseResults } from "./results";
 import { parseStudents } from "./students";
 import { timeLeftText } from "./attempts";
+import { parseQuestions } from "./questions";
+import { reviewSit } from "../reports/item-review";
 import { evaluateRelease } from "./releases";
 import { toCsv } from "../csv";
 import { rowMatchesQuery } from "../ui/shell";
@@ -55,6 +57,22 @@ describe("attempt time left", () => {
         now,
       ),
     ).toBe("Submitted");
+  });
+});
+
+describe("question review", () => {
+  it("marks each answer right or wrong from the answer key", () => {
+    const parsed = parseQuestions([
+      ["Lesson", "Q#", "Question", "A", "B", "C", "D", "E", "F", "Correct"],
+      ["SCI-SOIL", "1", "First", "Sand", "Clay", "", "", "", "", "B"],
+      ["SCI-SOIL", "2", "Second", "Yes", "No", "", "", "", "", ""],
+    ]);
+    expect(parsed.questions[0]?.keyLetter).toBe("B");
+    expect(JSON.stringify(parsed).toLowerCase()).not.toContain('"correct"');
+    const marks = reviewSit(parsed.questions, ["A", "Yes"]);
+    expect(marks[0]?.verdict).toBe("Wrong");
+    expect(marks[0]?.detail).toMatch(/Clay/);
+    expect(marks[1]?.verdict).toBe("No answer key");
   });
 });
 

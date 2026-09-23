@@ -13,6 +13,8 @@ import { renderReleases } from "./releases";
 import { renderMissing } from "./missing";
 import { warnIfBrowserRefreshSignedOut } from "./relogin-warning";
 import { attemptDeadlineMs, formatClock, timeLeftText } from "../workbook/attempts";
+import { reviewSit } from "../reports/item-review";
+import { scoreDialog } from "./dialogs";
 
 export type Screen =
   | "overview"
@@ -410,7 +412,7 @@ function renderMain(opts: ShellOpts): void {
     const t = el("table");
     const thead = el("thead");
     const hr = el("tr");
-    for (const h of ["Student", "Assessment", "Status", "Time left", "Started", "Submission"]) {
+    for (const h of ["Student", "Assessment", "Status", "Time left", "Started"]) {
       hr.append(el("th", {}, h));
     }
     thead.append(hr);
@@ -430,7 +432,6 @@ function renderMain(opts: ShellOpts): void {
         el("td", {}, a.displayStatus),
         timeCell,
         el("td", {}, a.startedAt),
-        el("td", {}, a.submissionId),
       );
       tb.append(r);
     }
@@ -444,23 +445,46 @@ function renderMain(opts: ShellOpts): void {
       el(
         "p",
         { class: "muted" },
-        "One row per student and test: the highest complete score, the date of that sit, and how many complete sits they have. Other sits stay on the sheet.",
+        "One row per student and test: the highest complete score. Click the score to see which questions were right and wrong on that sit.",
       ),
     );
-    main.append(
-      table(
-        ["Student", "Assessment", "Highest score", "When", "Complete sits", "Cycle"],
-        bestCompleteScores(snap.results, snap.questionCounts).map((r) => [
-          r.username,
-          TEST_TITLES[r.testId],
-          formatScore(r.scoreNum, r.scoreDen),
-          r.timestamp || "—",
-          String(r.completeCount),
-          r.cycle == null ? "—" : String(r.cycle),
-        ]),
-        true,
-      ),
-    );
+    const scores = bestCompleteScores(snap.results, snap.questionCounts);
+    const wrap = el("div", { class: "table-wrap" });
+    wrap.setAttribute("data-filterable", "true");
+    const t = el("table");
+    const thead = el("thead");
+    const hr = el("tr");
+    for (const h of ["Student", "Assessment", "Highest score", "When", "Complete sits", "Cycle"]) {
+      hr.append(el("th", {}, h));
+    }
+    thead.append(hr);
+    const tb = el("tbody");
+    for (const r of scores) {
+      const tr = el("tr");
+      tr.dataset.search = [r.username, r.testId, TEST_TITLES[r.testId]].join(" ").toLowerCase();
+      const scoreBtn = el("button", { type: "button", class: "score-link" }, formatScore(r.scoreNum, r.scoreDen));
+      scoreBtn.onclick = () => {
+        const items = reviewSit(
+          snap.questions.filter((q) => q.testId === r.testId),
+          r.answers,
+        );
+        scoreDialog(`${r.username} · ${TEST_TITLES[r.testId]} · ${formatScore(r.scoreNum, r.scoreDen)}`, items);
+      };
+      const scoreCell = el("td");
+      scoreCell.append(scoreBtn);
+      tr.append(
+        el("td", {}, r.username),
+        el("td", {}, TEST_TITLES[r.testId]),
+        scoreCell,
+        el("td", {}, r.timestamp || "—"),
+        el("td", {}, String(r.completeCount)),
+        el("td", {}, r.cycle == null ? "—" : String(r.cycle)),
+      );
+      tb.append(tr);
+    }
+    t.append(thead, tb);
+    wrap.append(t);
+    main.append(wrap);
   } else if (opts.screen === "missing") {
     const program = opts.snap.programs.find((p) => p.programId === opts.selectedProgramId);
     renderMissing(main, snap, opts.selectedProgramId || PROGRAM.legacyDefaultProgramId, program?.programName || PROGRAM.title);

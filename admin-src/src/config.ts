@@ -17,7 +17,7 @@ export const PROGRAM = {
 
 export const RANGES = {
   students: "Students!A:P",
-  questions: "Questions!A:I",
+  questions: "Questions!A:J",
   releases: "Releases!A:H",
   attempts: "Attempts!A:L",
   results: "Results!A:X",
