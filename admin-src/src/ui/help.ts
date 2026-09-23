@@ -158,9 +158,8 @@ const HELP: Record<HelpTopic, { title: string; body: string }> = {
 };
 
 export const SPREADSHEET_GUIDE = [
-  "Students tab — add a person: new row, email in Username. Type the password in plain text in the Password column, then Quiz Admin → Hash new passwords. Do not edit the hash column.",
+  "Students tab — add a person: new row at the bottom, email in Username, plain password in the Password column. Then Quiz Admin → Hash new passwords. Do not edit the hash column, and do not paste over the L1–L6 columns.",
   "L1–L6 are lesson codes, not the program name. Hover the header for the full title: L1 Soil, L2 Coral, L3 Computer Science, L4 Astronomy, L5 Health, L6 Digital Media. CycleL1–CycleL6 are the same lessons. The number goes up when you grant another round of tries.",
-  "RosterImport tab — paste Email and Password, then Quiz Admin → Sync roster from RosterImport. Hash passwords if they are still plain text.",
   "After the person exists on Students, come back here and Edit assignments on the cohort so they are included.",
   "Questions tab — the shared question bank. Do not change an answer key unless you mean to change the test.",
   "Do not run setup(). It closes tests.",
