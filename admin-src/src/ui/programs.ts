@@ -1,9 +1,10 @@
+import { PROGRAM, workbookUrl } from "../config";
 import { summarizeProgram } from "../programs/summaries";
 import { instructorProgramUrl, studentProgramUrl } from "../programs/urls";
 import type { DashboardSnapshot, ProgramView } from "../types";
 import { confirmDialog } from "./dialogs";
 import { el } from "./dom";
-import { pageHeading } from "./help";
+import { SPREADSHEET_GUIDE, pageHeading } from "./help";
 
 async function copyText(text: string): Promise<void> {
   try {
@@ -36,6 +37,20 @@ export function renderPrograms(
   },
 ): void {
   pageHeading(main, "Programs", "programs");
+  const guide = el("section", { class: "sheet-guide" });
+  guide.append(el("h2", {}, "Master spreadsheet"));
+  const link = el(
+    "a",
+    { href: workbookUrl(PROGRAM.spreadsheetId), target: "_blank", rel: "noopener" },
+    "Open the workbook this page reads",
+  );
+  guide.append(link);
+  guide.append(el("p", { class: "muted" }, "Hōkūlani is the whole program. Each card below is a cohort, such as Hōkūlani Fall Interns."));
+  guide.append(el("h2", {}, "How to use the spreadsheet"));
+  const steps = el("div", { class: "help-body" });
+  steps.textContent = SPREADSHEET_GUIDE;
+  guide.append(steps);
+  main.append(guide);
   if (!snap.programTablesPresent) {
     main.append(
       el(

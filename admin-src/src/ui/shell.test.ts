@@ -71,7 +71,8 @@ describe("search input", () => {
   it("opens a cheat sheet", () => {
     opts({ screen: "roster" });
     (document.getElementById("btn-cheat-sheet") as HTMLButtonElement).click();
-    expect(document.getElementById("dialog-overlay")?.textContent || "").toMatch(/They never sign in with Google/);
+    expect(document.getElementById("dialog-overlay")?.textContent || "").toMatch(/Sign in with UH Google/);
+    expect(document.getElementById("dialog-overlay")?.textContent || "").not.toMatch(/Who this is for/);
     (document.querySelector("main .help-btn") as HTMLButtonElement).click();
     expect(document.getElementById("dialog-overlay")?.textContent || "").toMatch(/Assigned tests/);
     (document.querySelector("#dialog-overlay button") as HTMLButtonElement).click();
@@ -116,6 +117,9 @@ describe("search input", () => {
   it("renders program cards and missing-test links", () => {
     opts({ screen: "programs" });
     expect(document.body.textContent || "").toMatch(/Summer 2026/);
+    expect(document.querySelector("main a")?.getAttribute("href") || "").toMatch(/docs.google.com\/spreadsheets/);
+    expect(document.body.textContent || "").toMatch(/Hōkūlani Fall Interns/);
+    expect(document.body.textContent || "").toMatch(/Hash new passwords/);
     opts({ screen: "missing", selectedProgramId: "hokulani" });
     const links = document.querySelectorAll("main a[href*='program=hokulani']");
     expect(links.length).toBeGreaterThan(0);

@@ -17,14 +17,11 @@ const HELP: Record<HelpTopic, { title: string; body: string }> = {
   start: {
     title: "Instructor cheat sheet",
     body: [
-      "Who this is for",
-      "Instructors only. Students take the quiz with a username and password. They never sign in with Google here.",
-      "",
       "Sign in with UH Google",
       "Use the UH account that can open the shared workbook. Google’s wording looks like all of Drive. This page only loads that one workbook. The login is kept in this browser tab and disappears if you reload the browser.",
       "",
       "Load demo workbook",
-      "Fake students, for showing the screens. Not the real class.",
+      "Fake students, for showing the screens. Not a real cohort.",
       "",
       "Refresh",
       "Reloads the sheet and keeps you signed in. Do not reload the whole browser tab unless you mean to sign out.",
@@ -38,22 +35,22 @@ const HELP: Record<HelpTopic, { title: string; body: string }> = {
       "What you can do",
       "See who is missing a test, open or close a test, copy a student link, and edit who is in a program and which tests that program uses.",
       "",
-      "What you still do on the Google Sheet",
-      "Add a student or change a password: Students tab, or Quiz Admin → Hash new passwords. Then come back here and Edit assignments so they are in the program.",
+      "Workbook",
+      "Programs has the link to the master spreadsheet and how to add people and passwords there.",
     ].join("\n"),
   },
   programs: {
     title: "Programs",
     body: [
-      "A program is one class or cohort, such as Hōkūlani. Everyone in a program gets the same tests.",
+      "Hōkūlani is the whole program. Each card here is a cohort inside it, for example Hōkūlani Fall Interns. Everyone in a cohort gets the same tests.",
       "",
-      "Open dashboard — switch Roster, Releases, Results, and Missing tests to this program.",
+      "Open dashboard — switch Roster, Releases, Results, and Missing tests to this cohort.",
       "Copy student link — send this. It does not include a password.",
-      "Edit assignments — change who is in this program and which tests it uses. It does not create a new program.",
-      "Create program — start a different class. Do this only when you mean a new program.",
+      "Edit assignments — change who is in this cohort and which tests it uses. It does not create a new cohort.",
+      "Create program — add a cohort, such as Hōkūlani Fall Interns. Do this only when you mean a new cohort.",
       "Archive — hide it. Records stay. You cannot reuse the same program id.",
       "",
-      "You cannot give one student a different test list from everyone else in the same program. Put them in another program if they need a different set.",
+      "You cannot give one student a different test list from everyone else in the same cohort. Put them in another cohort if they need a different set.",
     ].join("\n"),
   },
   overview: {
@@ -73,11 +70,11 @@ const HELP: Record<HelpTopic, { title: string; body: string }> = {
   roster: {
     title: "Roster",
     body: [
-      "People in the selected program.",
+      "People in the selected cohort.",
       "",
       "Assigned tests is a dropdown so the row stays short. Open it to see each test. Choosing a test opens the student link in a new tab. It does not change who is assigned.",
       "",
-      "Every student in the program has the same tests. To add or remove a person, or turn a test on or off, use Programs → Edit assignments.",
+      "Every student in the cohort has the same tests. To add or remove a person, or turn a test on or off, use Programs → Edit assignments.",
       "",
       "This page does not add accounts or change passwords. Do that on the Students tab of the workbook (Quiz Admin → Hash new passwords), then add them here with Edit assignments.",
     ].join("\n"),
@@ -85,7 +82,7 @@ const HELP: Record<HelpTopic, { title: string; body: string }> = {
   releases: {
     title: "Releases",
     body: [
-      "Whether students can start each test in this program.",
+      "Whether students can start each test in this cohort.",
       "",
       "Open now — students can start.",
       "Close now — students cannot start.",
@@ -126,7 +123,7 @@ const HELP: Record<HelpTopic, { title: string; body: string }> = {
   missing: {
     title: "Missing tests",
     body: [
-      "Students in this program who have not finished every assigned test.",
+      "Students in this cohort who have not finished every assigned test.",
       "",
       "A test counts as done only when every answer was filled in. A partial sit does not count.",
       "",
@@ -145,20 +142,29 @@ const HELP: Record<HelpTopic, { title: string; body: string }> = {
     ].join("\n"),
   },
   wizard: {
-    title: "Edit assignments / create a program",
+    title: "Edit assignments / create a cohort",
     body: [
-      "Five steps.",
+      "Five steps. Name the cohort, not the whole program. Example: Hōkūlani Fall Interns. Hōkūlani is the program.",
       "",
-      "1. Name. The short id (hokulani) cannot be changed later.",
-      "2. Check the students who belong in this program. Search stays put while you type.",
+      "1. Name. The short id cannot be changed later. Use something like hokulani-fall-interns.",
+      "2. Check the students who belong in this cohort. Search stays put while you type.",
       "3. Check the tests. L1, L2, L3… are the lesson codes, sitting between the box and the title. L1 is Soil, L2 Coral, L3 Computer Science, L4 Astronomy, L5 Health, L6 Digital Media.",
       "4. For each test: open, closed, or a window; max attempts; timer in minutes.",
-      "5. Read the changes, then Save assignments (existing program) or Launch (new program).",
+      "5. Read the changes, then Save assignments (existing cohort) or Launch (new cohort).",
       "",
       "Saving writes the workbook copy you are signed into. It asks you to confirm first.",
     ].join("\n"),
   },
 };
+
+export const SPREADSHEET_GUIDE = [
+  "Students tab — add a person: new row, email in Username. Type the password in plain text in the Password column, then Quiz Admin → Hash new passwords. Do not edit the hash column.",
+  "L1–L6 are lesson codes, not the program name. Hover the header for the full title: L1 Soil, L2 Coral, L3 Computer Science, L4 Astronomy, L5 Health, L6 Digital Media. CycleL1–CycleL6 are the same lessons. The number goes up when you grant another round of tries.",
+  "RosterImport tab — paste Email and Password, then Quiz Admin → Sync roster from RosterImport. Hash passwords if they are still plain text.",
+  "After the person exists on Students, come back here and Edit assignments on the cohort so they are included.",
+  "Questions tab — the shared question bank. Do not change an answer key unless you mean to change the test.",
+  "Do not run setup(). It closes tests.",
+].join("\n\n");
 
 export function openHelp(topic: HelpTopic): void {
   const item = HELP[topic];

@@ -50,6 +50,10 @@ export const PROGRAM_HEADERS = {
   ProgramStudentState: ["ProgramId", "Username", "TestId", "Cycle", "SitCache", "UpdatedAtHST", "UpdatedBy"],
 } as const;
 
+export function workbookUrl(spreadsheetId: string = PROGRAM.spreadsheetId): string {
+  return `https://docs.google.com/spreadsheets/d/${spreadsheetId}/edit`;
+}
+
 export const WRITE_SCOPE = "https://www.googleapis.com/auth/spreadsheets";
 export const READ_SCOPES =
   "openid email profile https://www.googleapis.com/auth/drive.metadata.readonly https://www.googleapis.com/auth/spreadsheets.readonly";
