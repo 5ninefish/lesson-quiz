@@ -20,8 +20,8 @@ function isBrowserRefreshKey(ev: KeyboardEvent): boolean {
 
 function warnBeforeBrowserRefresh(): void {
   confirmDialog({
-    title: "Refreshing the browser signs you out",
-    body: "You will have to sign in with UH Google again.\n\nUse the Refresh button at the top of this page to reload the sheet and stay signed in.",
+    title: "You will have to log in again",
+    body: "Refreshing the browser signs you out. You will have to log in again with UH Google.\n\nUse the Refresh button at the top of this page to reload the sheet and stay logged in.",
     confirmLabel: "Refresh anyway",
     cancelLabel: "Stay signed in",
     onConfirm: () => {
@@ -72,7 +72,7 @@ export function warnIfBrowserRefreshSignedOut(account: string): void {
   if (sessionStorage.getItem(STAY_SIGNED_IN) !== "1") return;
   clearStaySignedIn();
   infoDialog(
-    "Sign in again",
-    "Refreshing the browser signed you out. Sign in with UH Google to continue.\n\nNext time, use the Refresh button at the top of this page. That reloads the sheet and keeps you signed in.",
+    "You will have to log in again",
+    "Refreshing the browser signed you out. You will have to log in again with UH Google.\n\nNext time, use the Refresh button at the top of this page. That reloads the sheet and keeps you logged in.",
   );
 }

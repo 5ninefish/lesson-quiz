@@ -90,15 +90,15 @@ describe("search input", () => {
     sessionStorage.setItem("hokulani-stay-signed-in", "1");
     opts({ account: "", snap: null });
     const again = document.getElementById("dialog-overlay")?.textContent || "";
-    expect(again).toMatch(/Sign in again/);
+    expect(again).toMatch(/You will have to log in again/);
     expect(again).toMatch(/Refreshing the browser signed you out/);
     (document.querySelector("#dialog-overlay button") as HTMLButtonElement).click();
 
     opts({ account: "UH Google" });
     window.dispatchEvent(new KeyboardEvent("keydown", { key: "r", metaKey: true, bubbles: true, cancelable: true }));
     const before = document.getElementById("dialog-overlay")?.textContent || "";
-    expect(before).toMatch(/Refreshing the browser signs you out/);
-    expect(before).toMatch(/sign in with UH Google again/i);
+    expect(before).toMatch(/You will have to log in again/);
+    expect(before).toMatch(/log in again with UH Google/i);
     const stay = [...document.querySelectorAll("#dialog-overlay button")].find((b) => b.textContent === "Stay signed in");
     (stay as HTMLButtonElement).click();
     expect(document.getElementById("dialog-overlay")).toBeNull();
