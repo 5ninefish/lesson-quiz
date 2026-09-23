@@ -2,15 +2,15 @@ import type { RawWorkbook } from "../workbook/snapshot";
 
 /** Sanitized reproduction of the 2026-09-15 inspected shapes. No real people. */
 export function observedWorkbook(): RawWorkbook {
-  const blankStudent = ["", "", 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 1];
+  const blankStudent = ["", "", "", 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 1];
   const students: RawWorkbook["students"] = [
-    ["Username", "PasswordHash", "L1", "L2", "L3", "L4", "L5", "L6", "CycleL1", "CycleL2", "CycleL3", "CycleL4", "CycleL5", "CycleL6"],
-    ["student.one@example.edu", "", 1, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 1],
-    ["student.two@example.edu", "", 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 1],
-    ["student.three@example.edu", "", 2, 1, 0, 0, 0, 0, "", 1, 1, 1, 1, 1],
-    ["student.four@example.edu", "", 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 1],
-    ["student.five@example.edu", "", 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 1],
-    ["student.one@example.edu", "", 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 1],
+    ["Username", "Email", "PasswordHash", "L1", "L2", "L3", "L4", "L5", "L6", "CycleL1", "CycleL2", "CycleL3", "CycleL4", "CycleL5", "CycleL6"],
+    ["student.one@example.edu", "student.one@example.edu", "", 1, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 1],
+    ["student.two@example.edu", "student.two@example.edu", "", 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 1],
+    ["student.three@example.edu", "student.three@example.edu", "", 2, 1, 0, 0, 0, 0, "", 1, 1, 1, 1, 1],
+    ["student.four@example.edu", "student.four@example.edu", "", 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 1],
+    ["student.five@example.edu", "student.five@example.edu", "", 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 1],
+    ["student.one@example.edu", "student.one@example.edu", "", 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 1],
   ];
   for (let i = 0; i < 8; i++) students.push([...blankStudent]);
 

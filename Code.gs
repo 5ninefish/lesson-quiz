@@ -670,14 +670,46 @@ function passwordMatches_(stored, typed) {
   return looksHashed && cell === hashPassword(plain);
 }
 
+function studentLayout_(headerRow) {
+  const headers = headerRow || [];
+  function col(name, fallback) {
+    const i = headerIndex_(headers, name);
+    return i >= 0 ? i : fallback;
+  }
+  const passNamed = headerIndex_(headers, 'Password');
+  const passHash = headerIndex_(headers, 'PasswordHash');
+  return {
+    userCol: col('Username', 0),
+    emailCol: headerIndex_(headers, 'Email'),
+    passCol: passNamed >= 0 ? passNamed : (passHash >= 0 ? passHash : 1),
+    sit0: col('L1', 2),
+    cycle0: col('CycleL1', 8),
+  };
+}
+
 function findStudent(data, username, password) {
+  const layout = studentLayout_(data[0]);
   const want = normalizeUsername_(username);
   for (let i = 1; i < data.length; i++) {
-    if (normalizeUsername_(data[i][0]) === want && passwordMatches_(data[i][1], password)) {
-      return { row: data[i], sheetRow: i + 1, username: want };
+    if (normalizeUsername_(data[i][layout.userCol]) === want && passwordMatches_(data[i][layout.passCol], password)) {
+      return { row: data[i], sheetRow: i + 1, username: want, layout: layout };
     }
   }
   return null;
+}
+
+function addEmailColumn() {
+  const ui = SpreadsheetApp.getUi();
+  const sheet = ss_().getSheetByName('Students');
+  if (!sheet) return;
+  const headers = sheet.getRange(1, 1, 1, Math.max(1, sheet.getLastColumn())).getValues()[0];
+  if (headerIndex_(headers, 'Email') >= 0) {
+    ui.alert('Email is already next to Username.');
+    return;
+  }
+  sheet.insertColumnAfter(1);
+  sheet.getRange(1, 2).setValue('Email');
+  ui.alert('Added an Email column next to Username. Fill in each address. Students still log in with Username.');
 }
 
 function loadQuestions(ss, testId) {
@@ -829,7 +861,7 @@ function currentCycle_(student, testId) {
   const lesson = TEST_TO_LESSON[testId];
   const li = LESSONS.indexOf(lesson);
   if (li < 0) return 1;
-  const idx = 8 + li;
+  const idx = ((student.layout && student.layout.cycle0) || 8) + li;
   if (student.row.length > idx && student.row[idx] !== '' && student.row[idx] !== null) {
     const n = Number(student.row[idx]);
     return n > 0 ? n : 1;
@@ -1087,7 +1119,8 @@ function repairStudentsCache_(ss, student, testId) {
   if (li < 0) return;
   const cycle = currentCycle_(student, testId);
   const sits = cycleSits_(ss, usernameFromStudent_(student), testId, cycle);
-  ss.getSheetByName('Students').getRange(student.sheetRow, 3 + li).setValue(sits);
+  const sitCol = ((student.layout && student.layout.sit0) || 2) + li;
+  ss.getSheetByName('Students').getRange(student.sheetRow, sitCol + 1).setValue(sits);
   SpreadsheetApp.flush();
 }
 
@@ -1098,14 +1131,16 @@ function bumpCycle_(ss, username, lessonOrAll) {
   const want = normalizeUsername_(username);
   for (let i = 1; i < data.length; i++) {
     if (normalizeUsername_(data[i][0]) !== want) continue;
+    const layout = studentLayout_(data[0]);
     const lessons = lessonOrAll === 'ALL' ? LESSONS : [lessonOrAll];
     lessons.forEach(function (lesson) {
       const li = LESSONS.indexOf(lesson);
       if (li < 0) return;
-      const cycleCol = 9 + li;
+      const cycleCol = layout.cycle0 + li + 1;
+      const sitCol = layout.sit0 + li + 1;
       const cur = Number(sheet.getRange(i + 1, cycleCol).getValue()) || 1;
       sheet.getRange(i + 1, cycleCol).setValue(cur + 1);
-      sheet.getRange(i + 1, 3 + li).setValue(0);
+      sheet.getRange(i + 1, sitCol).setValue(0);
     });
     return true;
   }
@@ -1137,14 +1172,16 @@ function ensureRuntimeSchema_(ss) {
 }
 
 function ensureCycleHeaders_(sheet, headerRow) {
-  if (!headerRow || headerRow[8] === 'CycleL1') return;
+  if (!headerRow || headerIndex_(headerRow, 'CycleL1') >= 0) return;
+  const l1 = headerIndex_(headerRow, 'L1');
+  const start = (l1 >= 0 ? l1 + 6 : 8) + 1;
   const needed = ['CycleL1', 'CycleL2', 'CycleL3', 'CycleL4', 'CycleL5', 'CycleL6'];
-  sheet.getRange(1, 9, 1, 6).setValues([needed]);
+  sheet.getRange(1, start, 1, 6).setValues([needed]);
   const last = sheet.getLastRow();
   if (last > 1) {
     const ones = [];
     for (let i = 0; i < last - 1; i++) ones.push([1, 1, 1, 1, 1, 1]);
-    sheet.getRange(2, 9, last - 1, 6).setValues(ones);
+    sheet.getRange(2, start, last - 1, 6).setValues(ones);
   }
 }
 
@@ -1224,6 +1261,7 @@ function onOpen() {
     .addItem('Set time limit…', 'adminSetTimeLimit')
     .addSeparator()
     .addItem('Sync roster from RosterImport', 'syncRoster')
+    .addItem('Add Email column next to Username', 'addEmailColumn')
     .addItem('Create missing tabs (Releases, RosterImport)', 'createMissingTabs')
     .addToUi();
 }
@@ -1690,8 +1728,9 @@ function showSummary() {
   let rows = '';
   for (let i = 1; i < data.length; i++) {
     const u = data[i][0];
+    const layout = studentLayout_(data[0]);
     const tries = LESSONS.map(function (l, li) {
-      const t = Number(data[i][2 + li]) || 0;
+      const t = Number(data[i][layout.sit0 + li]) || 0;
       const color = t >= 2 ? '#dc2626' : t === 1 ? '#d97706' : '#16a34a';
       return '<td style="text-align:center;color:' + color + ';font-weight:bold">' + t + '</td>';
     }).join('');
@@ -1699,7 +1738,7 @@ function showSummary() {
   }
   const html = HtmlService.createHtmlOutput(
     '<style>body{font-family:Arial,sans-serif;font-size:13px;padding:12px}table{border-collapse:collapse;width:100%}th{background:#f1f5f9;padding:6px 8px;text-align:center}th:first-child{text-align:left}td{padding:4px 8px;border-bottom:1px solid #e2e8f0}</style>' +
-    '<table><tr><th>Email</th>' + LESSONS.map(function (l) { return '<th>' + LESSON_NAMES[l] + '</th>'; }).join('') + '</tr>' + rows + '</table>' +
+    '<table><tr><th>Username</th>' + LESSONS.map(function (l) { return '<th>' + LESSON_NAMES[l] + '</th>'; }).join('') + '</tr>' + rows + '</table>' +
     '<p class="legend" style="margin-top:8px;font-size:11px;color:#64748b">Cache of current-cycle sits. Reset increments Cycle, does not delete Results.</p>'
   ).setWidth(500).setHeight(400);
   SpreadsheetApp.getUi().showModalDialog(html, 'Attempt Summary');

@@ -107,7 +107,7 @@ describe("search input", () => {
   it("roster shows assigned tests in a dropdown, not a crowded line", () => {
     opts({ screen: "roster" });
     const headers = [...document.querySelectorAll("main th")].map((h) => h.textContent);
-    expect(headers).toEqual(["Student", "Assigned tests"]);
+    expect(headers).toEqual(["Username", "Email", "Assigned tests"]);
     const select = document.querySelector("main select") as HTMLSelectElement | null;
     expect(select).toBeTruthy();
     expect([...select!.options].some((o) => /Soil/.test(o.text))).toBe(true);
@@ -119,7 +119,7 @@ describe("search input", () => {
     expect(document.body.textContent || "").toMatch(/Summer 2026/);
     expect(document.querySelector("main a")?.getAttribute("href") || "").toMatch(/docs.google.com\/spreadsheets/);
     expect(document.body.textContent || "").toMatch(/Hōkūlani Fall Interns/);
-    expect(document.body.textContent || "").toMatch(/Leave that password as you assigned it/);
+    expect(document.body.textContent || "").toMatch(/Username is what they type to log in/);
     opts({ screen: "missing", selectedProgramId: "hokulani" });
     const links = document.querySelectorAll("main a[href*='program=hokulani']");
     expect(links.length).toBeGreaterThan(0);

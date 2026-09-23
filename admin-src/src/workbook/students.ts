@@ -37,6 +37,9 @@ export function parseStudents(values: SheetValues): StudentsParse {
   const start = headered ? 1 : 0;
   const headers = headered ? values[0].map((c) => String(c ?? "").trim()) : [];
   const userCol = headered && headerIndex(headers, "Username") >= 0 ? headerIndex(headers, "Username") : 0;
+  const emailCol = headered ? headerIndex(headers, "Email") : -1;
+  const sit0 = headered && headerIndex(headers, "L1") >= 0 ? headerIndex(headers, "L1") : 2;
+  const cycle0 = headered && headerIndex(headers, "CycleL1") >= 0 ? headerIndex(headers, "CycleL1") : 8;
 
   for (let i = start; i < values.length; i++) {
     const row = values[i];
@@ -73,8 +76,8 @@ export function parseStudents(values: SheetValues): StudentsParse {
     const sits = {} as Record<TestId, number | null>;
     const cycles = {} as Record<TestId, number | null>;
     TEST_IDS.forEach((id, li) => {
-      const sitRaw = cell(row, 2 + li);
-      const cycleRaw = cell(row, 8 + li);
+      const sitRaw = cell(row, sit0 + li);
+      const cycleRaw = cell(row, cycle0 + li);
       sits[id] = sitRaw === "" ? null : asInt(sitRaw);
       if (cycleRaw === "") {
         cycles[id] = 1;
@@ -102,7 +105,7 @@ export function parseStudents(values: SheetValues): StudentsParse {
       }
     });
 
-    students.push({ username, rowNumber, sits, cycles });
+    students.push({ username, email: emailCol >= 0 ? cell(row, emailCol) : "", rowNumber, sits, cycles });
   }
 
   return { students, skippedBlank, issues };

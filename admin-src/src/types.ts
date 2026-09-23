@@ -12,6 +12,7 @@ export type HealthIssue = {
 
 export type StudentView = {
   username: string;
+  email: string;
   rowNumber: number;
   sits: Record<TestId, number | null>;
   cycles: Record<TestId, number | null>;

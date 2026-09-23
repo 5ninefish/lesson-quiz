@@ -76,7 +76,7 @@ const HELP: Record<HelpTopic, { title: string; body: string }> = {
       "",
       "Every student in the cohort has the same tests. To add or remove a person, or turn a test on or off, use Programs → Edit assignments.",
       "",
-      "This page does not add accounts or change passwords. On the Students tab, type the email and the password you assigned. Leave the password readable. Then add them here with Edit assignments.",
+      "This page does not add accounts. On the Students tab, Username is the login. Email is the column next to it. Password is the one you assigned. Then add them here with Edit assignments.",
     ].join("\n"),
   },
   releases: {
@@ -158,7 +158,7 @@ const HELP: Record<HelpTopic, { title: string; body: string }> = {
 };
 
 export const SPREADSHEET_GUIDE = [
-  "Students tab — add a person: new row at the bottom, email in Username, the password you assigned in the Password column. Leave that password as you assigned it. Do not paste over the L1–L6 columns.",
+  "Students tab — Username is what they type to log in. Email is the next column, for contacting them. Password is the password you assigned; leave it as you typed it. Do not paste over the L1–L6 columns.",
   "L1–L6 are lesson codes, not the program name. Hover the header for the full title: L1 Soil, L2 Coral, L3 Computer Science, L4 Astronomy, L5 Health, L6 Digital Media. CycleL1–CycleL6 are the same lessons. The number goes up when you grant another round of tries.",
   "After the person exists on Students, come back here and Edit assignments on the cohort so they are included.",
   "Questions tab — the shared question bank. Do not change an answer key unless you mean to change the test.",

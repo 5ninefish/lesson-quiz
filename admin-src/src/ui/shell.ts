@@ -120,7 +120,7 @@ function renderRoster(main: HTMLElement, snap: DashboardSnapshot, programId: str
   const t = el("table");
   const thead = el("thead");
   const hr = el("tr");
-  hr.append(el("th", {}, "Student"), el("th", {}, "Assigned tests"));
+  hr.append(el("th", {}, "Username"), el("th", {}, "Email"), el("th", {}, "Assigned tests"));
   thead.append(hr);
   const tb = el("tbody");
   const tests = assignedTests(snap);
@@ -128,6 +128,7 @@ function renderRoster(main: HTMLElement, snap: DashboardSnapshot, programId: str
     const tr = el("tr");
     tr.dataset.search = `${s.username} ${tests.map((x) => x.title).join(" ")}`.toLowerCase();
     tr.append(el("td", {}, s.username));
+    tr.append(el("td", {}, s.email || "—"));
     const td = el("td");
     const sel = el("select", { "aria-label": `Assigned tests for ${s.username}` }) as HTMLSelectElement;
     sel.append(new Option(tests.length ? `${tests.length} assigned tests` : "No tests assigned", ""));
@@ -277,8 +278,8 @@ function renderMain(opts: ShellOpts): void {
         downloadCsv(
           "roster.csv",
           toCsv(
-            ["username", "assigned_tests"],
-            rows.map((s) => [s.username, assigned]),
+            ["username", "email", "assigned_tests"],
+            rows.map((s) => [s.username, s.email, assigned]),
           ),
         );
       } else if (opts.screen === "results") {
