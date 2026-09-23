@@ -31,6 +31,7 @@ function opts(over: Partial<Parameters<typeof renderShell>[0]> = {}) {
     onWizardChange: () => {},
     onEditAssignments: () => {},
     onLaunch: () => {},
+    onApplyRelease: () => {},
     onEnableEditing: () => {},
     onInitTables: () => {},
     onSeedHokulani: () => {},

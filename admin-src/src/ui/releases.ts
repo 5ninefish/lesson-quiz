@@ -1,6 +1,6 @@
 import { secondsToMinutes } from "../programs/ids";
 import { releaseMutation } from "../releases/mutations";
-import type { DashboardSnapshot, ProgramTestView } from "../types";
+import type { DashboardSnapshot, MutationPreview, ProgramTestView } from "../types";
 import { confirmDialog } from "./dialogs";
 import { el } from "./dom";
 import { pageHeading } from "./help";
@@ -10,7 +10,8 @@ export function renderReleases(
   snap: DashboardSnapshot,
   programId: string,
   canWrite: boolean,
-  onPreview: (text: string) => void,
+  actor: string,
+  onApply: (preview: MutationPreview) => void,
 ): void {
   pageHeading(main, "Releases", "releases");
   main.append(
@@ -29,10 +30,15 @@ export function renderReleases(
     main.append(el("p", {}, "No ProgramTests for this program. Seed or launch first."));
     return;
   }
-  for (const t of tests) main.append(testCard(t, canWrite, onPreview));
+  for (const t of tests) main.append(testCard(t, canWrite, actor, onApply));
 }
 
-function testCard(t: ProgramTestView, canWrite: boolean, onPreview: (text: string) => void): HTMLElement {
+function testCard(
+  t: ProgramTestView,
+  canWrite: boolean,
+  actor: string,
+  onApply: (preview: MutationPreview) => void,
+): HTMLElement {
   const card = el("section", { class: "release-card" });
   card.append(el("h2", {}, `${t.title}`));
   card.append(el("p", { class: "muted" }, `${t.testId} · ${t.stateLabel} · Manual ${t.manual}`));
@@ -46,12 +52,12 @@ function testCard(t: ProgramTestView, canWrite: boolean, onPreview: (text: strin
     b.onclick = fn;
     actions.append(b);
   };
-  add("Open now", () => previewAction(t, "open", onPreview));
-  add("Close now", () => previewAction(t, "close", onPreview));
-  add("Schedule window", () => schedule(t, onPreview));
-  add("Set attempts", () => attempts(t, onPreview));
-  add("Set time limit", () => timer(t, onPreview));
-  add("Return to legacy default", () => previewAction(t, "unset", onPreview));
+  add("Open now", () => previewAction(t, "open", actor, onApply));
+  add("Close now", () => previewAction(t, "close", actor, onApply));
+  add("Schedule window", () => schedule(t, actor, onApply));
+  add("Set attempts", () => attempts(t, actor, onApply));
+  add("Set time limit", () => timer(t, actor, onApply));
+  add("Return to legacy default", () => previewAction(t, "unset", actor, onApply));
   const missing = el("button", { type: "button" }, "View missing students");
   missing.onclick = () => {
     const btn = document.querySelector<HTMLButtonElement>('#nav button[data-screen="missing"]');
@@ -65,59 +71,63 @@ function testCard(t: ProgramTestView, canWrite: boolean, onPreview: (text: strin
 function previewAction(
   t: ProgramTestView,
   action: "open" | "close" | "unset",
-  onPreview: (text: string) => void,
+  actor: string,
+  onApply: (preview: MutationPreview) => void,
 ): void {
   const planned = releaseMutation({
     current: t,
     action,
-    actor: "instructor",
+    actor,
     nowHst: new Date().toISOString(),
   });
+  const verb = action === "open" ? "Open" : action === "close" ? "Close" : "Update";
   confirmDialog({
-    title: `${action} ${t.testId}`,
-    body: `Program: ${t.programId}\nTest: ${t.testId}\nBefore: ${planned.preview.before.join(" | ")}\nAfter: ${planned.preview.after.join(" | ")}\n\nLive workbook writes are blocked until Dalen approves a workbook copy.`,
-    confirmLabel: "Record preview",
-    onConfirm: () => onPreview(planned.preview.description),
+    title: `${verb} ${t.title}`,
+    body: `${t.title} is ${t.manual} and will become ${planned.next.manual}.\n\nThis saves on the workbook this page is reading.`,
+    confirmLabel: verb === "Open" ? "Open test" : "Save",
+    onConfirm: () => onApply(planned.preview),
   });
 }
 
-function schedule(t: ProgramTestView, onPreview: (text: string) => void): void {
-  const openAt = window.prompt("Open at (ISO HST)", t.openAt) || "";
-  const closeAt = window.prompt("Close at (ISO HST)", t.closeAt) || "";
+function schedule(t: ProgramTestView, actor: string, onApply: (preview: MutationPreview) => void): void {
+  const openAt = window.prompt("Open at", t.openAt) || "";
+  const closeAt = window.prompt("Close at", t.closeAt) || "";
   const planned = releaseMutation({
     current: t,
     action: "schedule",
     openAt,
     closeAt,
-    actor: "instructor",
+    actor,
     nowHst: new Date().toISOString(),
   });
   confirmDialog({
-    title: `Schedule ${t.testId}`,
-    body: `Manual AUTO\n${openAt} → ${closeAt}\nWrites stay on a workbook copy first.`,
-    onConfirm: () => onPreview(planned.preview.description),
+    title: `Schedule ${t.title}`,
+    body: `${openAt || "no open time"} → ${closeAt || "no close time"}\n\nThis saves on the workbook this page is reading.`,
+    confirmLabel: "Save",
+    onConfirm: () => onApply(planned.preview),
   });
 }
 
-function attempts(t: ProgramTestView, onPreview: (text: string) => void): void {
-  const raw = window.prompt("Maximum attempts (positive integer)", String(t.maxTries));
+function attempts(t: ProgramTestView, actor: string, onApply: (preview: MutationPreview) => void): void {
+  const raw = window.prompt("Maximum attempts (whole number, at least 1)", String(t.maxTries));
   const n = Number(raw);
   if (!Number.isInteger(n) || n < 1) return;
   const planned = releaseMutation({
     current: t,
     action: "attempts",
     maxTries: n,
-    actor: "instructor",
+    actor,
     nowHst: new Date().toISOString(),
   });
   confirmDialog({
-    title: `Set attempts ${t.testId}`,
+    title: `Set attempts for ${t.title}`,
     body: `${t.maxTries} → ${n}`,
-    onConfirm: () => onPreview(planned.preview.description),
+    confirmLabel: "Save",
+    onConfirm: () => onApply(planned.preview),
   });
 }
 
-function timer(t: ProgramTestView, onPreview: (text: string) => void): void {
+function timer(t: ProgramTestView, actor: string, onApply: (preview: MutationPreview) => void): void {
   const raw = window.prompt("Time limit in minutes (0 = none)", String(secondsToMinutes(t.timeLimitSec)));
   const n = Number(raw);
   if (!Number.isFinite(n) || n < 0) return;
@@ -125,12 +135,13 @@ function timer(t: ProgramTestView, onPreview: (text: string) => void): void {
     current: t,
     action: "timer",
     timeLimitMinutes: n,
-    actor: "instructor",
+    actor,
     nowHst: new Date().toISOString(),
   });
   confirmDialog({
-    title: `Set timer ${t.testId}`,
-    body: `${secondsToMinutes(t.timeLimitSec)} min → ${n} min (${planned.next.timeLimitSec}s stored)`,
-    onConfirm: () => onPreview(planned.preview.description),
+    title: `Set timer for ${t.title}`,
+    body: `${secondsToMinutes(t.timeLimitSec)} min → ${n} min`,
+    confirmLabel: "Save",
+    onConfirm: () => onApply(planned.preview),
   });
 }

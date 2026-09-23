@@ -2,7 +2,7 @@ import { PROGRAM } from "../config";
 import { TEST_TITLES } from "../ids";
 import { bestCompleteScores, formatScore } from "../reports/best-scores";
 import { filterSnapshot } from "../programs/summaries";
-import type { DashboardSnapshot, LaunchPlan } from "../types";
+import type { DashboardSnapshot, LaunchPlan, MutationPreview } from "../types";
 import { toCsv, downloadCsv } from "../csv";
 import { el } from "./dom";
 import { openHelp, pageHeading } from "./help";
@@ -44,6 +44,7 @@ export type ShellOpts = {
   onWizardChange: (w: WizardState) => void;
   onEditAssignments: (programId: string) => void;
   onLaunch: (plan: LaunchPlan) => void;
+  onApplyRelease: (preview: MutationPreview) => void;
   onEnableEditing: () => void;
   onInitTables: () => void;
   onSeedHokulani: () => void;
@@ -61,6 +62,7 @@ let onSelectProgramCb: (id: string) => void = () => {};
 let onWizardChangeCb: (w: WizardState) => void = () => {};
 let onEditAssignmentsCb: (programId: string) => void = () => {};
 let onLaunchCb: (plan: LaunchPlan) => void = () => {};
+let onApplyReleaseCb: (preview: MutationPreview) => void = () => {};
 let onEnableEditingCb: () => void = () => {};
 let onInitTablesCb: () => void = () => {};
 let onSeedHokulaniCb: () => void = () => {};
@@ -352,13 +354,14 @@ function renderMain(opts: ShellOpts): void {
       (plan) => onLaunchCb(plan),
     );
   } else if (opts.screen === "releases") {
-    renderReleases(main, snap, opts.selectedProgramId || PROGRAM.legacyDefaultProgramId, opts.writeEnabled, (text) => {
-      const banner = document.getElementById("banner");
-      if (banner) {
-        banner.className = "banner show ok";
-        banner.textContent = `Preview only: ${text}`;
-      }
-    });
+    renderReleases(
+      main,
+      snap,
+      opts.selectedProgramId || PROGRAM.legacyDefaultProgramId,
+      opts.writeEnabled,
+      opts.account || "instructor",
+      (preview) => onApplyReleaseCb(preview),
+    );
   } else if (opts.screen === "attempts") {
     pageHeading(main, "Attempts", "attempts");
     main.append(
@@ -431,6 +434,7 @@ export function renderShell(opts: ShellOpts): void {
   onWizardChangeCb = opts.onWizardChange;
   onEditAssignmentsCb = opts.onEditAssignments;
   onLaunchCb = opts.onLaunch;
+  onApplyReleaseCb = opts.onApplyRelease;
   onEnableEditingCb = opts.onEnableEditing;
   onInitTablesCb = opts.onInitTables;
   onSeedHokulaniCb = opts.onSeedHokulani;

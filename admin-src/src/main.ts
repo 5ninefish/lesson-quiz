@@ -5,7 +5,7 @@ import { loadRawWorkbook, loadWorkbookMeta } from "./google/sheets-client";
 import { buildSnapshot } from "./workbook/snapshot";
 import { instructorMessage, type ErrorCode } from "./errors";
 import { renderShell, type Screen } from "./ui/shell";
-import type { DashboardSnapshot } from "./types";
+import type { DashboardSnapshot, MutationPreview } from "./types";
 import { emptyWizard, wizardFromProgram, type WizardState } from "./ui/program-wizard";
 import { planAssignmentUpdate } from "./programs/assignment-save";
 import { requestWriteScope } from "./auth/google-token";
@@ -88,6 +88,9 @@ function paint(): void {
       wizard = next;
       screen = "wizard";
       paint();
+    },
+    onApplyRelease: (preview) => {
+      void saveRelease(preview);
     },
     onLaunch: (plan) => {
       if (plan.blocking.length) {
@@ -234,6 +237,40 @@ function paint(): void {
       paint();
     },
   });
+}
+
+async function saveRelease(preview: MutationPreview): Promise<void> {
+  const write = async () => {
+    const result = await executeBatchWrite({
+      valueUpdates: [{ range: preview.range, values: [preview.after] }],
+    });
+    if (!result.ok) {
+      banner = { kind: "err", text: instructorMessage((result.code as ErrorCode) || "write_verify") };
+      paint();
+      return;
+    }
+    await appendRows("Audit", [[new Date().toISOString(), account || "instructor", preview.id, preview.description]]);
+    banner = { kind: "ok", text: "Saved on the workbook this page is reading." };
+    await refreshLive();
+  };
+  if (!writeEnabled) {
+    const ok = requestWriteScope(
+      () => {
+        writeEnabled = true;
+        void write();
+      },
+      (message) => {
+        banner = { kind: "err", text: message };
+        paint();
+      },
+    );
+    if (!ok) {
+      banner = { kind: "err", text: "Turn on Enable editing, then open the test again." };
+      paint();
+    }
+    return;
+  }
+  await write();
 }
 
 async function maybeApplyLessonNotes(): Promise<void> {
