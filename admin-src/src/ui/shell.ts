@@ -5,6 +5,7 @@ import { filterSnapshot } from "../programs/summaries";
 import type { DashboardSnapshot, LaunchPlan } from "../types";
 import { toCsv, downloadCsv } from "../csv";
 import { el } from "./dom";
+import { openHelp, pageHeading } from "./help";
 import { renderPrograms } from "./programs";
 import { emptyWizard, renderWizard, type WizardState } from "./program-wizard";
 import { studentTestUrl } from "../programs/urls";
@@ -112,8 +113,8 @@ function assignedTestLabel(snap: DashboardSnapshot): string {
 }
 
 function renderRoster(main: HTMLElement, snap: DashboardSnapshot, programId: string): void {
-  main.append(el("h1", {}, "Roster"));
-  main.append(el("p", { class: "muted" }, "Tests on this program. Open the list next to a student to see them without crowding the row."));
+  pageHeading(main, "Roster", "roster");
+  main.append(el("p", { class: "muted" }, "Open the list to see each test. Choosing one opens the student link. It does not change assignments."));
   const wrap = el("div", { class: "table-wrap" });
   wrap.setAttribute("data-filterable", "true");
   const t = el("table");
@@ -180,6 +181,8 @@ function mountChrome(): void {
   prog.append(sel);
   header.append(prog);
   header.append(el("div", { class: "spacer" }));
+  const cheat = el("button", { type: "button", id: "btn-cheat-sheet", class: "help-btn" }, "Cheat sheet");
+  cheat.onclick = () => openHelp("start");
   const demo = el("button", { type: "button", id: "btn-demo" }, "Load demo workbook");
   demo.onclick = () => onDemoCb();
   const signin = el("button", { type: "button", class: "primary", id: "btn-signin" }, "Sign in with UH Google");
@@ -190,7 +193,7 @@ function mountChrome(): void {
   signout.onclick = () => onSignOutCb();
   const edit = el("button", { type: "button", id: "btn-enable-editing" }, "Enable editing");
   edit.onclick = () => onEnableEditingCb();
-  header.append(demo, signin, refresh, edit, signout);
+  header.append(cheat, demo, signin, refresh, edit, signout);
   app.append(header);
 
   const banner = el("div", { class: "banner", id: "banner" });
@@ -249,7 +252,7 @@ function renderMain(opts: ShellOpts): void {
   if (toolbar) toolbar.style.display = showSearch && opts.snap ? "flex" : "none";
 
   if (!opts.snap) {
-    main.append(el("h1", {}, "Instructor dashboard"));
+    pageHeading(main, "Instructor dashboard", "start");
     main.append(
       el(
         "p",
@@ -301,7 +304,7 @@ function renderMain(opts: ShellOpts): void {
   }
 
   if (opts.screen === "overview") {
-    main.append(el("h1", {}, "Overview"));
+    pageHeading(main, "Overview", "overview");
     const cards = el("div", { class: "cards" });
     const add = (label: string, n: number, screen: Screen) => {
       const c = el("button", { type: "button", class: "card" });
@@ -356,7 +359,7 @@ function renderMain(opts: ShellOpts): void {
       }
     });
   } else if (opts.screen === "attempts") {
-    main.append(el("h1", {}, "Attempts"));
+    pageHeading(main, "Attempts", "attempts");
     main.append(
       table(
         ["Student", "Assessment", "Status", "Started", "Submission", "Row"],
@@ -371,7 +374,7 @@ function renderMain(opts: ShellOpts): void {
       ),
     );
   } else if (opts.screen === "results") {
-    main.append(el("h1", {}, "Results"));
+    pageHeading(main, "Results", "results");
     main.append(
       el(
         "p",
@@ -397,7 +400,7 @@ function renderMain(opts: ShellOpts): void {
     const program = opts.snap.programs.find((p) => p.programId === opts.selectedProgramId);
     renderMissing(main, snap, opts.selectedProgramId || PROGRAM.legacyDefaultProgramId, program?.programName || PROGRAM.title);
   } else {
-    main.append(el("h1", {}, "Data Health"));
+    pageHeading(main, "Data Health", "health");
     main.append(el("p", { class: "muted" }, "Diagnostic only. There is no fix-everything action."));
     main.append(
       el(

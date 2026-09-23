@@ -5,6 +5,7 @@ import { suggestProgramId } from "../programs/ids";
 import { instructorProgramUrl, studentProgramUrl } from "../programs/urls";
 import type { DashboardSnapshot, LaunchPlan, ReleaseManual } from "../types";
 import { el } from "./dom";
+import { pageHeading } from "./help";
 
 export type WizardState = {
   step: 1 | 2 | 3 | 4 | 5;
@@ -57,7 +58,11 @@ export function renderWizard(
   onCancel: () => void,
   onLaunch: (plan: LaunchPlan) => void,
 ): void {
-  main.append(el("h1", {}, wizard.mode === "edit" ? `Edit assignments — ${wizard.draft.programName}` : "Create program"));
+  pageHeading(
+    main,
+    wizard.mode === "edit" ? `Edit assignments — ${wizard.draft.programName}` : "Create program",
+    "wizard",
+  );
   const steps = el("p", { class: "muted" }, `Step ${wizard.step} of 5`);
   main.append(steps);
 

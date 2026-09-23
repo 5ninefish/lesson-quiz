@@ -36,6 +36,27 @@ export function confirmDialog(opts: {
   ok.focus();
 }
 
+export function infoDialog(title: string, body: string): void {
+  closeDialogs();
+  const overlay = el("div", { class: "dialog-overlay", id: "dialog-overlay" });
+  const box = el("div", { class: "dialog help-dialog", role: "dialog", "aria-modal": "true" });
+  box.append(el("h2", {}, title));
+  const p = el("div", { class: "help-body" });
+  p.textContent = body;
+  box.append(p);
+  const actions = el("div", { class: "dialog-actions" });
+  const close = el("button", { type: "button", class: "primary" }, "Close");
+  close.onclick = () => closeDialogs();
+  actions.append(close);
+  box.append(actions);
+  overlay.append(box);
+  overlay.addEventListener("click", (ev) => {
+    if (ev.target === overlay) closeDialogs();
+  });
+  document.body.append(overlay);
+  close.focus();
+}
+
 export function closeDialogs(): void {
   document.getElementById("dialog-overlay")?.remove();
 }

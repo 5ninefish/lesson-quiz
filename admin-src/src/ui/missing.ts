@@ -4,6 +4,7 @@ import { studentTestUrl } from "../programs/urls";
 import type { DashboardSnapshot, MissingRow } from "../types";
 import { closeDialogs } from "./dialogs";
 import { el } from "./dom";
+import { pageHeading } from "./help";
 
 async function copyText(text: string): Promise<void> {
   try {
@@ -19,7 +20,7 @@ async function copyText(text: string): Promise<void> {
 }
 
 export function renderMissing(main: HTMLElement, snap: DashboardSnapshot, programId: string, programName: string): void {
-  main.append(el("h1", {}, "Missing tests"));
+  pageHeading(main, "Missing tests", "missing");
   main.append(
     el(
       "p",

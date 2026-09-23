@@ -3,6 +3,7 @@ import { instructorProgramUrl, studentProgramUrl } from "../programs/urls";
 import type { DashboardSnapshot, ProgramView } from "../types";
 import { confirmDialog } from "./dialogs";
 import { el } from "./dom";
+import { pageHeading } from "./help";
 
 async function copyText(text: string): Promise<void> {
   try {
@@ -34,7 +35,7 @@ export function renderPrograms(
     onSeed: () => void;
   },
 ): void {
-  main.append(el("h1", {}, "Programs"));
+  pageHeading(main, "Programs", "programs");
   if (!snap.programTablesPresent) {
     main.append(
       el(

@@ -68,6 +68,15 @@ describe("search input", () => {
     expect(state.q).toBe("st");
   });
 
+  it("opens a cheat sheet", () => {
+    opts({ screen: "roster" });
+    (document.getElementById("btn-cheat-sheet") as HTMLButtonElement).click();
+    expect(document.getElementById("dialog-overlay")?.textContent || "").toMatch(/They never sign in with Google/);
+    (document.querySelector("main .help-btn") as HTMLButtonElement).click();
+    expect(document.getElementById("dialog-overlay")?.textContent || "").toMatch(/Assigned tests/);
+    (document.querySelector("#dialog-overlay button") as HTMLButtonElement).click();
+  });
+
   it("keeps the demo button for staff walkthrough", () => {
     opts({ snap: null, screen: "programs", account: "" });
     expect(document.getElementById("btn-demo")).toBeTruthy();

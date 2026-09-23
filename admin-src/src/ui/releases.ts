@@ -3,6 +3,7 @@ import { releaseMutation } from "../releases/mutations";
 import type { DashboardSnapshot, ProgramTestView } from "../types";
 import { confirmDialog } from "./dialogs";
 import { el } from "./dom";
+import { pageHeading } from "./help";
 
 export function renderReleases(
   main: HTMLElement,
@@ -11,7 +12,7 @@ export function renderReleases(
   canWrite: boolean,
   onPreview: (text: string) => void,
 ): void {
-  main.append(el("h1", {}, "Releases"));
+  pageHeading(main, "Releases", "releases");
   main.append(
     el(
       "p",
