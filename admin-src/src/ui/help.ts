@@ -158,7 +158,7 @@ const HELP: Record<HelpTopic, { title: string; body: string }> = {
 };
 
 export const SPREADSHEET_GUIDE = [
-  "Students tab — add a person: new row at the bottom, email in Username, the password you assigned in the Password column. Leave that password readable so you can look it up later. Do not paste over the L1–L6 columns. If a Password cell is already a long scrambled string, that password cannot be recovered — type it again.",
+  "Students tab — add a person: new row at the bottom, email in Username, the password you assigned in the Password column. Leave that password as you assigned it. Do not paste over the L1–L6 columns.",
   "L1–L6 are lesson codes, not the program name. Hover the header for the full title: L1 Soil, L2 Coral, L3 Computer Science, L4 Astronomy, L5 Health, L6 Digital Media. CycleL1–CycleL6 are the same lessons. The number goes up when you grant another round of tries.",
   "After the person exists on Students, come back here and Edit assignments on the cohort so they are included.",
   "Questions tab — the shared question bank. Do not change an answer key unless you mean to change the test.",

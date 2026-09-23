@@ -14,7 +14,7 @@ Google Apps Script (Web App)
         │  read/write
         ▼
 Google Sheet (one bound workbook per program)
-  ├── Students   (email, hashed password, L1–L6 sit cache, CycleL1–CycleL6)
+  ├── Students   (email, assigned password, L1–L6 sit cache, CycleL1–CycleL6)
   ├── Questions  (canonical TestId, stems, choices, Correct — keys stay here)
   ├── Releases   (open/close window, max tries, time limit)
   ├── Attempts   (server submissionId, in_flight clock, snapshots)
@@ -22,7 +22,7 @@ Google Sheet (one bound workbook per program)
 ```
 
 **Key behaviors:**
-- Passwords are stored as SHA-256 hashes (never plaintext after setup)
+- Passwords are the ones you assign. They stay readable in the Students tab.
 - Each student gets a configurable max number of attempts per lesson (default: 2)
 - Optional countdown timer per quiz
 - Scores write back to the Sheet in real time; the teacher sees results immediately
@@ -41,7 +41,7 @@ Make a copy of the [template sheet](#) (or create your own with the schema below
 
 1. Open your Sheet → **Extensions → Apps Script**
 2. Paste `Code.gs`, click **Save**
-3. In the function dropdown, select `setup` → **Run** (grants permissions + hashes passwords)
+3. In the function dropdown, select `setup` → **Run** (grants permissions)
 4. **Deploy → New deployment → Web App**
    - Execute as: **Me**
    - Who has access: **Anyone**
@@ -71,7 +71,7 @@ Push to a GitHub repo and enable **GitHub Pages** (Settings → Pages → main b
 
 **Change attempt limit / timer:** Quiz Admin → Set attempts / Set time limit (Releases row). `MAX_TRIES` and `QUIZ_TIME_SECONDS` in `Code.gs` are fallbacks only when a Releases row is missing.
 
-**Add students:** add rows to the Students sheet with plaintext passwords → re-run `setup()` to hash them.
+**Add students:** add rows to the Students sheet with the password you assigned. Leave that cell as you typed it.
 
 ## Files
 

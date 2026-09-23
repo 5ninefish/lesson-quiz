@@ -32,7 +32,7 @@ Instructor UI is **GitHub Pages** (`admin.html`), not an Apps Script popup. Afte
 
    This will:
    - Add L1–L6 try-count columns and CycleL1–CycleL6 (default 1)
-   - Hash all the plaintext passwords (column B becomes 64-char hashes)
+   - Leave assigned passwords readable in column B
    - Create **Results**, **Questions**, **Attempts**, **Releases**, **Audit**, **RosterImport**
    - Set spreadsheet timezone to Pacific/Honolulu
    - Seed Releases as CLOSED (use Quiz Admin to open a window)
@@ -136,9 +136,6 @@ Send students:
 - The URL: `https://YOUR_USERNAME.github.io/lesson-quiz/`
 - Their username and password (from the Students tab)
 
-Passwords are now hashed in the sheet — students use their original plaintext
-password, not the hash.
-
 ---
 
 ## Instructor Reference
@@ -205,7 +202,7 @@ const LESSON_NAMES = {
 ## Troubleshooting
 
 **Students can't log in:**
-- Check that `setup()` was run (passwords are hashed in column B)
+- Check that the Password cell matches the password you assigned
 - Confirm the Apps Script URL in `index.html` is correct
 - Make sure the web app is deployed as "Anyone" (not "Anyone with Google account")
 

@@ -1767,8 +1767,7 @@ function createMissingTabs() {
     'Releases — one row per test with full titles. Manual=UNSET means not gated yet (tests still open).\n' +
     'RosterImport — paste Email + plaintext password, then Quiz Admin → Sync roster.\n' +
     'Attempts / Results extra columns created if missing.\n\n' +
-    'Passwords: type the assigned password in Students column B and leave it readable.\n' +
-    'Do not scramble it. A cell that is already a long hex string cannot be turned back into the password.'
+    'Passwords: type the assigned password in Students column B and leave it as you typed it.'
   );
 }
 
@@ -1935,10 +1934,6 @@ function setup() {
 }
 
 function bulkHashPasswords_() {
-  SpreadsheetApp.getUi().alert(
-    'Passwords stay as you assigned them. This no longer scrambles them.\n\n' +
-    'If a Password cell is already a long string of letters and numbers, that password is gone. Type the assigned password again.'
-  );
   return 0;
 }
 

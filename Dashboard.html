@@ -413,7 +413,7 @@
 
     function renderRoster() {
       var r = (state && state.roster) || { students: 0, importRows: 0, emails: [] };
-      $('footHint').textContent = 'Students type the roster password, never the hash.';
+      $('footHint').textContent = 'Students type the password you assigned.';
       var opts = (r.emails || []).map(function (e) {
         return '<option value="' + escapeAttr(e) + '">' + escapeHtml(e) + '</option>';
       }).join('');
@@ -424,7 +424,6 @@
         '<p class="roster-counts">' + r.students + ' students on the sheet. ' + r.importRows + ' RosterImport rows with email + password.</p>' +
         '<div class="actions">' +
         '<button type="button" class="primary" id="btnSync">Sync roster from RosterImport</button>' +
-        '<button type="button" id="btnHash">Hash new passwords</button>' +
         '<button type="button" id="btnTabs">Create missing tabs</button>' +
         '</div>' +
         '<h1 style="font-size:18px;margin-top:24px">Reset tries</h1>' +
@@ -503,7 +502,6 @@
         callDash(function (r) { r.dashSaveWindow(t3.id, openAt, closeAt, maxTries, timeMin); });
       }
       if (id === 'btnSync') callDash(function (r) { r.dashSyncRoster(); });
-      if (id === 'btnHash') callDash(function (r) { r.dashHashPasswords(); });
       if (id === 'btnTabs') callDash(function (r) { r.dashCreateTabs(); });
       if (id === 'btnReset') {
         var user = $('resetUser') && $('resetUser').value;
