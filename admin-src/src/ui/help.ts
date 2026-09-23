@@ -152,7 +152,7 @@ const HELP: Record<HelpTopic, { title: string; body: string }> = {
       "4. For each test: open, closed, or a window; max attempts; timer in minutes.",
       "5. Read the changes, then Save assignments (existing cohort) or Launch (new cohort).",
       "",
-      "Saving writes the workbook copy you are signed into. It asks you to confirm first.",
+      "Saving writes the live student workbook. It asks you to confirm first.",
     ].join("\n"),
   },
 };

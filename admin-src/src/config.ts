@@ -1,10 +1,9 @@
 export const PROGRAM = {
   code: "hokulani",
   title: "Hōkūlani Post-Test Portal",
-  /** Student quiz still uses the original live book. Do not point students here. */
+  /** The sheet students use. The instructor page reads and writes this book. */
   liveStudentSpreadsheetId: "1wFjzB6PgjhZjHWBcgLLVOa1TtBvaEDqoV8PGFYoX3EI",
-  /** Instructor dashboard reads this copy until cutover. */
-  spreadsheetId: "1n5wfSq9HCkXZwX7xzJTYdR3BS8SUNiahpO3oXc7j-Tg",
+  spreadsheetId: "1wFjzB6PgjhZjHWBcgLLVOa1TtBvaEDqoV8PGFYoX3EI",
   googleClientId: "920320221741-sdr3g7lcijko53f7tu7t0e225801pvu4.apps.googleusercontent.com",
   timezone: "Pacific/Honolulu",
   /** Existing Pages origin until Dalen approves the custom-domain cutover. */

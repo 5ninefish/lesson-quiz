@@ -56,7 +56,7 @@ export function renderPrograms(
       el(
         "p",
         { class: "muted" },
-        `Missing tabs: ${snap.missingProgramTables.join(", ")}. Creates only those four tabs on the workbook copy. Never run setup() on the live student book.`,
+        `Missing tabs: ${snap.missingProgramTables.join(", ")}. Creates only those four tabs. Do not run setup().`,
       ),
     );
     main.append(
@@ -64,8 +64,8 @@ export function renderPrograms(
         "p",
         { class: "muted" },
         opts.signedIn
-          ? "Click the button below. Google will ask for permission to edit the copy, then the four tabs are created."
-          : "Sign in first, then you can create the program tabs on the copy.",
+          ? "Click the button below. Google will ask for permission to edit the live workbook, then the four tabs are created."
+          : "Sign in first, then you can create the program tabs.",
       ),
     );
     const init = el("button", { type: "button", class: "primary" }, "Initialize Program Launcher");

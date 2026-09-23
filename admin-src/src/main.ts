@@ -28,7 +28,7 @@ let wizard: WizardState | null = null;
 let query = "";
 let banner: { kind: "ok" | "warn" | "err"; text: string } | null = {
   kind: "warn",
-  text: "Sign in with UH Google to read the workbook copy, or load the demo to show staff. Student quiz still uses the original live book.",
+  text: "Sign in with UH Google to read the live student workbook, or load the demo to show staff.",
 };
 
 function paint(): void {
@@ -412,8 +412,8 @@ async function refreshLive(): Promise<void> {
     banner = {
       kind: snap.programTablesPresent ? "ok" : "warn",
       text: snap.programTablesPresent
-        ? `Workbook copy loaded: ${snap.students.length} students.`
-        : "Workbook copy loaded. Program tabs are missing — use Initialize Program Launcher on this copy, never setup() on the live student book.",
+        ? `Live workbook loaded: ${snap.students.length} students.`
+        : "Live workbook loaded. Program tabs are missing — use Initialize Program Launcher, then Seed Hōkūlani. Do not run setup().",
     };
   } catch (err) {
     const code = (err as { code?: ErrorCode }).code || "network";
