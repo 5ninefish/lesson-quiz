@@ -21,6 +21,7 @@ describe("students", () => {
     const parsed = parseStudents(wb.students);
     expect(parsed.students.length).toBe(6);
     expect(parsed.skippedBlank).toBeGreaterThanOrEqual(8);
+    expect(parsed.issues.some((i) => i.id.startsWith("students-blank-user"))).toBe(false);
     expect(parsed.issues.some((i) => i.message.includes("Duplicate"))).toBe(true);
     expect(JSON.stringify(parsed.students).toLowerCase()).not.toContain("password");
   });

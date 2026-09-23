@@ -51,13 +51,6 @@ export function parseStudents(values: SheetValues): StudentsParse {
     const username = normalizeUsername(cell(row, userCol));
     if (!username) {
       skippedBlank += 1;
-      issues.push({
-        id: `students-blank-user-${rowNumber}`,
-        severity: "info",
-        tab: "Students",
-        rowNumber,
-        message: "Blank username on an initialized row — ignored.",
-      });
       continue;
     }
     const prev = seen.get(username);

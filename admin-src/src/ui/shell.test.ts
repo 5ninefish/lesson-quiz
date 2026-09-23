@@ -91,6 +91,17 @@ describe("search input", () => {
     expect((document.getElementById("btn-signout") as HTMLButtonElement).style.display).not.toBe("none");
   });
 
+  it("does not list blank student rows as parse warnings", () => {
+    opts({ screen: "overview" });
+    const overview = document.querySelector("main")?.textContent || "";
+    expect(overview).not.toMatch(/Blank students skipped/i);
+    expect(overview).not.toMatch(/Blank username/i);
+    opts({ screen: "health" });
+    const health = document.querySelector("main")?.textContent || "";
+    expect(health).not.toMatch(/Blank username/i);
+    expect(health).not.toMatch(/initialized row/i);
+  });
+
   it("does not render a separate best-complete-scores section", () => {
     opts({ screen: "results" });
     expect(document.body.textContent || "").not.toMatch(/Best complete scores/i);

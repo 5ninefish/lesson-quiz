@@ -323,7 +323,6 @@ function renderMain(opts: ShellOpts): void {
     add("Expired (display)", snap.attempts.filter((a) => a.displayStatus === "expired").length, "attempts");
     add("Missing rows", snap.missing.length, "missing");
     add("Parse warnings", opts.snap.issues.length, "health");
-    add("Blank students skipped", snap.skippedBlankStudents, "health");
     main.append(cards);
     main.append(el("p", { class: "muted" }, `Results parse mode: ${snap.resultsHeaderMode}`));
   } else if (opts.screen === "roster") {
