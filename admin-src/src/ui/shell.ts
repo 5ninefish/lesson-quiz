@@ -11,6 +11,7 @@ import { emptyWizard, renderWizard, type WizardState } from "./program-wizard";
 import { studentTestUrl } from "../programs/urls";
 import { renderReleases } from "./releases";
 import { renderMissing } from "./missing";
+import { warnIfBrowserRefreshSignedOut } from "./relogin-warning";
 
 export type Screen =
   | "overview"
@@ -451,6 +452,7 @@ export function renderShell(opts: ShellOpts): void {
   );
   setShown("btn-signin", !signedIn);
   setShown("btn-signout", Boolean(opts.account));
+  warnIfBrowserRefreshSignedOut(opts.account);
   setShown("btn-enable-editing", signedIn && !opts.writeEnabled);
   setShown("btn-refresh", Boolean(opts.snap));
   setText("stamp", opts.snap ? `Refreshed ${opts.snap.fetchedAt}` : "");

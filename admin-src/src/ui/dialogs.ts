@@ -4,6 +4,7 @@ export function confirmDialog(opts: {
   title: string;
   body: string;
   confirmLabel?: string;
+  cancelLabel?: string;
   onConfirm: () => void;
   onCancel?: () => void;
 }): void {
@@ -16,7 +17,7 @@ export function confirmDialog(opts: {
   p.textContent = opts.body;
   box.append(p);
   const actions = el("div", { class: "dialog-actions" });
-  const cancel = el("button", { type: "button" }, "Cancel");
+  const cancel = el("button", { type: "button" }, opts.cancelLabel || "Cancel");
   cancel.onclick = () => {
     closeDialogs();
     opts.onCancel?.();

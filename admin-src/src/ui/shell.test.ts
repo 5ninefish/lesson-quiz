@@ -45,6 +45,7 @@ function opts(over: Partial<Parameters<typeof renderShell>[0]> = {}) {
 
 afterEach(() => {
   resetChromeForTests();
+  sessionStorage.clear();
   document.body.innerHTML = "";
 });
 
@@ -83,6 +84,24 @@ describe("search input", () => {
     opts({ snap: null, screen: "programs", account: "" });
     expect(document.getElementById("btn-demo")).toBeTruthy();
     expect((document.getElementById("btn-signin") as HTMLButtonElement).style.display).not.toBe("none");
+  });
+
+  it("warns that a browser refresh requires signing in again", () => {
+    sessionStorage.setItem("hokulani-stay-signed-in", "1");
+    opts({ account: "", snap: null });
+    const again = document.getElementById("dialog-overlay")?.textContent || "";
+    expect(again).toMatch(/Sign in again/);
+    expect(again).toMatch(/Refreshing the browser signed you out/);
+    (document.querySelector("#dialog-overlay button") as HTMLButtonElement).click();
+
+    opts({ account: "UH Google" });
+    window.dispatchEvent(new KeyboardEvent("keydown", { key: "r", metaKey: true, bubbles: true, cancelable: true }));
+    const before = document.getElementById("dialog-overlay")?.textContent || "";
+    expect(before).toMatch(/Refreshing the browser signs you out/);
+    expect(before).toMatch(/sign in with UH Google again/i);
+    const stay = [...document.querySelectorAll("#dialog-overlay button")].find((b) => b.textContent === "Stay signed in");
+    (stay as HTMLButtonElement).click();
+    expect(document.getElementById("dialog-overlay")).toBeNull();
   });
 
   it("hides sign in after a Google login", () => {

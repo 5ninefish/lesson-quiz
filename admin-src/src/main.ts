@@ -14,6 +14,7 @@ import { seedHokulaniPlan } from "./programs/seed";
 import { appendRows, executeBatchWrite } from "./google/batch-write";
 import { applyLessonTitleNotes, renameFirstCohort } from "./google/lesson-notes";
 import { confirmDialog } from "./ui/dialogs";
+import { clearStaySignedIn } from "./ui/relogin-warning";
 import { duplicateConfig } from "./ui/programs";
 
 let screen: Screen = "programs";
@@ -61,6 +62,7 @@ function paint(): void {
       void startSignIn();
     },
     onSignOut: () => {
+      clearStaySignedIn();
       clearAccessToken();
       snap = null;
       account = "";
