@@ -662,11 +662,18 @@ function hashPassword(plain) {
   }).join('');
 }
 
+function passwordMatches_(stored, typed) {
+  const cell = String(stored || '');
+  const plain = String(typed || '');
+  if (cell === plain) return true;
+  const looksHashed = cell.length === 64 && /^[0-9a-f]+$/.test(cell);
+  return looksHashed && cell === hashPassword(plain);
+}
+
 function findStudent(data, username, password) {
-  const hash = hashPassword(password);
   const want = normalizeUsername_(username);
   for (let i = 1; i < data.length; i++) {
-    if (normalizeUsername_(data[i][0]) === want && String(data[i][1]) === hash) {
+    if (normalizeUsername_(data[i][0]) === want && passwordMatches_(data[i][1], password)) {
       return { row: data[i], sheetRow: i + 1, username: want };
     }
   }
@@ -1217,7 +1224,6 @@ function onOpen() {
     .addItem('Set time limit…', 'adminSetTimeLimit')
     .addSeparator()
     .addItem('Sync roster from RosterImport', 'syncRoster')
-    .addItem('Hash new passwords', 'bulkHashPasswords_')
     .addItem('Create missing tabs (Releases, RosterImport)', 'createMissingTabs')
     .addToUi();
 }
@@ -1761,8 +1767,8 @@ function createMissingTabs() {
     'Releases — one row per test with full titles. Manual=UNSET means not gated yet (tests still open).\n' +
     'RosterImport — paste Email + plaintext password, then Quiz Admin → Sync roster.\n' +
     'Attempts / Results extra columns created if missing.\n\n' +
-    'Passwords: type plaintext in Students column B (or RosterImport), then Quiz Admin → Hash new passwords.\n' +
-    'Already-hashed 64-character values are left alone.'
+    'Passwords: type the assigned password in Students column B and leave it readable.\n' +
+    'Do not scramble it. A cell that is already a long hex string cannot be turned back into the password.'
   );
 }
 
@@ -1865,7 +1871,6 @@ function syncRosterCore_() {
     have[email] = true;
     added++;
   }
-  bulkHashPasswords_();
   logAudit_('sync_roster', 'added ' + added);
   let message = 'Roster sync: added ' + added + ' new students. Existing try counts left alone.';
   if (skipped) message += ' Skipped ' + skipped + ' dupes.';
@@ -1894,7 +1899,6 @@ function setup() {
     }
   }
   ensureCycleHeaders_(students, students.getRange(1, 1, 1, 14).getValues()[0]);
-  bulkHashPasswords_();
   ensureResultsHeaders_(ss);
   ensureAttemptsSheet_(ss);
   ensureAuditSheet_(ss);
@@ -1931,19 +1935,11 @@ function setup() {
 }
 
 function bulkHashPasswords_() {
-  const sheet = ss_().getSheetByName('Students');
-  const data = sheet.getDataRange().getValues();
-  let count = 0;
-  for (let i = 1; i < data.length; i++) {
-    const val = String(data[i][1]);
-    const alreadyHashed = val.length === 64 && /^[0-9a-f]+$/.test(val);
-    if (!alreadyHashed && val.trim() !== '') {
-      sheet.getRange(i + 1, 2).setValue(hashPassword(val));
-      count++;
-    }
-  }
-  Logger.log('Hashed ' + count + ' passwords');
-  return count;
+  SpreadsheetApp.getUi().alert(
+    'Passwords stay as you assigned them. This no longer scrambles them.\n\n' +
+    'If a Password cell is already a long string of letters and numbers, that password is gone. Type the assigned password again.'
+  );
+  return 0;
 }
 
 function addLessonQuestions_(lessonId, rows) {

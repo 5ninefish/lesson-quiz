@@ -119,7 +119,7 @@ describe("search input", () => {
     expect(document.body.textContent || "").toMatch(/Summer 2026/);
     expect(document.querySelector("main a")?.getAttribute("href") || "").toMatch(/docs.google.com\/spreadsheets/);
     expect(document.body.textContent || "").toMatch(/Hōkūlani Fall Interns/);
-    expect(document.body.textContent || "").toMatch(/Hash new passwords/);
+    expect(document.body.textContent || "").toMatch(/Leave that password readable/);
     opts({ screen: "missing", selectedProgramId: "hokulani" });
     const links = document.querySelectorAll("main a[href*='program=hokulani']");
     expect(links.length).toBeGreaterThan(0);
