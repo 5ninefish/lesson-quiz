@@ -1,7 +1,7 @@
 import { PROGRAM } from "../config";
 import { LESSON_TO_TEST, TEST_TITLES, canonicalTestId } from "../ids";
 import { getAccessToken } from "../auth/google-token";
-import { copyWorkbookId, executeSpreadsheetRequests } from "./batch-write";
+import { copyWorkbookId, executeBatchWrite, executeSpreadsheetRequests } from "./batch-write";
 
 function lessonNote(lessonOrTest: string): string {
   const testId = canonicalTestId(lessonOrTest) || LESSON_TO_TEST[lessonOrTest as keyof typeof LESSON_TO_TEST];
@@ -105,4 +105,18 @@ export async function applyLessonTitleNotes(): Promise<{ ok: true } | { ok: fals
 
   if (!requests.length) return { ok: true };
   return executeSpreadsheetRequests(requests);
+}
+
+export async function renameFirstCohort(): Promise<{ ok: true } | { ok: false; code: string }> {
+  const rows = await values("Programs!A:B");
+  for (let i = 1; i < rows.length; i++) {
+    const id = String(rows[i][0] || "").trim().toLowerCase();
+    const name = String(rows[i][1] || "").trim();
+    if (id === "hokulani" && /^(hōkūlani|hokulani)$/i.test(name)) {
+      return executeBatchWrite({
+        valueUpdates: [{ range: `Programs!B${i + 1}`, values: [["Hōkūlani Fall Interns"]] }],
+      });
+    }
+  }
+  return { ok: true };
 }

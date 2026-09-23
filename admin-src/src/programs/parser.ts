@@ -68,7 +68,10 @@ export function parsePrograms(values: SheetValues): ProgramsParse {
         message: `Invalid Status "${cell(row, col("Status", 2))}".`,
       });
     }
-    const programName = cell(row, col("ProgramName", 1));
+    let programName = cell(row, col("ProgramName", 1));
+    if (programId === "hokulani" && /^(hōkūlani|hokulani)$/i.test(programName)) {
+      programName = "Hōkūlani Fall Interns";
+    }
     if (!programName) {
       issues.push({
         id: `programs-name-${rowNumber}`,

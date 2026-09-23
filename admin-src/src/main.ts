@@ -12,7 +12,7 @@ import { requestWriteScope } from "./auth/google-token";
 import { programTableInitMutations } from "./programs/mutations";
 import { seedHokulaniPlan } from "./programs/seed";
 import { appendRows, executeBatchWrite } from "./google/batch-write";
-import { applyLessonTitleNotes } from "./google/lesson-notes";
+import { applyLessonTitleNotes, renameFirstCohort } from "./google/lesson-notes";
 import { confirmDialog } from "./ui/dialogs";
 import { duplicateConfig } from "./ui/programs";
 
@@ -239,7 +239,8 @@ function paint(): void {
 async function maybeApplyLessonNotes(): Promise<void> {
   if (!writeEnabled || lessonNotesApplied) return;
   const result = await applyLessonTitleNotes();
-  if (result.ok) lessonNotesApplied = true;
+  const renamed = await renameFirstCohort();
+  if (result.ok && renamed.ok) lessonNotesApplied = true;
 }
 
 async function saveAssignments(): Promise<void> {

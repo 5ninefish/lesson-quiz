@@ -90,7 +90,7 @@ export function observedWorkbook(): RawWorkbook {
 
   const programs: RawWorkbook["programs"] = [
     ["ProgramId", "ProgramName", "Status", "StartAt", "EndAt", "CreatedAtHST", "CreatedBy", "UpdatedAtHST", "UpdatedBy"],
-    ["hokulani", "Hōkūlani", "ACTIVE", "", "", "2026-09-01T08:00:00-10:00", "demo", "2026-09-01T08:00:00-10:00", "demo"],
+    ["hokulani", "Hōkūlani Fall Interns", "ACTIVE", "", "", "2026-09-01T08:00:00-10:00", "demo", "2026-09-01T08:00:00-10:00", "demo"],
     ["summer-2026", "Summer 2026", "DRAFT", "2026-06-01", "2026-08-01", "2026-09-10T08:00:00-10:00", "demo", "2026-09-10T08:00:00-10:00", "demo"],
     ["old-2025", "Archived 2025", "ARCHIVED", "", "", "2025-06-01T08:00:00-10:00", "demo", "2025-08-01T08:00:00-10:00", "demo"],
   ];

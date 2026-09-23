@@ -76,7 +76,7 @@ export function seedHokulaniPlan(opts: {
   const plan: LaunchPlan = {
     program: {
       programId: PROGRAM.legacyDefaultProgramId,
-      programName: "Hōkūlani",
+      programName: "Hōkūlani Fall Interns",
       status: "ACTIVE",
       startAt: "",
       endAt: "",
@@ -94,7 +94,7 @@ export function seedHokulaniPlan(opts: {
         tab: "Programs",
         values: [
           PROGRAM.legacyDefaultProgramId,
-          "Hōkūlani",
+          "Hōkūlani Fall Interns",
           "ACTIVE",
           "",
           "",
