@@ -1,4 +1,4 @@
-import { TEST_IDS, type TestId, normalizeUsername } from "../ids";
+import { COLUMN_TEST_IDS, EXTRA_TEST_IDS, type TestId, normalizeUsername } from "../ids";
 import type { HealthIssue, StudentView } from "../types";
 import { asInt, cell, headerIndex, looksLikeHeaderRow, rowHasContent, type SheetValues } from "./cells";
 
@@ -68,7 +68,7 @@ export function parseStudents(values: SheetValues): StudentsParse {
 
     const sits = {} as Record<TestId, number | null>;
     const cycles = {} as Record<TestId, number | null>;
-    TEST_IDS.forEach((id, li) => {
+    COLUMN_TEST_IDS.forEach((id, li) => {
       const sitRaw = cell(row, sit0 + li);
       const cycleRaw = cell(row, cycle0 + li);
       sits[id] = sitRaw === "" ? null : asInt(sitRaw);
@@ -97,6 +97,10 @@ export function parseStudents(values: SheetValues): StudentsParse {
         }
       }
     });
+    for (const id of EXTRA_TEST_IDS) {
+      sits[id] = null;
+      cycles[id] = 1;
+    }
 
     students.push({ username, email: emailCol >= 0 ? cell(row, emailCol) : "", rowNumber, sits, cycles });
   }

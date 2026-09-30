@@ -14,3 +14,71 @@ SCI-CS,2,In computer science what is a program?,The study of computers and compu
 SCI-CS,3,"True or False: If a list of directions is incorrect, it is still an algorithm.",True,False,,,,,
 SCI-CS,4,"In the image below, the Artist has a pencil and is ready to draw. Select the correct algorithm that allows the Artist to draw the diamond. (see cs_q4_diamond.png)",https://5ninefish.github.io/lesson-quiz/images/cs_q4_choice_a.svg,https://5ninefish.github.io/lesson-quiz/images/cs_q4_choice_b.svg,https://5ninefish.github.io/lesson-quiz/images/cs_q4_choice_c.svg,,,,
 SCI-CS,5,What command could shorten the repeated lines of code in question 4?,Loop,Conditional statement,Set color,None of the above,,,
+COL-APP,1,Which is not a section of the college application?,Personal Information,Medical Information,Academic History,Supporting Information,,,B
+COL-APP,2,"Which section will ask you about your biographic information, race and ethnicity, and residency?",Personal Information section,Academic History section,Supporting Information section,Program Materials section,,,A
+COL-APP,3,Which is not a section in your resume that you should include?,Summary of Accomplishments,List of Professional Skills,A list of classes with your grades for each,Awards and Certificates,,,C
+COL-APP,4,True or false: Your resume should be formatted in an elaborate or fancy font.,True,False,,,,,B
+COL-PS,1,Which topic is typically a prompt used on college entrance essays?,Convincing people to like your favorite cookie,Sharing a challenging time in your life,Explaining which teacher was your favorite and why,None of the above,,,B
+COL-PS,2,What kind of information should you include in the introduction of your statement?,Specific evidence to support your points,Contact information,A hook to grab the reader’s attention,Supporting documentation,,,C
+COL-PS,3,What kind of information should you include in the body of your statement?,Specific evidence to support your points,The overall thesis of your statement,Why you are applying to this college or scholarship,Supporting documentation,,,A
+COL-PS,4,What do you NOT need to do in your conclusion paragraph?,Restate your thesis,Restate your talking points,Introduce a new idea that you have not talked about before,Talk about where you see yourself in the future,,,C
+COL-PRE,1,Which of the following statements is false?,"Making schedules can help with time management, organizing and prioritizing tasks, and accomplishing goals.","You should keep your job hours, sports and extracurricular activities, and any personal commitments in mind when making your class schedule.",Some colleges hold different lengths of classes on different days.,"In college, you are assigned classes to attend each semester.",,,D
+COL-PRE,2,"The set of courses meant to build basic communication and mathematical skills, introduce many fields, and prepare you to work with different people are called:",Global Education Requirements,General Education Requirements,Interdisciplinary Education Requirements,Multidisciplinary Education Requirements,,,B
+COL-PRE,3,Colleges compile all of the courses they offer into a:,Course catalog,Course map,Course description,Coursicle,,,A
+COL-PRE,4,True or false: Writing courses are not prerequisites for college STEM programs.,True,False,,,,,B
+COL-PAY,1,What is the difference between grants and loans?,None; you need to pay back the money for both,Grants require you to pay the money back; loans allow you to keep the money,Loans require you to pay the money back; grants allow you to keep the money,None of the above,,,C
+COL-PAY,2,True or false: Some college applications require you to write an essay.,True,False,,,,,A
+COL-PAY,3,Scholarships require you to meet certain qualifications. Those qualifications can include:,GPA scores in college,Taking a certain amount of classes,Being of a certain ethnicity,All of the above,,,D
+COL-PAY,4,"Which type of financial aid lets you work, usually on campus, while taking classes?",Scholarships,Grants,Loans,Work-study programs,,,D
+MENT-AROUND,1,What is the definition of science?,The knowledge about the natural world that is based on facts learned through experiments and observation,A method or tool used to solve problems,The application of scientific knowledge to create useful machines or structures,"The study of numbers, quantities, measurements, and the relationships between them",,,A
+MENT-AROUND,2,"The winnow basket, used to hold and clean rice, is an example of:",Science,Technology,Engineering,Mathematics,,,B
+MENT-AROUND,3,Filipino ancestors were curious about how the stars and moon affected planting. This ethnoastronomy is an example of:,Science,Technology,Engineering,Mathematics,,,A
+MENT-AROUND,4,"Every year, Maritess changes her parol design based on the results of last year’s parol. Maritess is working as which of these?",Scientist,Technician,Engineer,Mathematician,,,C
+TEAMS-MIND,1,"In this lesson, a mindset is:",A grade you earn at the end of the year,A set of beliefs you have about yourself,A scholarship application,A type of internship site,,,B
+TEAMS-MIND,2,Which is one of the four core values of the Hōkūlani Mindset?,Kūlia i ka Nuʻu (strive to reach the highest),A fancy resume font,Federal work-study,A soil ribbon test,,,A
+TEAMS-MIND,3,"On the Hōkūlani Mindset handout, green means:",You need to improve on this skill,You have questions about what the skill means,You perform this skill well already,Skip this skill,,,C
+TEAMS-MIND,4,What is the Hōkū Profile for?,A visual of your current strengths and the areas you need to develop,The internship daily log,A list of every class grade,A college course catalog,,,A
+MENT-SCI,1,"In this lesson, kilo means:",Careful observation,A college major,A scholarship requirement,A resume section,,,A
+MENT-SCI,2,Dr. Jedidah Isler is known as:,The first Black woman to earn a PhD in astrophysics,A scientist who observed chimpanzees at Gombe,The person who files the FAFSA for you,A coach who assigns your classes,,,A
+MENT-SCI,3,Dr. Jane Goodall is known for:,Observing chimpanzees in the forests of Gombe,Studying supermassive black holes,Designing winnow baskets,Writing college application essays,,,A
+MENT-SCI,4,One objective of this lesson is to:,Identify at least two characteristics of a scientist,Memorize the sections of a resume,Sort jobs only by salary,Complete the FAFSA,,,A
+MENT-INT,1,What should you have with you for interview practice?,Your resume,A soil sample,A course catalog,A parol,,,A
+MENT-INT,2,"During partner practice, you switch roles after about:",5 minutes,2 hours,One week,You do not switch,,,A
+MENT-INT,3,The interviewer rates the answers on:,The Interview Rubric,A soil texture chart,The course catalog,The daily log only,,,A
+MENT-INT,4,In this activity you interview a total of:,3 classmates,1 classmate,10 classmates,Only the instructor,,,A
+MENT-ROLE,1,The ʻōlelo noʻeau for this lesson says:,Not all knowledge is learned in one school,One school teaches everything you need,Skip interviews,A resume must use a fancy font,,,A
+MENT-ROLE,2,The videos in this lesson are interviews of:,Native Hawaiians who work in STEM,Only mainland football coaches,Soil scientists from the science unit only,College registrars reading a catalog,,,A
+MENT-ROLE,3,Before each video you:,Make a new copy of the Interview Questions worksheet and take notes,Turn in a finished personal statement,Sort careers into three houses,Design a parol,,,A
+MENT-ROLE,4,A reason to hear from more than one person is:,Knowledge does not all come from a single school or source,Every career requires the same classes,You should copy one interview word for word,Mentors are not part of this lesson,,,A
+MENT-SORT,1,The three spaces named in the papakū makawalu introduction are:,"papahulilani, papahulihonua, and papahānaumoku","grants, loans, and work-study","sand, silt, and clay","introduction, body, and conclusion",,,A
+MENT-SORT,2,"In the career card sort, one station asks you to sort jobs by:",The level of education you think each job requires,Your favorite color,Last name of the employer,Font used on a resume,,,A
+MENT-SORT,3,The STEM career research asks you to record:,"Education requirements, salary range, skills, and employers in Hawaiʻi",Only your current GPA,A hook for a personal statement,Your daily log for today,,,A
+MENT-SORT,4,"In this lesson, ʻike kūpuna means:",Knowledge of the ancestors,A work-study paycheck,A general-education form,An interview rubric score,,,A
+INT-1,1,"In this lesson, WBLO means:",Work-based learning opportunity,Written biology lab outline,Weekly budget loan office,Web-based login only,,,A
+INT-1,2,"If the internship manual does not answer your question, you can:",Ask a mentor or email info@cdlteams.org,Only redo the soil lesson,Skip the daily log forever,Wait until after college,,,A
+INT-1,3,The Interactive Internship Toolkit activity includes:,A crossword puzzle as you read each item,A soil ribbon test,A FAFSA-only worksheet,A parol design contest,,,A
+INT-1,4,"The form you practice, and will keep using during the internship, is:",The Daily Log,The Hōkū Profile only,A course catalog,A personal statement,,,A
+INT-2,1,"In Think Links, your group uses three picture cards to decide:",How you would set up a business or service with those objects,Which FAFSA year to file,How to ribbon-test soil,Which font a resume needs,,,A
+INT-2,2,"You post what you are excited about, and what concerns you, on:",A Miro board,The back of a resume only,The Questions tab of the quiz sheet,A scholarship list,,,A
+INT-2,3,Preparing for the internship shows the site and your mentor that you are:,Enthusiastic and ready to learn and try new things,Already finished with college,Exempt from asking questions,Only there to complete a crossword,,,A
+INT-2,4,One objective is to brainstorm questions you will ask:,Your internship mentor,A stranger at the beach,"Only yourself, with no mentor meeting",The quiz timer,,,A
+INT-3,1,The “You Said What?” activity is so that you and your Internship Mentor:,Get to know each other,File a financial-aid form,Sort careers into houses,Design a parol,,,A
+INT-3,2,The questions you ask the mentor were prepared in:,Internship Lesson 2,The soil lesson,The astronomy lesson,The personal-statement slides only,,,A
+INT-3,3,"After you meet the mentor, you revisit:","The Knowledge, Skills, and Preparation worksheet",The coral pH scale,Only the course catalog,Nothing,,,A
+INT-3,4,"At the internship site, you make a good impression by:","Being on time, presentable, and eager to participate",Arriving whenever you want,Skipping introductions,Hiding your questions,,,A
+COL-INTRO,1,The Kaʻao framework is:,A set of questions that can help you think about your path toward and during college,A kind of student loan,A required resume font,A soil type,,,A
+COL-INTRO,2,Which term is part of the college vocabulary in this lesson?,College major,Soil ribbon,Kilo as a resume rule,Parol,,,A
+COL-INTRO,3,The scavenger hunt is about STEM majors:,At college campuses in Hawaiʻi,Only at colleges in Alaska,Only in middle school,Nowhere,,,A
+COL-INTRO,4,The class discusses how studying marine science in Hawaiʻi could differ from studying it:,In a cold place such as Alaska,On the same reef with no change,In a resume font,In a daily log,,,A
+COL-EARLY,1,One objective of Early College and Dual Credit is to:,Identify benefits and risks of those programs,Measure soil particle size,Score an interview rubric only,Design a parol,,,A
+COL-EARLY,2,"You compare the programs by reviewing definitions and slides, then completing:",A Dual Credit WebQuest,A soil chart,Only a resume template,The internship crossword from Lesson 1,,,A
+COL-EARLY,3,The lesson also covers:,The steps to apply for each early-college program,How to hash a password,Only black holes,Nothing about applications,,,A
+COL-EARLY,4,The wrap-up asks who you can contact for more information:,Someone at your school who knows Early College and Dual Credit,Only a mainland coach,Nobody,The quiz server,,,A
+COL-CAREER,1,One objective is to explore:,The pros and cons of working while in college,Soil textures,Coral pH,Resume fonts only,,,A
+COL-CAREER,2,"The short videos cover internships, on- and off-campus jobs, federal work-study, and:",Cooperative education (co-op),Soil ribbons,Black holes,Parol painting,,,A
+COL-CAREER,3,The job-post activity uses:,"SECE, which lists jobs for University of Hawaiʻi students",A random blog,The soil lab manual,A canvas game score,,,A
+COL-CAREER,4,Working during college is:,Your decision. It is not a requirement.,Required for every Hōkūlani student,The same thing as a grant,Illegal,,,A
+COL-SERV,1,"Campus services across the UH system are often similar, but:",The name and how much they offer can differ by campus,Every campus copies the same office down to the hour,No campus has student services,Only one campus has any office,,,A
+COL-SERV,2,"The campus scavenger hunt asks about freshmen resources, Native Hawaiian student resources, health services, disability services, and:",How you find your academic counselor,Soil types,Coral printing,Parol colors,,,A
+COL-SERV,3,"Hui Kākoʻo asks you to find supports for Native Hawaiian students, tutoring, counseling, financial aid, and:",Student life,Soil texture,Interview fonts,Astronomy only,,,A
+COL-SERV,4,A wrap-up question is whether campus resources:,Affect which college you decide to attend,Replace the need to apply,Are only for instructors,Are the same thing as a loan,,,A

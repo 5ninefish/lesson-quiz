@@ -8,7 +8,6 @@ import { buildLaunchPlan, defaultDraft, verifyLaunch } from "./launcher";
 import { resolveStudentProgram } from "./memberships";
 import { releaseMutation, verifyCells } from "./mutations";
 import { studentProgramUrl, studentTestUrl, urlHasNoStudentData } from "./urls";
-import { TEST_IDS } from "../ids";
 import { seedHokulaniPlan } from "./seed";
 
 const now = new Date("2026-09-16T12:00:00-10:00");
@@ -171,7 +170,7 @@ describe("hokulani seed", () => {
       actor: "demo",
       nowHst: "now",
     });
-    expect(report.stateRows).toBe(unique.size * TEST_IDS.length);
+    expect(report.stateRows).toBe(unique.size * snap.releases.length);
     expect(report.blocking).toEqual([]);
   });
 });
