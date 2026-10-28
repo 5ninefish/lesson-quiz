@@ -1342,16 +1342,52 @@ function opToRequest_(ss, op) {
       },
     };
   }
+  if (op.kind === 'expandCols') {
+    return {
+      updateSheetProperties: {
+        properties: { sheetId: sheetId, gridProperties: { columnCount: op.columnCount } },
+        fields: 'gridProperties.columnCount',
+      },
+    };
+  }
   return null;
+}
+
+function columnNeed_(op) {
+  if (!op) return 0;
+  if (op.kind === 'append') return (op.values || []).length;
+  if (op.kind === 'set') return Number(op.col) || 0;
+  return 0;
+}
+
+function withGridExpansion_(ss, ops) {
+  const need = {};
+  for (let i = 0; i < ops.length; i++) {
+    const op = ops[i];
+    if (!op || !op.sheet) continue;
+    const cols = columnNeed_(op);
+    if (cols > (need[op.sheet] || 0)) need[op.sheet] = cols;
+  }
+  const prefix = [];
+  const names = Object.keys(need);
+  for (let n = 0; n < names.length; n++) {
+    const sheet = ss.getSheetByName(names[n]);
+    if (!sheet || !sheet.getMaxColumns) continue;
+    if (need[names[n]] > sheet.getMaxColumns()) {
+      prefix.push({ kind: 'expandCols', sheet: names[n], columnCount: need[names[n]] });
+    }
+  }
+  return prefix.concat(ops);
 }
 
 function commitOps_(ss, ops, accessToken) {
   if (!ops || !ops.length) return { ok: true };
   if (!accessToken) return { ok: false, error: 'not_allowed' };
+  ops = withGridExpansion_(ss, ops);
   const requests = [];
   for (let i = 0; i < ops.length; i++) {
     const req = opToRequest_(ss, ops[i]);
-    if (!req) return { ok: false, error: 'batch_failed' };
+    if (!req) return { ok: false, error: 'batch_failed', detail: 'unmapped ' + String(ops[i] && ops[i].kind) + ' ' + String(ops[i] && ops[i].sheet) };
     requests.push(req);
   }
   const resp = UrlFetchApp.fetch('https://sheets.googleapis.com/v4/spreadsheets/' + ss.getId() + ':batchUpdate', {
@@ -1362,7 +1398,14 @@ function commitOps_(ss, ops, accessToken) {
     muteHttpExceptions: true,
   });
   if (resp.getResponseCode() === 403) return { ok: false, error: 'not_allowed' };
-  if (resp.getResponseCode() !== 200) return { ok: false, error: 'batch_failed' };
+  if (resp.getResponseCode() !== 200) {
+    var detail = '';
+    try {
+      var parsedErr = JSON.parse(resp.getContentText());
+      if (parsedErr && parsedErr.error) detail = String(parsedErr.error.status || '') + ' ' + String(parsedErr.error.message || '').slice(0, 180);
+    } catch (eLog) {}
+    return { ok: false, error: 'batch_failed', detail: detail };
+  }
   return { ok: true };
 }
 
@@ -2039,7 +2082,7 @@ function finalizeAttempt_(ss, inFlight, answers, status, now) {
     }
   }
   const committed = commitOps_(ss, ops, scriptToken_());
-  if (!committed.ok) return { error: committed.error || 'batch_failed' };
+  if (!committed.ok) return { error: committed.detail ? (committed.error + ': ' + committed.detail) : (committed.error || 'batch_failed') };
   return {
     score: graded.score,
     total: graded.total,
