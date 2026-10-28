@@ -305,7 +305,9 @@ function mountChrome(): void {
   }) as HTMLInputElement;
   search.addEventListener("input", () => {
     onSearchCb(search.value);
-    applyFilter(search.value);
+    const onRoster = document.querySelector('#nav button[aria-current="page"]')?.getAttribute("data-screen") === "roster";
+    if (onRoster) onNavCb("roster");
+    else applyFilter(search.value);
   });
   const exp = el("button", { type: "button", id: "btn-export" }, "Export CSV");
   toolbar.append(search, exp);

@@ -52,6 +52,66 @@ afterEach(() => {
 });
 
 describe("search input", () => {
+  it("shows a roster match that starts past the first page", () => {
+    document.body.innerHTML = '<div id="app"></div>';
+    resetChromeForTests();
+    const base = buildSnapshot(observedWorkbook());
+    const students = Array.from({ length: 20 }, (_, i) => ({
+      ...base.students[0],
+      username: `early${String(i).padStart(2, "0")}`,
+      email: "",
+    }));
+    students.push({ ...base.students[0], username: "zebra-match", email: "z@example.edu" });
+    const snap = { ...base, students, programTablesPresent: false };
+    let query = "";
+    const draw = () => {
+      renderShell({
+        snap,
+        screen: "roster",
+        bookName: "demo",
+        account: "demo",
+        canEdit: false,
+        banner: null,
+        query,
+        writeEnabled: false,
+        selectedProgramId: "hokulani",
+        wizard: null,
+        onNav: (screen) => {
+          if (screen === "roster") draw();
+        },
+        onSearch: (q) => {
+          query = q;
+        },
+        onRefresh: () => {},
+        onDemo: () => {},
+        onSignIn: () => {},
+        onSignOut: () => {},
+        onSelectProgram: () => {},
+        onWizardChange: () => {},
+        onEditAssignments: () => {},
+        onLaunch: () => {},
+        onApplyRelease: () => {},
+        onEnableEditing: () => {},
+        onInitTables: () => {},
+        onSeedHokulani: () => {},
+        onArchive: () => {},
+        onDuplicate: () => {},
+        onImportRoster: () => {},
+        onResetCycle: () => {},
+      });
+    };
+    draw();
+    const input = document.getElementById("instructor-search") as HTMLInputElement;
+    expect(document.querySelector("main")?.textContent || "").not.toContain("zebra-match");
+    input.focus();
+    input.value = "zebra";
+    input.dispatchEvent(new Event("input", { bubbles: true }));
+    expect(document.querySelector("main")?.textContent || "").toContain("zebra-match");
+    expect(document.querySelector("main")?.textContent || "").toContain("z@example.edu");
+    expect(document.getElementById("instructor-search")).toBe(input);
+    expect(document.activeElement).toBe(input);
+  });
+
   it("keeps the same input node after typing two characters", () => {
     const state = { q: "" };
     opts({
