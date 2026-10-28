@@ -44,7 +44,7 @@ export type ReleaseView = {
   stateLabel: string;
 };
 
-export type AttemptStatus = "in_flight" | "done" | "expired" | "malformed";
+export type AttemptStatus = "in_flight" | "done" | "expired" | "malformed" | "reset";
 
 export type AttemptView = {
   username: string;

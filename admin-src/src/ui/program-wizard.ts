@@ -1,7 +1,7 @@
 import { TEST_IDS, TEST_TITLES, TEST_TO_LESSON } from "../ids";
 import { planAssignmentUpdate } from "../programs/assignment-save";
 import { buildLaunchPlan, defaultDraft, type WizardDraft } from "../programs/launcher";
-import { suggestProgramId } from "../programs/ids";
+import { suggestProgramId, uniqueProgramId } from "../programs/ids";
 import { instructorProgramUrl, studentProgramUrl } from "../programs/urls";
 import type { DashboardSnapshot, LaunchPlan, ReleaseManual } from "../types";
 import { el } from "./dom";
@@ -15,6 +15,24 @@ export type WizardState = {
 
 export function emptyWizard(name = ""): WizardState {
   return { step: 1, mode: "create", draft: defaultDraft(name) };
+}
+
+export function wizardFromDuplicate(snap: DashboardSnapshot, programId: string): WizardState | null {
+  const source = wizardFromProgram(snap, programId);
+  if (!source) return null;
+  const existing = snap.programs.map((p) => p.programId);
+  return {
+    step: 1,
+    mode: "create",
+    draft: {
+      ...source.draft,
+      programName: `${source.draft.programName} copy`,
+      programId: uniqueProgramId(source.draft.programId, existing),
+      status: "DRAFT",
+      actor: "",
+      nowHst: "",
+    },
+  };
 }
 
 export function wizardFromProgram(snap: DashboardSnapshot, programId: string): WizardState | null {
@@ -262,12 +280,14 @@ function stepReview(main: HTMLElement, snap: DashboardSnapshot, wizard: WizardSt
       draft: { ...wizard.draft, nowHst: new Date().toISOString(), actor: "instructor" },
       memberships: snap.programStudents,
       programTests: snap.programTests,
+      state: snap.programState,
     });
     main.append(el("h2", {}, "Changes"));
     main.append(el("p", {}, `Add students: ${update.addedStudents.join(", ") || "none"}`));
     main.append(el("p", {}, `Remove students: ${update.removedStudents.join(", ") || "none"}`));
     main.append(el("p", {}, `Add tests: ${update.addedTests.join(", ") || "none"}`));
     main.append(el("p", {}, `Remove tests: ${update.removedTests.join(", ") || "none"}`));
+    main.append(el("p", {}, `New student/test state rows: ${update.addedState}`));
     for (const b of update.blocking) main.append(el("p", { class: "sev-error" }, b));
   } else {
     main.append(el("h2", {}, "Sheet rows to add"));

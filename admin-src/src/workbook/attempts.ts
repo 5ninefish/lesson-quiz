@@ -8,7 +8,8 @@ function statusOf(raw: string): AttemptStatus {
   const v = raw.toLowerCase();
   if (v === "in_flight" || v === "in-progress" || v === "in_progress") return "in_flight";
   if (v === "done" || v === "submitted") return "done";
-  if (v === "expired") return "expired";
+  if (v === "expired" || v === "time_expired") return "expired";
+  if (v === "reset") return "reset";
   if (!v) return "malformed";
   return "malformed";
 }

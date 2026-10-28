@@ -1,4 +1,4 @@
-import { secondsToMinutes } from "../programs/ids";
+import { formatHst, secondsToMinutes } from "../programs/ids";
 import { releaseMutation } from "../releases/mutations";
 import type { DashboardSnapshot, MutationPreview, ProgramTestView } from "../types";
 import { confirmDialog } from "./dialogs";
@@ -43,7 +43,7 @@ function testCard(
   card.append(el("h2", {}, `${t.title}`));
   card.append(el("p", { class: "muted" }, `${t.testId} · ${t.stateLabel} · Manual ${t.manual}`));
   const meta = el("p");
-  meta.textContent = `Window ${t.openAt || "—"} → ${t.closeAt || "—"} · Max ${t.maxTries} · Timer ${secondsToMinutes(t.timeLimitSec)} min (${t.timeLimitSec}s) · Row ${t.rowNumber}`;
+  meta.textContent = `Window ${formatHst(t.openAt)} → ${formatHst(t.closeAt)} · Max ${t.maxTries} · Timer ${secondsToMinutes(t.timeLimitSec)} min (${t.timeLimitSec}s)`;
   card.append(meta);
   const actions = el("div", { class: "toolbar" });
   const add = (label: string, fn: () => void) => {

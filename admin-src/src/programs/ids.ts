@@ -31,3 +31,32 @@ export function secondsToMinutes(seconds: number): number {
   if (!Number.isFinite(seconds) || seconds <= 0) return 0;
   return seconds / 60;
 }
+
+export function formatHst(raw: string): string {
+  const s = String(raw || "").trim();
+  if (!s) return "—";
+  const d = new Date(s);
+  if (Number.isNaN(d.getTime())) return s;
+  const formatted = new Intl.DateTimeFormat("en-US", {
+    timeZone: "Pacific/Honolulu",
+    year: "numeric",
+    month: "short",
+    day: "numeric",
+    hour: "numeric",
+    minute: "2-digit",
+  }).format(d);
+  return `${formatted} HST`;
+}
+
+export function uniqueProgramId(base: string, existing: string[]): string {
+  const stem = base.replace(/-copy(-\d+)?$/, "") || "program";
+  let id = `${stem}-copy`;
+  let n = 2;
+  const taken = new Set(existing);
+  while (taken.has(id) || !isValidProgramId(id)) {
+    id = `${stem}-copy-${n}`;
+    n += 1;
+    if (n > 50) break;
+  }
+  return id;
+}

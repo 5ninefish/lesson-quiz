@@ -8,6 +8,7 @@ import { el } from "./dom";
 import { openHelp, pageHeading } from "./help";
 import { renderPrograms } from "./programs";
 import { emptyWizard, renderWizard, type WizardState } from "./program-wizard";
+import { pageOf, parseRosterPaste, type RosterImportRow } from "../programs/roster-import";
 import { studentTestUrl } from "../programs/urls";
 import { renderReleases } from "./releases";
 import { renderMissing } from "./missing";
@@ -54,6 +55,8 @@ export type ShellOpts = {
   onSeedHokulani: () => void;
   onArchive: (id: string) => void;
   onDuplicate: (id: string) => void;
+  onImportRoster: (rows: RosterImportRow[]) => void;
+  onResetCycle: (username: string, testId: string) => void;
 };
 
 let onSearchCb: (q: string) => void = () => {};
@@ -72,7 +75,12 @@ let onInitTablesCb: () => void = () => {};
 let onSeedHokulaniCb: () => void = () => {};
 let onArchiveCb: (id: string) => void = () => {};
 let onDuplicateCb: (id: string) => void = () => {};
+let onImportRosterCb: (rows: RosterImportRow[]) => void = () => {};
+let onResetCycleCb: (username: string, testId: string) => void = () => {};
 let chromeReady = false;
+let rosterPage = 1;
+let rosterQuery = "";
+const ROSTER_PAGE = 20;
 
 export function rowMatchesQuery(cells: string[], query: string): boolean {
   const q = query.trim().toLowerCase();
@@ -118,9 +126,15 @@ function assignedTestLabel(snap: DashboardSnapshot): string {
     .join("; ");
 }
 
-function renderRoster(main: HTMLElement, snap: DashboardSnapshot, programId: string): void {
+function renderRoster(
+  main: HTMLElement,
+  snap: DashboardSnapshot,
+  programId: string,
+  query: string,
+  bank: DashboardSnapshot["students"],
+): void {
   pageHeading(main, "Roster", "roster");
-  main.append(el("p", { class: "muted" }, "Open the list to see each test. Choosing one opens the student link. It does not change assignments."));
+  main.append(el("p", { class: "muted" }, "Open the list to see each test. Choosing one opens the student link. It does not change assignments. Add people to the shared bank here, then put them in a program with Edit assignments."));
   const wrap = el("div", { class: "table-wrap" });
   wrap.setAttribute("data-filterable", "true");
   const t = el("table");
@@ -130,7 +144,15 @@ function renderRoster(main: HTMLElement, snap: DashboardSnapshot, programId: str
   thead.append(hr);
   const tb = el("tbody");
   const tests = assignedTests(snap);
-  for (const s of snap.students) {
+  const q = query.trim().toLowerCase();
+  if (q !== rosterQuery) {
+    rosterQuery = q;
+    rosterPage = 1;
+  }
+  const matched = snap.students.filter((s) => !q || `${s.username} ${s.email}`.includes(q));
+  const paged = pageOf(matched, rosterPage, ROSTER_PAGE);
+  rosterPage = paged.page;
+  for (const s of paged.rows) {
     const tr = el("tr");
     tr.dataset.search = `${s.username} ${tests.map((x) => x.title).join(" ")}`.toLowerCase();
     tr.append(el("td", {}, s.username));
@@ -153,6 +175,51 @@ function renderRoster(main: HTMLElement, snap: DashboardSnapshot, programId: str
   t.append(thead, tb);
   wrap.append(t);
   main.append(wrap);
+  const pager = el("div", { class: "toolbar" });
+  const prev = el("button", { type: "button" }, "Previous");
+  const next = el("button", { type: "button" }, "Next");
+  prev.disabled = paged.page <= 1;
+  next.disabled = paged.page >= paged.pages;
+  prev.onclick = () => {
+    rosterPage = paged.page - 1;
+    onNavCb("roster");
+  };
+  next.onclick = () => {
+    rosterPage = paged.page + 1;
+    onNavCb("roster");
+  };
+  pager.append(prev, el("span", {}, `Page ${paged.page} of ${paged.pages} · ${matched.length} students`), next);
+  main.append(pager);
+
+  const add = el("section", { class: "release-card" });
+  add.append(el("h2", {}, "Add students"));
+  add.append(el("p", { class: "muted" }, "One person per line: username, email, password. Email can be blank. This does not change existing accounts."));
+  const box = el("textarea", { id: "roster-import", rows: "5" }) as HTMLTextAreaElement;
+  box.placeholder = "ada, ada@example.edu, assigned-password";
+  const preview = el("div", { id: "roster-import-preview" });
+  let ready: RosterImportRow[] = [];
+  const previewBtn = el("button", { type: "button" }, "Preview import");
+  previewBtn.onclick = () => {
+    const parsed = parseRosterPaste(box.value, bank.map((s) => s.username));
+    ready = parsed.accepted;
+    const lines = [
+      `Accepted ${parsed.accepted.length}: ${parsed.accepted.map((r) => `${r.username}${r.email ? ` <${r.email}>` : ""}`).join(", ") || "none"}`,
+      `Duplicates ${parsed.duplicates.length}: ${parsed.duplicates.map((d) => d.username).join(", ") || "none"}`,
+      `Rejected ${parsed.rejected.length}: ${parsed.rejected.map((r) => `line ${r.line} ${r.reason}`).join("; ") || "none"}`,
+    ];
+    preview.replaceChildren(...lines.map((line) => el("p", {}, line)));
+    saveBtn.disabled = ready.length === 0;
+  };
+  const saveBtn = el("button", { type: "button", class: "primary" }, "Add accepted students");
+  saveBtn.disabled = true;
+  saveBtn.onclick = () => {
+    if (!ready.length) return;
+    onImportRosterCb(ready);
+  };
+  const tools = el("div", { class: "toolbar" });
+  tools.append(previewBtn, saveBtn);
+  add.append(box, tools, preview);
+  main.append(add);
 }
 
 function liveQuery(fallback: string): string {
@@ -364,7 +431,7 @@ function renderMain(opts: ShellOpts): void {
     main.append(cards);
     main.append(el("p", { class: "muted" }, `Results parse mode: ${snap.resultsHeaderMode}`));
   } else if (opts.screen === "roster") {
-    renderRoster(main, snap, opts.selectedProgramId || PROGRAM.legacyDefaultProgramId);
+    renderRoster(main, snap, opts.selectedProgramId || PROGRAM.legacyDefaultProgramId, opts.query, opts.snap.students);
   } else if (opts.screen === "programs") {
     renderPrograms(main, opts.snap, opts.selectedProgramId, {
       canEdit: opts.canEdit,
@@ -439,6 +506,27 @@ function renderMain(opts: ShellOpts): void {
     wrap.append(t);
     main.append(wrap);
     startAttemptClock(main);
+    const reset = el("section", { class: "release-card" });
+    reset.append(el("h2", {}, "Reset allowance"));
+    reset.append(
+      el(
+        "p",
+        { class: "muted" },
+        "Starts a new cycle for this student in the selected program only. Earlier attempts stay on the sheet. Another program is left alone.",
+      ),
+    );
+    const studentSel = el("select", { id: "reset-student", "aria-label": "Student to reset" }) as HTMLSelectElement;
+    studentSel.append(new Option("Choose a student", ""));
+    for (const s of snap.students) studentSel.append(new Option(s.username, s.username));
+    const testSel = el("select", { id: "reset-test", "aria-label": "Assessment to reset" }) as HTMLSelectElement;
+    testSel.append(new Option("All enabled assessments", "ALL"));
+    for (const test of snap.releases) testSel.append(new Option(test.title, test.testId));
+    const resetBtn = el("button", { type: "button" }, "Reset allowance");
+    resetBtn.onclick = () => onResetCycleCb(studentSel.value, testSel.value);
+    const resetTools = el("div", { class: "toolbar" });
+    resetTools.append(studentSel, testSel, resetBtn);
+    reset.append(resetTools);
+    main.append(reset);
   } else if (opts.screen === "results") {
     pageHeading(main, "Results", "results");
     main.append(
@@ -525,6 +613,8 @@ export function renderShell(opts: ShellOpts): void {
   onSeedHokulaniCb = opts.onSeedHokulani;
   onArchiveCb = opts.onArchive;
   onDuplicateCb = opts.onDuplicate;
+  onImportRosterCb = opts.onImportRoster;
+  onResetCycleCb = opts.onResetCycle;
 
   if (!chromeReady || !document.getElementById("instructor-search")) mountChrome();
 

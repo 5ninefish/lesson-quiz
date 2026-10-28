@@ -9,6 +9,11 @@ import { resolveStudentProgram } from "./memberships";
 import { releaseMutation, verifyCells } from "./mutations";
 import { studentProgramUrl, studentTestUrl, urlHasNoStudentData } from "./urls";
 import { seedHokulaniPlan } from "./seed";
+import { planAssignmentUpdate } from "./assignment-save";
+import { planCycleReset } from "./reset";
+import { formatHst, uniqueProgramId } from "./ids";
+import { buildStudentRows, pageOf, parseRosterPaste } from "./roster-import";
+import { attemptInProgram } from "./summaries";
 
 const now = new Date("2026-09-16T12:00:00-10:00");
 
@@ -172,5 +177,121 @@ describe("hokulani seed", () => {
     });
     expect(report.stateRows).toBe(unique.size * snap.releases.length);
     expect(report.blocking).toEqual([]);
+  });
+});
+
+describe("assignment state pairs", () => {
+  const draft = {
+    ...defaultDraft("Summer"),
+    programId: "summer-2026",
+    programName: "Summer",
+    usernames: ["ada", "bea"],
+    tests: [
+      { testId: "SCI-CS" as const, sortOrder: 1, manual: "UNSET" as const, openAt: "", closeAt: "", maxTries: 2, timeLimitMinutes: 0 },
+      { testId: "SCI-SOIL" as const, sortOrder: 2, manual: "CLOSED" as const, openAt: "", closeAt: "", maxTries: 1, timeLimitMinutes: 5 },
+    ],
+    actor: "instructor",
+    nowHst: "now",
+  };
+
+  it("creates a state row for every new student and test pair and leaves an existing pair alone", () => {
+    const update = planAssignmentUpdate({
+      programId: "summer-2026",
+      draft,
+      memberships: [],
+      programTests: [],
+      state: [
+        {
+          programId: "summer-2026",
+          username: "ada",
+          testId: "SCI-CS",
+          cycle: 3,
+          sitCache: 1,
+          updatedAtHst: "",
+          updatedBy: "",
+          rowNumber: 4,
+        },
+      ],
+    });
+    const state = update.appends.find((block) => block.tab === "ProgramStudentState");
+    expect(state?.values).toHaveLength(3);
+    expect(state?.values.some((row) => row[1] === "ada" && row[2] === "SCI-CS")).toBe(false);
+    expect(update.addedState).toBe(3);
+  });
+});
+
+describe("program reset isolation", () => {
+  it("bumps only the selected program and test", () => {
+    const plan = planCycleReset({
+      programId: "summer-2026",
+      username: "ada",
+      testId: "SCI-CS",
+      state: [
+        { programId: "summer-2026", username: "ada", testId: "SCI-CS", cycle: 1, sitCache: 2, updatedAtHst: "", updatedBy: "", rowNumber: 8 },
+        { programId: "hokulani", username: "ada", testId: "SCI-CS", cycle: 4, sitCache: 1, updatedAtHst: "", updatedBy: "", rowNumber: 9 },
+      ],
+      enabledTestIds: ["SCI-CS", "SCI-SOIL"],
+      attempts: [],
+      actor: "instructor",
+      nowHst: "now",
+    });
+    expect(plan.blocking).toEqual([]);
+    expect(plan.updates).toEqual([
+      { range: "ProgramStudentState!D8:G8", values: [["2", "0", "now", "instructor"]] },
+    ]);
+    expect(JSON.stringify(plan)).not.toContain("D9");
+  });
+
+  it("does not treat another program's attempt as the one to resolve", () => {
+    expect(attemptInProgram({
+      username: "ada",
+      testId: "SCI-CS",
+      cycle: 1,
+      submissionId: "s",
+      startedAt: "",
+      timeLimitSec: 30,
+      status: "in_flight",
+      displayStatus: "in_flight",
+      deadlineAt: null,
+      remainingSec: null,
+      rowNumber: 3,
+      rawTestId: "SCI-CS",
+      programId: "hokulani",
+    }, "summer-2026")).toBe(false);
+  });
+});
+
+describe("roster import", () => {
+  it("previews accepted, duplicate, and rejected rows without returning passwords in the duplicate list", () => {
+    const preview = parseRosterPaste("username,email,password\nada,ada@example.edu,secret\nada,ada@example.edu,secret\n,bad@example.edu,secret\nbea,not-an-email,secret\n", ["ada"]);
+    expect(preview.accepted).toEqual([]);
+    expect(preview.duplicates.map((row) => row.username)).toEqual(["ada", "ada"]);
+    expect(preview.rejected.length).toBe(2);
+    expect(JSON.stringify(preview.duplicates)).not.toContain("secret");
+  });
+
+  it("places a new student on the named Password column", () => {
+    const built = buildStudentRows(
+      ["Username", "Email", "Password", "L1", "CycleL1"],
+      [{ username: "cy", email: "cy@example.edu", password: "kept-plain" }],
+    );
+    expect(built.blocking).toEqual([]);
+    expect(built.values[0]).toEqual(["cy", "cy@example.edu", "kept-plain", "0", "1"]);
+  });
+
+  it("pages the roster", () => {
+    const paged = pageOf(["a", "b", "c"], 2, 2);
+    expect(paged).toEqual({ page: 2, pages: 2, rows: ["c"] });
+  });
+});
+
+describe("schedule display", () => {
+  it("labels a parseable instant in HST", () => {
+    expect(formatHst("2026-09-20T19:00:00Z")).toContain("HST");
+    expect(formatHst("")).toBe("—");
+  });
+
+  it("does not reuse an archived program id for a duplicate", () => {
+    expect(uniqueProgramId("hokulani", ["hokulani", "hokulani-copy"])).toBe("hokulani-copy-2");
   });
 });

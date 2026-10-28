@@ -55,6 +55,22 @@ export async function executeSpreadsheetRequests(requests: unknown[]): Promise<{
   return { ok: true };
 }
 
+export async function readRange(
+  range: string,
+): Promise<{ ok: true; values: string[][] } | { ok: false; code: string }> {
+  const token = getAccessToken();
+  if (!token) return { ok: false, code: "sign_in" };
+  const id = copyWorkbookId();
+  const res = await fetch(
+    `https://sheets.googleapis.com/v4/spreadsheets/${id}/values/${encodeURIComponent(range)}?valueRenderOption=FORMATTED_VALUE`,
+    { headers: { Authorization: `Bearer ${token}` } },
+  );
+  if (!res.ok) return { ok: false, code: res.status === 403 ? "permission" : "network" };
+  const data = (await res.json()) as { values?: unknown[][] };
+  const values = (data.values || []).map((row) => (row || []).map((cell) => String(cell ?? "")));
+  return { ok: true, values };
+}
+
 export async function appendRows(tab: string, values: string[][]): Promise<{ ok: true } | { ok: false; code: string }> {
   if (!values.length) return { ok: true };
   const token = getAccessToken();

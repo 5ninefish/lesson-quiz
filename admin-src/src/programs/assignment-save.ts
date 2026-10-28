@@ -1,5 +1,5 @@
 import type { TestId } from "../ids";
-import type { ProgramStudentView, ProgramTestView } from "../types";
+import type { ProgramStateView, ProgramStudentView, ProgramTestView, ProgramView } from "../types";
 import type { WizardDraft } from "./launcher";
 import { minutesToSeconds } from "./ids";
 
@@ -10,14 +10,46 @@ export type AssignmentUpdate = {
   removedStudents: string[];
   addedTests: string[];
   removedTests: string[];
+  addedState: number;
   blocking: string[];
 };
+
+function stateKey(programId: string, username: string, testId: string): string {
+  return `${programId}\t${username}\t${testId}`;
+}
+
+export function planProgramConfigUpdate(
+  program: ProgramView,
+  draft: WizardDraft,
+): { range: string; values: string[][] } | null {
+  const name = draft.programName.trim();
+  const same =
+    program.programName === name &&
+    program.status === draft.status &&
+    program.startAt === draft.startAt &&
+    program.endAt === draft.endAt;
+  if (same || !program.rowNumber) return null;
+  return {
+    range: `Programs!B${program.rowNumber}:I${program.rowNumber}`,
+    values: [[
+      name,
+      draft.status,
+      draft.startAt,
+      draft.endAt,
+      program.createdAtHst,
+      program.createdBy,
+      draft.nowHst,
+      draft.actor,
+    ]],
+  };
+}
 
 export function planAssignmentUpdate(opts: {
   programId: string;
   draft: WizardDraft;
   memberships: ProgramStudentView[];
   programTests: ProgramTestView[];
+  state: ProgramStateView[];
 }): AssignmentUpdate {
   const blocking: string[] = [];
   const nextUsers = new Set(opts.draft.usernames);
@@ -64,6 +96,8 @@ export function planAssignmentUpdate(opts: {
   const testById = new Map(currentTests.map((t) => [t.testId, t]));
   opts.draft.tests.forEach((t, i) => {
     const row = testById.get(t.testId as TestId);
+    const sort = String(t.sortOrder || i + 1);
+    const limit = String(minutesToSeconds(t.timeLimitMinutes));
     if (!row) {
       addedTests.push(t.testId);
       appends.push({
@@ -72,19 +106,46 @@ export function planAssignmentUpdate(opts: {
           opts.programId,
           t.testId,
           "TRUE",
-          String(t.sortOrder || i + 1),
+          sort,
           t.manual,
           t.openAt,
           t.closeAt,
           String(t.maxTries),
-          String(minutesToSeconds(t.timeLimitMinutes)),
+          limit,
           opts.draft.nowHst,
           opts.draft.actor,
         ]],
       });
-    } else if (!row.enabled) {
-      addedTests.push(t.testId);
-      updates.push({ range: `ProgramTests!C${row.rowNumber}`, values: [["TRUE"]] });
+      return;
+    }
+    const desired = [
+      opts.programId,
+      t.testId,
+      "TRUE",
+      sort,
+      t.manual,
+      t.openAt,
+      t.closeAt,
+      String(t.maxTries),
+      limit,
+    ];
+    const current = [
+      row.programId,
+      row.testId,
+      row.enabled ? "TRUE" : "FALSE",
+      String(row.sortOrder),
+      row.manual,
+      row.openAt,
+      row.closeAt,
+      String(row.maxTries),
+      String(row.timeLimitSec),
+    ];
+    if (desired.some((value, idx) => value !== current[idx])) {
+      if (!row.enabled) addedTests.push(t.testId);
+      updates.push({
+        range: `ProgramTests!A${row.rowNumber}:K${row.rowNumber}`,
+        values: [[...desired, opts.draft.nowHst, opts.draft.actor]],
+      });
     }
   });
   for (const row of currentTests) {
@@ -94,15 +155,42 @@ export function planAssignmentUpdate(opts: {
     }
   }
 
-  appends.push({
-    tab: "Audit",
-    values: [[
-      opts.draft.nowHst,
-      opts.draft.actor,
-      "edit_assignments",
-      `${opts.programId} +students=${addedStudents.length} -students=${removedStudents.length} +tests=${addedTests.length} -tests=${removedTests.length}`,
-    ]],
-  });
+  const seen = new Set(
+    opts.state
+      .filter((s) => s.programId === opts.programId)
+      .map((s) => stateKey(s.programId, s.username, s.testId)),
+  );
+  const stateRows: string[][] = [];
+  for (const username of nextUsers) {
+    for (const t of opts.draft.tests) {
+      const key = stateKey(opts.programId, username, t.testId);
+      if (seen.has(key)) continue;
+      seen.add(key);
+      stateRows.push([opts.programId, username, t.testId, "1", "0", opts.draft.nowHst, opts.draft.actor]);
+    }
+  }
+  if (stateRows.length) appends.push({ tab: "ProgramStudentState", values: stateRows });
 
-  return { appends, updates, addedStudents, removedStudents, addedTests, removedTests, blocking };
+  if (!blocking.length && (updates.length || appends.length)) {
+    appends.push({
+      tab: "Audit",
+      values: [[
+        opts.draft.nowHst,
+        opts.draft.actor,
+        "edit_assignments",
+        `${opts.programId} +students=${addedStudents.length} -students=${removedStudents.length} +tests=${addedTests.length} -tests=${removedTests.length} +state=${stateRows.length}`,
+      ]],
+    });
+  }
+
+  return {
+    appends,
+    updates,
+    addedStudents,
+    removedStudents,
+    addedTests,
+    removedTests,
+    addedState: stateRows.length,
+    blocking,
+  };
 }

@@ -37,6 +37,8 @@ function opts(over: Partial<Parameters<typeof renderShell>[0]> = {}) {
     onSeedHokulani: () => {},
     onArchive: () => {},
     onDuplicate: () => {},
+    onImportRoster: () => {},
+    onResetCycle: () => {},
     ...over,
   };
   renderShell(o);
@@ -156,6 +158,26 @@ describe("search input", () => {
     expect(body).toMatch(/When/);
     expect(body).toMatch(/5\/5/);
     expect(body).not.toMatch(/4\/5/);
+  });
+
+  it("previews a roster import and keeps the assigned-test dropdown as a link", () => {
+    opts({ screen: "roster" });
+    const box = document.getElementById("roster-import") as HTMLTextAreaElement;
+    box.value = "newstudent, newstudent@example.edu, assigned-password";
+    const preview = [...document.querySelectorAll("main button")].find((b) => b.textContent === "Preview import");
+    (preview as HTMLButtonElement).click();
+    const text = document.getElementById("roster-import-preview")?.textContent || "";
+    expect(text).toMatch(/Accepted 1: newstudent/);
+    expect(text).not.toMatch(/assigned-password/);
+    const select = document.querySelector("main select") as HTMLSelectElement;
+    expect([...select.options].some((o) => /Soil/.test(o.text))).toBe(true);
+  });
+
+  it("shows a program-scoped reset control on Attempts", () => {
+    opts({ screen: "attempts" });
+    expect(document.body.textContent || "").toMatch(/Reset allowance/);
+    expect(document.body.textContent || "").toMatch(/selected program only/);
+    expect(document.body.textContent || "").not.toMatch(/submission/i);
   });
 
   it("roster shows assigned tests in a dropdown, not a crowded line", () => {
