@@ -50,7 +50,9 @@ export function renderMissing(main: HTMLElement, snap: DashboardSnapshot, progra
     const tests = el("td");
     row.missing.forEach((id, i) => {
       if (i) tests.append(document.createTextNode("; "));
-      const a = el("a", { href: studentTestUrl(programId, id), target: "_blank", rel: "noopener" }, TEST_TITLES[id]);
+      const phase = row.phases?.[i];
+      const label = !phase || phase === "SINGLE" ? TEST_TITLES[id] : `${TEST_TITLES[id]} (${phase})`;
+      const a = el("a", { href: studentTestUrl(programId, id, phase), target: "_blank", rel: "noopener" }, label);
       tests.append(a);
     });
     tr.append(tests);
@@ -70,7 +72,7 @@ export function renderMissing(main: HTMLElement, snap: DashboardSnapshot, progra
 function openEmailDialog(row: MissingRow, programId: string, programName: string): void {
   closeDialogs();
   const subject = missingEmailSubject(programName);
-  const body = missingEmailBody({ username: row.username, programId, programName, missing: row.missing as TestId[] });
+  const body = missingEmailBody({ username: row.username, programId, programName, missing: row.missing as TestId[], phases: row.phases });
   const overlay = el("div", { class: "dialog-overlay", id: "dialog-overlay" });
   const box = el("div", { class: "dialog", role: "dialog", "aria-modal": "true" });
   box.append(el("h2", {}, "Student email"));

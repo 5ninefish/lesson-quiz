@@ -6,6 +6,7 @@ import { parseStudents } from "./students";
 import { timeLeftText } from "./attempts";
 import { parseQuestions } from "./questions";
 import { reviewSit } from "../reports/item-review";
+import { reconcileOrphans } from "../reports/data-health";
 import { evaluateRelease } from "./releases";
 import { toCsv } from "../csv";
 import { rowMatchesQuery } from "../ui/shell";
@@ -117,8 +118,14 @@ describe("snapshot", () => {
     expect(snap.bestScores.some((b) => b.username.startsWith("student.two") && b.testId === "SCI-CORAL" && b.scoreNum === 5)).toBe(true);
     expect(JSON.stringify(snap).toLowerCase()).not.toContain('"passwordhash"');
     expect(JSON.stringify(snap).toLowerCase()).not.toContain("correctsnapshot");
-    expect(snap.issues.some((i) => i.message.includes("no matching attempt"))).toBe(true);
+    expect(snap.results[0]?.submissionId).toBe("");
     expect(snap.issues.some((i) => i.message.includes("Unknown assessment"))).toBe(true);
+    const orphan = reconcileOrphans(snap.students, [{
+      ...snap.results[0]!,
+      submissionId: "missing-sub",
+      rowNumber: 99,
+    }], snap.attempts);
+    expect(orphan.some((i) => i.message.includes("no matching attempt"))).toBe(true);
   });
 });
 

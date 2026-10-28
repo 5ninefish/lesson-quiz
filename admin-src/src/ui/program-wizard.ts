@@ -1,7 +1,7 @@
 import { TEST_IDS, TEST_TITLES, TEST_TO_LESSON } from "../ids";
 import { planAssignmentUpdate } from "../programs/assignment-save";
 import { buildLaunchPlan, defaultDraft, type WizardDraft } from "../programs/launcher";
-import { suggestProgramId, uniqueProgramId } from "../programs/ids";
+import { phaseOf, suggestProgramId, uniqueProgramId, type AssessmentPhase } from "../programs/ids";
 import { instructorProgramUrl, studentProgramUrl } from "../programs/urls";
 import type { DashboardSnapshot, LaunchPlan, ReleaseManual } from "../types";
 import { el } from "./dom";
@@ -50,6 +50,7 @@ export function wizardFromProgram(snap: DashboardSnapshot, programId: string): W
       closeAt: t.closeAt,
       maxTries: t.maxTries,
       timeLimitMinutes: t.timeLimitSec / 60,
+      phase: phaseOf(t.phase),
     }));
   return {
     step: 2,
@@ -205,25 +206,26 @@ function readWizardDom(draft: WizardDraft): WizardDraft {
 }
 
 function stepTests(main: HTMLElement, snap: DashboardSnapshot, wizard: WizardState, onChange: (next: WizardState) => void): void {
-  const selected = new Map(wizard.draft.tests.map((t) => [t.testId, t]));
   TEST_IDS.forEach((id) => {
     const count = snap.questionCounts[id] || 0;
     const row = el("label", { class: "picker-row" });
     const cb = el("input", { type: "checkbox" }) as HTMLInputElement;
-    cb.checked = selected.has(id);
+    cb.checked = wizard.draft.tests.some((test) => test.testId === id);
     cb.onchange = () => {
-      if (cb.checked) {
-        selected.set(id, {
-          testId: id,
-          sortOrder: selected.size + 1,
-          manual: "UNSET",
-          openAt: "",
-          closeAt: "",
-          maxTries: 2,
-          timeLimitMinutes: 0,
-        });
-      } else selected.delete(id);
-      onChange({ ...wizard, draft: { ...wizard.draft, tests: [...selected.values()] } });
+      const rest = wizard.draft.tests.filter((test) => test.testId !== id);
+      const tests = cb.checked
+        ? rest.concat([{
+            testId: id,
+            sortOrder: rest.length + 1,
+            manual: "UNSET",
+            openAt: "",
+            closeAt: "",
+            maxTries: 2,
+            timeLimitMinutes: 0,
+            phase: "SINGLE",
+          }])
+        : rest;
+      onChange({ ...wizard, draft: { ...wizard.draft, tests } });
     };
     const code = el("span", { class: "lesson-code" }, TEST_TO_LESSON[id]);
     const title = el("span", { class: "picker-title" }, `${TEST_TITLES[id]} (${count} questions)`);
@@ -236,7 +238,32 @@ function stepTests(main: HTMLElement, snap: DashboardSnapshot, wizard: WizardSta
 function stepConfig(main: HTMLElement, wizard: WizardState, onChange: (next: WizardState) => void): void {
   wizard.draft.tests.forEach((t, i) => {
     const box = el("section", { class: "release-card" });
-    box.append(el("h2", {}, TEST_TITLES[t.testId]));
+    const phaseLabel = phaseOf(t.phase);
+    box.append(el("h2", {}, phaseLabel === "SINGLE" ? TEST_TITLES[t.testId] : `${TEST_TITLES[t.testId]} (${phaseLabel})`));
+    const phase = el("select") as HTMLSelectElement;
+    for (const value of ["SINGLE", "PRE", "POST"] as AssessmentPhase[]) phase.append(new Option(value, value));
+    phase.value = phaseLabel;
+    phase.onchange = () => {
+      const nextPhase = phaseOf(phase.value);
+      const clash = wizard.draft.tests.some((other, index) => index !== i && other.testId === t.testId && phaseOf(other.phase) === nextPhase);
+      if (clash) return;
+      updateTest(wizard, i, { phase: nextPhase }, onChange);
+    };
+    box.append(el("label", {}, "Phase"), phase);
+    if (phaseLabel !== "SINGLE" && !wizard.draft.tests.some((other) => other.testId === t.testId && phaseOf(other.phase) === (phaseLabel === "PRE" ? "POST" : "PRE"))) {
+      const add = el("button", { type: "button" }, phaseLabel === "PRE" ? "Also assign POST" : "Also assign PRE");
+      add.onclick = () => {
+        const other = phaseLabel === "PRE" ? "POST" : "PRE";
+        onChange({
+          ...wizard,
+          draft: {
+            ...wizard.draft,
+            tests: wizard.draft.tests.concat([{ ...t, phase: other, sortOrder: wizard.draft.tests.length + 1 }]),
+          },
+        });
+      };
+      box.append(add);
+    }
     const manual = el("select") as HTMLSelectElement;
     for (const m of ["UNSET", "OPEN", "CLOSED", "AUTO"] as ReleaseManual[]) manual.append(new Option(m, m));
     manual.value = t.manual;
@@ -270,7 +297,7 @@ function stepReview(main: HTMLElement, snap: DashboardSnapshot, wizard: WizardSt
       el(
         "p",
         {},
-        `${t.title}: ${t.manual}, max ${t.maxTries}, timer ${t.timeLimitSec}s (${t.timeLimitSec / 60} min stored from minutes)`,
+        `${t.title} ${phaseOf(t.phase)}: ${t.manual}, max ${t.maxTries}, timer ${t.timeLimitSec}s (${t.timeLimitSec / 60} min stored from minutes)`,
       ),
     );
   }

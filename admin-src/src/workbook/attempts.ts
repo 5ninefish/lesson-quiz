@@ -1,4 +1,5 @@
 import { canonicalTestId, normalizeUsername } from "../ids";
+import { phaseOf } from "../programs/ids";
 import type { AttemptStatus, AttemptView, HealthIssue } from "../types";
 import { asInt, cell, headerIndex, looksLikeHeaderRow, rowHasContent, type SheetValues } from "./cells";
 
@@ -84,6 +85,10 @@ export function parseAttempts(values: SheetValues, now = new Date()): AttemptsPa
     }
 
     const programId = cell(row, col("ProgramId", 11)).toLowerCase();
+    const pinnedRaw = cell(row, col("CorrectSnapshot", 8));
+    const pinnedKey = pinnedRaw
+      ? pinnedRaw.split("|").map((part) => part.trim().toUpperCase()).filter(Boolean)
+      : undefined;
     const view: AttemptView = {
       username,
       testId,
@@ -98,6 +103,8 @@ export function parseAttempts(values: SheetValues, now = new Date()): AttemptsPa
       rowNumber,
       rawTestId,
       programId,
+      phase: phaseOf(cell(row, col("Phase", 12))),
+      pinnedKey,
     };
     const blob = JSON.stringify(view).toLowerCase();
     if (blob.includes("correctsnapshot") || /\bcorrect\b/.test(blob)) {

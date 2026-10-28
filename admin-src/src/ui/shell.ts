@@ -1,6 +1,7 @@
 import { PROGRAM } from "../config";
 import { TEST_TITLES } from "../ids";
 import { bestCompleteScores, formatScore } from "../reports/best-scores";
+import { phaseOf } from "../programs/ids";
 import { filterSnapshot } from "../programs/summaries";
 import type { DashboardSnapshot, LaunchPlan, MutationPreview } from "../types";
 import { toCsv, downloadCsv } from "../csv";
@@ -398,10 +399,11 @@ function renderMain(opts: ShellOpts): void {
         downloadCsv(
           "results.csv",
           toCsv(
-            ["username", "assessment", "highest_score", "when", "sits", "cycle"],
+            ["username", "assessment", "phase", "highest_score", "when", "sits", "cycle"],
             rows.map((r) => [
               r.username,
-              TEST_TITLES[r.testId],
+              phaseOf(r.phase) === "SINGLE" ? TEST_TITLES[r.testId] : `${TEST_TITLES[r.testId]} (${phaseOf(r.phase)})`,
+              phaseOf(r.phase),
               formatScore(r.scoreNum, r.scoreDen),
               r.timestamp,
               String(r.completeCount),
@@ -497,7 +499,9 @@ function renderMain(opts: ShellOpts): void {
       if (timeCell.textContent === "Time is up") timeCell.classList.add("up");
       r.append(
         el("td", {}, a.username),
-        el("td", {}, a.testId ? TEST_TITLES[a.testId] : a.rawTestId),
+        el("td", {}, a.testId
+          ? (phaseOf(a.phase) === "SINGLE" ? TEST_TITLES[a.testId] : `${TEST_TITLES[a.testId]} (${phaseOf(a.phase)})`)
+          : a.rawTestId),
         el("td", {}, a.displayStatus),
         timeCell,
         el("td", {}, a.startedAt),
@@ -522,7 +526,16 @@ function renderMain(opts: ShellOpts): void {
     for (const s of snap.students) studentSel.append(new Option(s.username, s.username));
     const testSel = el("select", { id: "reset-test", "aria-label": "Assessment to reset" }) as HTMLSelectElement;
     testSel.append(new Option("All enabled assessments", "ALL"));
-    for (const test of snap.releases) testSel.append(new Option(test.title, test.testId));
+    const programTests = snap.programTests.filter((test) => test.programId === opts.selectedProgramId && test.enabled);
+    if (programTests.length) {
+      for (const test of programTests) {
+        const phase = phaseOf(test.phase);
+        const label = phase === "SINGLE" ? TEST_TITLES[test.testId] : `${TEST_TITLES[test.testId]} (${phase})`;
+        testSel.append(new Option(label, `${test.testId}|${phase}`));
+      }
+    } else {
+      for (const test of snap.releases) testSel.append(new Option(test.title, test.testId));
+    }
     const resetBtn = el("button", { type: "button" }, "Reset allowance");
     resetBtn.onclick = () => onResetCycleCb(studentSel.value, testSel.value);
     const resetTools = el("div", { class: "toolbar" });
@@ -554,17 +567,23 @@ function renderMain(opts: ShellOpts): void {
       tr.dataset.search = [r.username, r.testId, TEST_TITLES[r.testId]].join(" ").toLowerCase();
       const scoreBtn = el("button", { type: "button", class: "score-link" }, formatScore(r.scoreNum, r.scoreDen));
       scoreBtn.onclick = () => {
+        const attempt = snap.attempts.find((item) => r.submissionId && item.submissionId === r.submissionId);
+        const pinned = attempt?.pinnedKey;
         const items = reviewSit(
           snap.questions.filter((q) => q.testId === r.testId),
           r.answers,
+          pinned,
         );
-        scoreDialog(`${r.username} · ${TEST_TITLES[r.testId]} · ${formatScore(r.scoreNum, r.scoreDen)}`, items);
+        const note = pinned?.length ? "" : " Current question bank; this older sit has no pinned key.";
+        const phase = phaseOf(r.phase);
+        const name = phase === "SINGLE" ? TEST_TITLES[r.testId] : `${TEST_TITLES[r.testId]} (${phase})`;
+        scoreDialog(`${r.username} · ${name} · ${formatScore(r.scoreNum, r.scoreDen)}.${note}`, items);
       };
       const scoreCell = el("td");
       scoreCell.append(scoreBtn);
       tr.append(
         el("td", {}, r.username),
-        el("td", {}, TEST_TITLES[r.testId]),
+        el("td", {}, phaseOf(r.phase) === "SINGLE" ? TEST_TITLES[r.testId] : `${TEST_TITLES[r.testId]} (${phaseOf(r.phase)})`),
         scoreCell,
         el("td", {}, r.timestamp || "—"),
         el("td", {}, String(r.completeCount)),

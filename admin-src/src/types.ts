@@ -60,9 +60,12 @@ export type AttemptView = {
   rowNumber: number;
   rawTestId: string;
   programId: string;
+  phase?: "SINGLE" | "PRE" | "POST";
+  /** Pinned answer letters for instructor review. Not a student payload and not a CSV column. */
+  pinnedKey?: string[];
 };
 
-export type ResultAttribution = "attempt" | "legacy_default" | "unassigned";
+export type ResultAttribution = "attempt" | "explicit" | "legacy_default" | "unassigned";
 
 export type ResultView = {
   username: string;
@@ -80,6 +83,7 @@ export type ResultView = {
   rowNumber: number;
   source: "headered" | "positional";
   programId: string;
+  phase?: "SINGLE" | "PRE" | "POST";
   attribution: ResultAttribution;
 };
 
@@ -102,11 +106,14 @@ export type BestScoreRow = {
   cycle: number | null;
   complete: boolean;
   answers: string[];
+  phase?: "SINGLE" | "PRE" | "POST";
+  submissionId?: string;
 };
 
 export type MissingRow = {
   username: string;
   missing: TestId[];
+  phases?: Array<"SINGLE" | "PRE" | "POST">;
   availability: string;
 };
 
@@ -150,6 +157,7 @@ export type ProgramTestView = {
   title: string;
   state: ReleaseView["state"];
   stateLabel: string;
+  phase?: "SINGLE" | "PRE" | "POST";
 };
 
 export type ProgramStateView = {
@@ -161,6 +169,7 @@ export type ProgramStateView = {
   updatedAtHst: string;
   updatedBy: string;
   rowNumber: number;
+  phase?: "SINGLE" | "PRE" | "POST";
 };
 
 export type ProgramSummary = {

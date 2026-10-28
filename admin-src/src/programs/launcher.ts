@@ -10,7 +10,7 @@ import type {
   ReleaseManual,
   StudentView,
 } from "../types";
-import { isValidProgramId, minutesToSeconds, normalizeProgramId, suggestProgramId } from "./ids";
+import { isValidProgramId, minutesToSeconds, normalizeProgramId, phaseOf, suggestProgramId, type AssessmentPhase } from "./ids";
 
 export type WizardDraft = {
   programName: string;
@@ -27,6 +27,7 @@ export type WizardDraft = {
     closeAt: string;
     maxTries: number;
     timeLimitMinutes: number;
+    phase?: AssessmentPhase;
   }>;
   actor: string;
   nowHst: string;
@@ -71,11 +72,15 @@ export function buildLaunchPlan(opts: {
   }
 
   const qCount = (id: TestId) => opts.questions.filter((q) => q.testId === id).length;
+  const seenAssignments = new Set<string>();
   for (const t of opts.draft.tests) {
     if (!TEST_IDS.includes(t.testId)) blocking.push(`Unknown test ${t.testId}.`);
     if (qCount(t.testId) === 0) blocking.push(`${TEST_TITLES[t.testId] || t.testId} has no valid questions.`);
-    if (!(t.maxTries > 0)) blocking.push(`Max attempts for ${t.testId} must be a positive integer.`);
-    if (t.timeLimitMinutes < 0) blocking.push(`Timer for ${t.testId} cannot be negative.`);
+    if (!Number.isInteger(t.maxTries) || t.maxTries < 1) blocking.push(`Max attempts for ${t.testId} must be a positive integer.`);
+    if (t.timeLimitMinutes < 0 || !Number.isFinite(t.timeLimitMinutes)) blocking.push(`Timer for ${t.testId} cannot be negative.`);
+    const key = `${t.testId}|${phaseOf(t.phase)}`;
+    if (seenAssignments.has(key)) blocking.push(`Duplicate assignment ${t.testId} ${phaseOf(t.phase)}.`);
+    seenAssignments.add(key);
   }
 
   const program: ProgramView = {
@@ -116,6 +121,7 @@ export function buildLaunchPlan(opts: {
     title: TEST_TITLES[t.testId],
     state: "open",
     stateLabel: t.manual,
+    phase: phaseOf(t.phase),
   }));
 
   const state = students.flatMap((s) =>
@@ -128,6 +134,7 @@ export function buildLaunchPlan(opts: {
       updatedAtHst: opts.draft.nowHst,
       updatedBy: opts.draft.actor,
       rowNumber: 0,
+      phase: t.phase,
     })),
   );
 
@@ -188,15 +195,34 @@ export function buildLaunchPlan(opts: {
   return { program, students, tests, state, rows, blocking, warnings };
 }
 
-export function verifyLaunch(expected: LaunchPlan, observed: { programs: ProgramView[]; students: ProgramStudentView[]; tests: ProgramTestView[]; state: { programId: string }[] }): string[] {
+export function verifyLaunch(expected: LaunchPlan, observed: {
+  programs: ProgramView[];
+  students: ProgramStudentView[];
+  tests: ProgramTestView[];
+  state: Array<{ programId: string; username?: string; testId?: string; phase?: string; cycle?: number; manual?: string; maxTries?: number; timeLimitSec?: number; sortOrder?: number }>;
+}): string[] {
   const mismatches: string[] = [];
-  const hasProgram = observed.programs.some((p) => p.programId === expected.program.programId);
-  if (!hasProgram) mismatches.push(`Programs: expected ${expected.program.programId}, not found.`);
-  const students = observed.students.filter((s) => s.programId === expected.program.programId).length;
-  if (students !== expected.students.length) mismatches.push(`ProgramStudents: expected ${expected.students.length}, observed ${students}.`);
-  const tests = observed.tests.filter((t) => t.programId === expected.program.programId).length;
-  if (tests !== expected.tests.length) mismatches.push(`ProgramTests: expected ${expected.tests.length}, observed ${tests}.`);
-  const state = observed.state.filter((s) => s.programId === expected.program.programId).length;
-  if (state !== expected.state.length) mismatches.push(`ProgramStudentState: expected ${expected.state.length}, observed ${state}.`);
+  const program = observed.programs.find((p) => p.programId === expected.program.programId);
+  if (!program) mismatches.push(`Programs: expected ${expected.program.programId}, not found.`);
+  else {
+    if (program.programName !== expected.program.programName) mismatches.push(`Program name: expected ${expected.program.programName}, observed ${program.programName}.`);
+    if (program.status !== expected.program.status) mismatches.push(`Program status: expected ${expected.program.status}, observed ${program.status}.`);
+  }
+  for (const student of expected.students) {
+    const hit = observed.students.find((row) => row.programId === student.programId && row.username === student.username && row.active);
+    if (!hit) mismatches.push(`ProgramStudents missing ${student.username}.`);
+  }
+  for (const test of expected.tests) {
+    const hit = observed.tests.find((row) => row.programId === test.programId && row.testId === test.testId && phaseOf(row.phase) === phaseOf(test.phase));
+    if (!hit) mismatches.push(`ProgramTests missing ${test.testId} ${phaseOf(test.phase)}.`);
+    else if (hit.manual !== test.manual || hit.maxTries !== test.maxTries || hit.timeLimitSec !== test.timeLimitSec || hit.sortOrder !== test.sortOrder) {
+      mismatches.push(`ProgramTests ${test.testId} ${phaseOf(test.phase)} policy did not match.`);
+    }
+  }
+  for (const row of expected.state) {
+    const hit = observed.state.find((item) => item.programId === row.programId && item.username === row.username && item.testId === row.testId && phaseOf(item.phase) === phaseOf(row.phase));
+    if (!hit) mismatches.push(`ProgramStudentState missing ${row.username} ${row.testId} ${phaseOf(row.phase)}.`);
+    else if (hit.cycle != null && row.cycle != null && hit.cycle !== row.cycle) mismatches.push(`ProgramStudentState cycle for ${row.testId} ${phaseOf(row.phase)} did not match.`);
+  }
   return mismatches;
 }

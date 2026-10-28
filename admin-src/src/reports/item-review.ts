@@ -22,12 +22,12 @@ function asLetter(raw: string, options: string[]): string {
   return idx >= 0 ? String.fromCharCode(65 + idx) : up;
 }
 
-/** Compare one sit's answers to the question bank. Answers are Q1, Q2, … in order. */
-export function reviewSit(questions: QuestionView[], answers: string[]): ItemMark[] {
+/** Compare one sit's answers. A pinned key reviews that attempt. Without one, the current bank is labeled by the caller. */
+export function reviewSit(questions: QuestionView[], answers: string[], pinnedKey?: string[]): ItemMark[] {
   const ordered = [...questions].sort((a, b) => Number(a.number) - Number(b.number) || a.rowNumber - b.rowNumber);
-  return ordered.map((q) => {
-    const given = asLetter(answers[Number(q.number) - 1] || "", q.options);
-    const key = q.keyLetter.trim().toUpperCase();
+  return ordered.map((q, index) => {
+    const given = asLetter(answers[Number(q.number) - 1] || answers[index] || "", q.options);
+    const key = (pinnedKey && pinnedKey.length ? pinnedKey[Number(q.number) - 1] || pinnedKey[index] || "" : q.keyLetter).trim().toUpperCase();
     const givenText = optionText(q.options, given);
     const keyText = optionText(q.options, key);
     const choice = given ? `${given}${givenText ? `. ${givenText}` : ""}` : "blank";

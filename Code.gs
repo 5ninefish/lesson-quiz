@@ -148,6 +148,7 @@ function doPost(e) {
   try {
     const body = JSON.parse(e.postData.contents);
     const action = body.action;
+    if (action === 'command') return commandPost_(body);
     if (action && String(action).indexOf('dash_') === 0) {
       return dashPost_(action, body);
     }
@@ -155,12 +156,13 @@ function doPost(e) {
     const password = body.password;
     const testId = resolveTestId_(body.testId || body.lesson);
     const programId = normalizeProgramId_(body.programId);
+    const phase = normalizePhase_(body.phase);
 
     if (action === 'auth_and_load') {
-      return authAndLoad(username, password, testId, programId);
+      return authAndLoad(username, password, testId, programId, phase);
     }
     if (action === 'submit') {
-      return submit(username, password, testId, body.answers || {}, body.submissionId, programId);
+      return submit(username, password, testId, body.answers || {}, body.submissionId, programId, phase);
     }
     if (action === 'get_tries' || action === 'login') {
       return getTries(username, password, programId);
@@ -181,7 +183,7 @@ function doGet(e) {
       googleClientId: PropertiesService.getScriptProperties().getProperty('GOOGLE_OAUTH_CLIENT_ID') || '',
     });
   }
-  return respond({ ok: true, service: 'lesson-quiz' });
+  return respond({ ok: true, service: 'lesson-quiz', contract: 'dashboard-t9' });
 }
 
 function isSpreadsheetEditorEmail_(email) {
@@ -226,19 +228,15 @@ function dashPost_(action, body) {
   const email = verifyInstructorToken_(body && body.idToken);
   if (!email) return respond({ ok: false, error: 'not_allowed' });
   if (action === 'dash_state') return respond(dashState());
-  if (action === 'dash_open') return respond(dashOpenNow(body.testId));
-  if (action === 'dash_close') return respond(dashCloseNow(body.testId));
-  if (action === 'dash_save_window') {
-    return respond(dashSaveWindow(body.testId, body.openAt, body.closeAt, body.maxTries, body.timeLimitMin));
-  }
-  if (action === 'dash_sync') return respond(dashSyncRoster());
-  if (action === 'dash_hash') return respond(dashHashPasswords());
-  if (action === 'dash_tabs') return respond(dashCreateTabs());
-  if (action === 'dash_reset') return respond(dashReset(body.username, body.lesson));
-  return respond({ ok: false, error: 'unknown_action' });
+  if (action === 'dash_hash') return respond({ ok: true, changed: 0, retired: true });
+  return respond({
+    ok: false,
+    error: 'retired',
+    message: 'Use the instructor dashboard. This menu no longer writes the workbook.',
+  });
 }
 
-const ADMIN_PAGES_URL = 'https://5ninefish.github.io/lesson-quiz/admin.html';
+const ADMIN_PAGES_URL = 'https://5ninefish.github.io/lesson-quiz/admin-v2/';
 const LEGACY_DEFAULT_PROGRAM_ID = 'hokulani';
 
 function ss_() {
@@ -247,6 +245,12 @@ function ss_() {
 
 function normalizeProgramId_(raw) {
   return String(raw || '').trim().toLowerCase();
+}
+
+function normalizePhase_(raw) {
+  const v = String(raw || '').trim().toUpperCase();
+  if (v === 'PRE' || v === 'POST') return v;
+  return 'SINGLE';
 }
 
 function programTablesReady_(ss) {
@@ -286,7 +290,8 @@ function loadActiveMemberships_(ss, username) {
   const archived = {};
   const pdata = programs.getDataRange().getValues();
   for (let i = 1; i < pdata.length; i++) {
-    if (String(pdata[i][2] || '').trim().toUpperCase() === 'ARCHIVED') {
+    const programStatus = String(pdata[i][2] || '').trim().toUpperCase();
+    if (programStatus === 'ARCHIVED' || programStatus === 'DRAFT') {
       archived[normalizeProgramId_(pdata[i][0])] = true;
     }
   }
@@ -317,14 +322,18 @@ function resolveProgramContext_(ss, username, requested) {
   return { mode: 'none', programId: '', error: 'no_program', memberships: [] };
 }
 
-function getProgramTestRow_(ss, programId, testId) {
+function getProgramTestRow_(ss, programId, testId, phase) {
   const sheet = ss.getSheetByName('ProgramTests');
   if (!sheet) return null;
   const canon = resolveTestId_(testId);
+  const wantPhase = normalizePhase_(phase);
   const data = sheet.getDataRange().getValues();
+  const phaseCol = headerIndex_(data[0] || [], 'Phase');
   for (let i = 1; i < data.length; i++) {
     if (normalizeProgramId_(data[i][0]) !== programId) continue;
     if (resolveTestId_(data[i][1]) !== canon) continue;
+    const rowPhase = phaseCol >= 0 ? normalizePhase_(data[i][phaseCol]) : 'SINGLE';
+    if (rowPhase !== wantPhase) continue;
     const enabled = String(data[i][2]).toUpperCase();
     if (enabled === 'FALSE' || enabled === '0' || enabled === 'NO') return { assigned: false };
     return {
@@ -334,7 +343,7 @@ function getProgramTestRow_(ss, programId, testId) {
       manual: String(data[i][4] || '').trim().toUpperCase() || 'UNSET',
       openAt: parseSheetDate_(data[i][5]),
       closeAt: parseSheetDate_(data[i][6]),
-      maxTries: Number(data[i][7]) > 0 ? Number(data[i][7]) : MAX_TRIES,
+      maxTries: Number(data[i][7]),
       timeLimitSec: Number(data[i][8]) >= 0 ? Number(data[i][8]) : QUIZ_TIME_SECONDS,
     };
   }
@@ -343,6 +352,7 @@ function getProgramTestRow_(ss, programId, testId) {
 
 function releaseFromProgramTest_(row, testId) {
   if (!row || !row.assigned) return { error: 'test_not_assigned' };
+  if (!positiveInt_(row.maxTries)) return { error: 'invalid_program' };
   return {
     missing: false,
     testId: resolveTestId_(testId),
@@ -356,28 +366,32 @@ function releaseFromProgramTest_(row, testId) {
   };
 }
 
-function getReleaseForContext_(ss, testId, programId) {
+function getReleaseForContext_(ss, testId, programId, phase) {
   if (!programId) return getRelease_(ss, testId);
-  const row = getProgramTestRow_(ss, programId, testId);
+  const row = getProgramTestRow_(ss, programId, testId, phase);
   if (!row || !row.assigned) return { error: 'test_not_assigned' };
   return releaseFromProgramTest_(row, testId);
 }
 
-function getProgramState_(ss, programId, username, testId) {
+function getProgramState_(ss, programId, username, testId, phase) {
   const sheet = ss.getSheetByName('ProgramStudentState');
-  if (!sheet || !programId) return { cycle: 1, sitCache: 0, sheetRow: 0 };
+  if (!sheet || !programId) return { cycle: 1, sitCache: 0, sheetRow: 0, phase: normalizePhase_(phase) };
   const canon = resolveTestId_(testId);
   const want = normalizeUsername_(username);
+  const wantPhase = normalizePhase_(phase);
   const data = sheet.getDataRange().getValues();
+  const phaseCol = headerIndex_(data[0] || [], 'Phase');
   for (let i = 1; i < data.length; i++) {
     if (normalizeProgramId_(data[i][0]) !== programId) continue;
     if (normalizeUsername_(data[i][1]) !== want) continue;
     if (resolveTestId_(data[i][2]) !== canon) continue;
+    const rowPhase = phaseCol >= 0 ? normalizePhase_(data[i][phaseCol]) : 'SINGLE';
+    if (rowPhase !== wantPhase) continue;
     const cycle = Number(data[i][3]) > 0 ? Number(data[i][3]) : 1;
     const sitCache = Number(data[i][4]) || 0;
-    return { cycle: cycle, sitCache: sitCache, sheetRow: i + 1 };
+    return { cycle: cycle, sitCache: sitCache, sheetRow: i + 1, phase: rowPhase };
   }
-  return { cycle: 1, sitCache: 0, sheetRow: 0 };
+  return { cycle: 1, sitCache: 0, sheetRow: 0, phase: wantPhase };
 }
 
 function writeProgramSitCache_(ss, state, sits, actor) {
@@ -397,19 +411,21 @@ function bumpProgramCycle_(ss, programId, username, testId) {
   SpreadsheetApp.flush();
 }
 
-function cycleSitsForContext_(ss, username, testId, cycle, programId, student) {
+function cycleSitsForContext_(ss, username, testId, cycle, programId, student, phase) {
   if (!programId) return cycleSits_(ss, username, testId, cycle);
   const attempts = ss.getSheetByName('Attempts');
   if (!attempts) return 0;
   const data = attempts.getDataRange().getValues();
   const want = normalizeUsername_(username);
   const canon = resolveTestId_(testId);
+  const wantPhase = normalizePhase_(phase);
   let n = 0;
   for (let i = 1; i < data.length; i++) {
     if (normalizeUsername_(data[i][0]) !== want) continue;
     if (resolveTestId_(data[i][1]) !== canon) continue;
     if (Number(data[i][2]) !== Number(cycle)) continue;
     if (!sameProgramAttempt_(data[i][11], programId)) continue;
+    if (normalizePhase_(data[i][12]) !== wantPhase) continue;
     const status = String(data[i][9] || '').trim();
     if (status === 'done' || status === 'submitted' || status === 'time_expired') n++;
   }
@@ -461,8 +477,9 @@ function getTries(username, password, programId) {
           cycleSits >= max -> max_attempts_reached
           else mint snapshots + StartedAt
 */
-function authAndLoad(username, password, testId, programId) {
+function authAndLoad(username, password, testId, programId, phase) {
   if (!testId) return respond({ error: 'invalid_lesson' });
+  phase = normalizePhase_(phase);
 
   const ss = ss_();
   ensureRuntimeSchema_(ss);
@@ -478,41 +495,36 @@ function authAndLoad(username, password, testId, programId) {
   const loaded = loadQuestions(ss, testId);
   if (loaded.error) return respond({ error: loaded.error });
 
-  const rel = getReleaseForContext_(ss, testId, resolvedProgramId);
+  const rel = getReleaseForContext_(ss, testId, resolvedProgramId, phase);
   if (rel.error) return respond({ error: rel.error });
 
   const now = new Date();
   const lockResult = withScriptLock_(START_LOCK_MS, function () {
-    const pstate = getProgramState_(ss, resolvedProgramId, username, testId);
+    const pstate = getProgramState_(ss, resolvedProgramId, username, testId, phase);
     const cycle = resolvedProgramId ? pstate.cycle : currentCycle_(student, testId);
     const maxTries = rel.missing ? MAX_TRIES : rel.maxTries;
     const timeLimitSec = rel.missing ? QUIZ_TIME_SECONDS : rel.timeLimitSec;
 
     const attemptsSheet = ss.getSheetByName('Attempts');
-    const inFlight = findInFlight_(attemptsSheet, username, testId, cycle, resolvedProgramId);
+    const inFlight = findInFlight_(attemptsSheet, username, testId, cycle, resolvedProgramId, phase);
 
     if (inFlight) {
       const startedAt = asDate_(inFlight.startedAt);
       const expired = isTimerExpired_(startedAt, inFlight.timeLimitSec, now);
-      const closed = !releaseAllowsStart_(rel, now);
       if (expired) {
-        finalizeAttempt_(ss, inFlight, {}, 'time_expired', now);
-        repairStudentsCache_(ss, student, testId);
-      } else if (closed) {
-        finalizeAttempt_(ss, inFlight, {}, 'time_expired', now);
-        repairStudentsCache_(ss, student, testId);
-        return { error: 'not_released' };
+        const fin = finalizeAttempt_(ss, inFlight, {}, 'time_expired', now);
+        if (fin && fin.error) return fin;
       } else {
         const remaining = remainingSec_(startedAt, inFlight.timeLimitSec, now);
         const questions = parseQuestionsSnapshot_(inFlight.questionsSnapshot) || loaded.questions;
-        return joinPayload_(student, testId, inFlight.submissionId, questions, remaining, maxTries, ss, resolvedProgramId);
+        return joinPayload_(student, testId, inFlight.submissionId, questions, remaining, maxTries, ss, resolvedProgramId, phase);
       }
     }
 
     const studentNow = reloadStudent_(ss, username, password) || student;
-    const pstateNow = getProgramState_(ss, resolvedProgramId, username, testId);
+    const pstateNow = getProgramState_(ss, resolvedProgramId, username, testId, phase);
     const cycleNow = resolvedProgramId ? pstateNow.cycle : currentCycle_(studentNow, testId);
-    const sitsNow = cycleSitsForContext_(ss, username, testId, cycleNow, resolvedProgramId, studentNow);
+    const sitsNow = cycleSitsForContext_(ss, username, testId, cycleNow, resolvedProgramId, studentNow, phase);
 
     if (!releaseAllowsStart_(rel, now)) return { error: 'not_released' };
     if (sitsNow >= maxTries) {
@@ -522,8 +534,9 @@ function authAndLoad(username, password, testId, programId) {
       return { error: 'no_questions_found' };
     }
 
-    const minted = mintAttempt_(ss, username, testId, cycleNow, loaded, maxTries, timeLimitSec, now, resolvedProgramId);
-    return joinPayload_(studentNow, testId, minted.submissionId, loaded.questions, remainingSec_(now, timeLimitSec, now), maxTries, ss, resolvedProgramId);
+    const minted = mintAttempt_(ss, username, testId, cycleNow, loaded, maxTries, timeLimitSec, now, resolvedProgramId, phase);
+    if (minted.error) return minted;
+    return joinPayload_(studentNow, testId, minted.submissionId, loaded.questions, remainingSec_(now, timeLimitSec, now), maxTries, ss, resolvedProgramId, phase);
   });
 
   if (lockResult && lockResult._busy) return respond({ error: 'busy_try_again' });
@@ -536,7 +549,8 @@ function authAndLoad(username, password, testId, programId) {
   return respond(lockResult);
 }
 
-function submit(username, password, testId, answers, clientSubmissionId, programId) {
+function submit(username, password, testId, answers, clientSubmissionId, programId, phase) {
+  phase = normalizePhase_(phase);
   if (!testId) return respond({ error: 'invalid_lesson' });
   const ss = ss_();
   ensureRuntimeSchema_(ss);
@@ -552,51 +566,46 @@ function submit(username, password, testId, answers, clientSubmissionId, program
     if (ctx.error) return { error: ctx.error };
     const resolvedProgramId = ctx.programId || '';
 
-    const rel = getReleaseForContext_(ss, testId, resolvedProgramId);
-    if (rel.error) return { error: rel.error };
-
-    const byId = clientSubmissionId ? findResultsBySubmissionId_(ss, clientSubmissionId) : null;
-    if (byId) {
-      repairStudentsCache_(ss, student, testId);
-      return storedSubmitResponse_(byId, rel, now, student, testId, resolvedProgramId);
+    const attemptsSheet = ss.getSheetByName('Attempts');
+    const attemptById = clientSubmissionId ? findAttemptBySubmissionId_(attemptsSheet, clientSubmissionId) : null;
+    const storedById = clientSubmissionId ? findResultsBySubmissionId_(ss, clientSubmissionId) : null;
+    const ownerRecord = attemptById || storedById;
+    if (ownerRecord && !ownerContextMatches_(ownerRecord, username, testId, resolvedProgramId, phase)) {
+      return { error: 'invalid_attempt' };
     }
 
-    const pstate = getProgramState_(ss, resolvedProgramId, username, testId);
+    const rel = getReleaseForContext_(ss, testId, resolvedProgramId, phase);
+    if (rel.error) return { error: rel.error };
+    if (storedById && ownerContextMatches_(storedById, username, testId, resolvedProgramId, phase)) {
+      return storedSubmitResponse_(storedById, rel, now, student, testId, resolvedProgramId);
+    }
+
+    const pstate = getProgramState_(ss, resolvedProgramId, username, testId, phase);
     const cycle = resolvedProgramId ? pstate.cycle : currentCycle_(student, testId);
-    const attemptsSheet = ss.getSheetByName('Attempts');
-    let inFlight = null;
+    let inFlight = attemptById;
     if (clientSubmissionId) {
-      inFlight = findAttemptBySubmissionId_(attemptsSheet, clientSubmissionId);
-      if (inFlight && inFlight.status !== 'in_flight') {
-        const stored = findResultsBySubmissionId_(ss, clientSubmissionId);
-        if (stored) {
-          repairStudentsCache_(ss, student, testId);
-          return storedSubmitResponse_(stored, rel, now, student, testId, resolvedProgramId);
-        }
-        return { error: 'invalid_attempt' };
-      }
+      if (inFlight && inFlight.status !== 'in_flight') return { error: 'invalid_attempt' };
       if (inFlight && (inFlight.username !== username || inFlight.testId !== testId || Number(inFlight.cycle) !== Number(cycle))) {
         return { error: 'invalid_attempt' };
       }
+      if (inFlight && normalizePhase_(inFlight.phase) !== phase) return { error: 'invalid_attempt' };
       if (inFlight && resolvedProgramId && inFlight.programId && inFlight.programId !== resolvedProgramId) {
         return { error: 'invalid_attempt' };
       }
     } else {
-      inFlight = findInFlight_(attemptsSheet, username, testId, cycle, resolvedProgramId);
+      inFlight = findInFlight_(attemptsSheet, username, testId, cycle, resolvedProgramId, phase);
     }
     if (!inFlight || inFlight.status !== 'in_flight') return { error: 'invalid_attempt' };
 
     const startedAt = asDate_(inFlight.startedAt);
     const expired = isTimerExpired_(startedAt, inFlight.timeLimitSec, now);
-    const closed = !releaseAllowsStart_(rel, now);
-
-    if (closed && !expired) {
-      return { error: 'not_released' };
-    }
+    const questions = parseQuestionsSnapshot_(inFlight.questionsSnapshot) || [];
+    const badChoices = invalidChoices_(questions, answers || {});
+    if (badChoices.length) return { error: 'invalid_choice' };
 
     const status = expired ? 'time_expired' : 'submitted';
     const result = finalizeAttempt_(ss, inFlight, answers, status, now);
-    repairStudentsCache_(ss, student, testId);
+    if (result && result.error) return result;
     const studentNow = reloadStudent_(ss, username, password) || student;
     return studentSubmitPayload_(result, rel, studentNow, testId, inFlight, resolvedProgramId);
   });
@@ -606,11 +615,11 @@ function submit(username, password, testId, answers, clientSubmissionId, program
   return respond(lockResult);
 }
 
-function joinPayload_(student, testId, submissionId, questions, remaining, maxTries, ss, programId) {
+function joinPayload_(student, testId, submissionId, questions, remaining, maxTries, ss, programId, phase) {
   const lesson = TEST_TO_LESSON[testId] || testId;
   let tries = Number(allTriesFor(student)[lesson]) || 0;
   if (programId && ss) {
-    const st = getProgramState_(ss, programId, usernameFromStudent_(student), testId);
+    const st = getProgramState_(ss, programId, usernameFromStudent_(student), testId, phase);
     tries = Number(st.sitCache) || 0;
   }
   return {
@@ -625,6 +634,7 @@ function joinPayload_(student, testId, submissionId, questions, remaining, maxTr
     allTries: allTriesFor(student),
     timeLimit: remaining,
     programId: programId || '',
+    phase: normalizePhase_(phase),
   };
 }
 
@@ -636,7 +646,7 @@ function studentSubmitPayload_(result, rel, student, testId, inFlight, programId
   const cycle = (inFlight && inFlight.cycle) || currentCycle_(student, testId);
   const user = usernameFromStudent_(student);
   const attempt = pid
-    ? cycleSitsForContext_(ss_(), user, testId, cycle, pid, student)
+    ? cycleSitsForContext_(ss_(), user, testId, cycle, pid, student, inFlight && inFlight.phase)
     : cycleSits_(ss_(), user, testId, cycle);
   return {
     ok: true,
@@ -708,10 +718,11 @@ function buildTestsPayload_(ss, student, programId) {
   return lessons.map(function (item) {
     const lesson = item.lesson;
     const testId = item.testId;
-    const rel = getReleaseForContext_(ss, testId, programId || '');
+    const phase = normalizePhase_(item.phase);
+    const rel = getReleaseForContext_(ss, testId, programId || '', phase);
     if (rel.error === 'test_not_assigned') return null;
     const maxTries = rel.missing ? MAX_TRIES : rel.maxTries;
-    const pstate = programId ? getProgramState_(ss, programId, usernameFromStudent_(student), testId) : null;
+    const pstate = programId ? getProgramState_(ss, programId, usernameFromStudent_(student), testId, phase) : null;
     const tries = pstate ? (pstate.sitCache || 0) : (Number(allTriesFor(student)[lesson]) || 0);
     let state = 'open';
     if (rel.error) state = 'locked';
@@ -731,7 +742,8 @@ function buildTestsPayload_(ss, student, programId) {
     return {
       testId: testId,
       lesson: lesson,
-      title: meta.title || LESSON_NAMES[lesson] || lesson,
+      phase: phase,
+      title: (meta.title || LESSON_NAMES[lesson] || lesson) + (phase === 'SINGLE' ? '' : ' (' + phase + ')'),
       strand: meta.strand || 'Science',
       state: state,
       tries: tries,
@@ -747,6 +759,7 @@ function programLessons_(ss, programId) {
   const sheet = ss.getSheetByName('ProgramTests');
   if (!sheet) return [];
   const data = sheet.getDataRange().getValues();
+  const phaseCol = headerIndex_(data[0] || [], 'Phase');
   const out = [];
   for (let i = 1; i < data.length; i++) {
     if (normalizeProgramId_(data[i][0]) !== programId) continue;
@@ -755,7 +768,12 @@ function programLessons_(ss, programId) {
     const testId = resolveTestId_(data[i][1]);
     const lesson = TEST_TO_LESSON[testId];
     if (!lesson) continue;
-    out.push({ lesson: lesson, testId: testId, sort: Number(data[i][3]) || 0 });
+    out.push({
+      lesson: lesson,
+      testId: testId,
+      phase: phaseCol >= 0 ? normalizePhase_(data[i][phaseCol]) : 'SINGLE',
+      sort: Number(data[i][3]) || 0,
+    });
   }
   out.sort(function (a, b) { return a.sort - b.sort; });
   return out;
@@ -1017,22 +1035,22 @@ function cycleSits_(ss, username, testId, cycle) {
   return n;
 }
 
-function nextLifetimeSeq_(ss, username, testId) {
+function nextLifetimeSeq_(ss, username, testId, phase) {
   const sheet = ss.getSheetByName('Results');
   if (!sheet) return 1;
   const data = sheet.getDataRange().getValues();
-  const headers = data[0] || [];
-  const userCol = 1;
-  const testCol = headerIndex_(headers, 'TestId') >= 0 ? headerIndex_(headers, 'TestId') : 2;
-  const seqCol = headerIndex_(headers, 'LifetimeSeq');
-  const attemptCol = headerIndex_(headers, 'Attempt');
+  const layout = resultsLayout_(data);
+  const start = layout.mode === 'header' ? 1 : 0;
   const want = normalizeUsername_(username);
   const canon = resolveTestId_(testId);
+  const wantPhase = normalizePhase_(phase);
   let max = 0;
-  for (let i = 1; i < data.length; i++) {
-    if (normalizeUsername_(data[i][userCol]) !== want) continue;
-    if (resolveTestId_(data[i][testCol]) !== canon && String(data[i][testCol]).trim() !== (TEST_TO_LESSON[canon] || '')) continue;
-    const seq = seqCol >= 0 ? Number(data[i][seqCol]) : Number(data[i][attemptCol]);
+  for (let i = start; i < data.length; i++) {
+    if (normalizeUsername_(data[i][layout.username]) !== want) continue;
+    const rawTest = String(data[i][layout.testId] || '').trim();
+    if (resolveTestId_(rawTest) !== canon && rawTest !== (TEST_TO_LESSON[canon] || '')) continue;
+    if (layout.phase >= 0 && normalizePhase_(data[i][layout.phase]) !== wantPhase && String(data[i][layout.phase] || '').trim().toLowerCase() !== 'phase') continue;
+    const seq = Number(data[i][layout.lifetime]);
     if (seq > max) max = seq;
   }
   return max + 1;
@@ -1046,18 +1064,20 @@ function headerIndex_(headers, name) {
   return -1;
 }
 
-function findInFlight_(attemptsSheet, username, testId, cycle, programId) {
+function findInFlight_(attemptsSheet, username, testId, cycle, programId, phase) {
   if (!attemptsSheet) return null;
   const data = attemptsSheet.getDataRange().getValues();
   const want = normalizeUsername_(username);
   const canon = resolveTestId_(testId);
   const wantProgram = normalizeProgramId_(programId);
+  const wantPhase = normalizePhase_(phase);
   for (let i = 1; i < data.length; i++) {
     if (normalizeUsername_(data[i][0]) !== want) continue;
     if (resolveTestId_(data[i][1]) !== canon) continue;
     if (Number(data[i][2]) !== Number(cycle)) continue;
     if (String(data[i][9]).trim() !== 'in_flight') continue;
     if (!sameProgramAttempt_(data[i][11], wantProgram)) continue;
+    if (normalizePhase_(data[i][12]) !== wantPhase) continue;
     return attemptFromRow_(data[i], i + 1);
   }
   return null;
@@ -1086,6 +1106,7 @@ function attemptFromRow_(row, sheetRow) {
     status: String(row[9] || ''),
     questionsSnapshot: row[10] !== undefined ? String(row[10] || '') : '',
     programId: normalizeProgramId_(row[11] || ''),
+    phase: normalizePhase_(row[12] || ''),
     sheetRow: sheetRow,
   };
 }
@@ -1100,7 +1121,7 @@ function parseQuestionsSnapshot_(raw) {
   }
 }
 
-function mintAttempt_(ss, username, testId, cycle, loaded, maxTries, timeLimitSec, now, programId) {
+function mintAttempt_(ss, username, testId, cycle, loaded, maxTries, timeLimitSec, now, programId, phase) {
   const sheet = ss.getSheetByName('Attempts');
   const submissionId = Utilities.getUuid();
   const correctSnapshot = correctSnapshotFrom_(loaded.corrects);
@@ -1119,70 +1140,906 @@ function mintAttempt_(ss, username, testId, cycle, loaded, maxTries, timeLimitSe
     'in_flight',
     questionsSnapshot,
   ];
-  if (programId) {
-    const last = Math.max(sheet.getLastColumn(), 12);
-    const headers = sheet.getRange(1, 1, 1, last).getValues()[0];
-    let idx = headerIndex_(headers, 'ProgramId');
-    if (idx < 0 && !String(headers[11] || '').trim()) {
-      sheet.getRange(1, 12).setValue('ProgramId');
-      idx = 11;
-    }
-    if (idx >= 0) {
-      while (row.length <= idx) row.push('');
-      row[idx] = programId;
+  const ops = [];
+  const last = Math.max(sheet.getLastColumn(), 13);
+  const headers = sheet.getRange(1, 1, 1, last).getValues()[0];
+  let programIdx = headerIndex_(headers, 'ProgramId');
+  if (programId && programIdx < 0 && !String(headers[11] || '').trim()) {
+    ops.push({ kind: 'set', sheet: 'Attempts', row: 1, col: 12, value: 'ProgramId' });
+    programIdx = 11;
+  }
+  if (programIdx >= 0) {
+    while (row.length <= programIdx) row.push('');
+    row[programIdx] = programId || '';
+  }
+  let phaseIdx = headerIndex_(headers, 'Phase');
+  if (phaseIdx < 0 && !String(headers[12] || '').trim()) {
+    ops.push({ kind: 'set', sheet: 'Attempts', row: 1, col: 13, value: 'Phase' });
+    phaseIdx = 12;
+  }
+  if (phaseIdx >= 0) {
+    while (row.length <= phaseIdx) row.push('');
+    row[phaseIdx] = normalizePhase_(phase);
+  }
+  ops.push({ kind: 'append', sheet: 'Attempts', values: row });
+  const committed = commitOps_(ss, ops, scriptToken_());
+  if (!committed.ok) return { error: committed.error || 'batch_failed' };
+  return { submissionId: submissionId, correctSnapshot: correctSnapshot, questionsSnapshot: questionsSnapshot };
+}
+
+function ownerContextMatches_(record, username, testId, programId, phase) {
+  if (!record) return false;
+  if (normalizeUsername_(record.username) !== normalizeUsername_(username)) return false;
+  if (record.testId && resolveTestId_(record.testId) !== resolveTestId_(testId)) return false;
+  if (normalizePhase_(record.phase) !== normalizePhase_(phase)) return false;
+  const want = normalizeProgramId_(programId);
+  const got = normalizeProgramId_(record.programId);
+  if (want && got && want !== got) return false;
+  if (want && !got && want !== LEGACY_DEFAULT_PROGRAM_ID) return false;
+  return true;
+}
+
+function invalidChoices_(questions, answers) {
+  const bad = [];
+  const keys = Object.keys(answers || {});
+  for (let i = 0; i < keys.length; i++) {
+    const num = keys[i];
+    const given = String(answers[num] || '').trim();
+    if (!given) continue;
+    const q = (questions || []).filter(function (item) { return String(item.num) === String(num); })[0];
+    if (!q) { bad.push(num); continue; }
+    const letter = given.toUpperCase();
+    const okLetter = /^[A-F]$/.test(letter) && (letter.charCodeAt(0) - 65) < (q.options || []).length;
+    const okText = (q.options || []).some(function (opt) { return String(opt).trim().toLowerCase() === given.toLowerCase(); });
+    if (!okLetter && !okText) bad.push(num);
+  }
+  return bad;
+}
+
+function resultsLayout_(data) {
+  const row0 = (data && data[0]) || [];
+  const a = String(row0[0] || '').trim().toLowerCase();
+  const b = String(row0[1] || '').trim().toLowerCase();
+  const headered = b === 'username' || a === 'timestamp';
+  if (headered) {
+    const headers = row0.map(function (c) { return String(c || '').trim(); });
+    const q1 = headerIndex_(headers, 'Q1');
+    const lifetime = headerIndex_(headers, 'LifetimeSeq') >= 0 ? headerIndex_(headers, 'LifetimeSeq') : headerIndex_(headers, 'Attempt');
+    return {
+      mode: 'header',
+      headers: headers,
+      answerStart: q1 >= 0 ? q1 : 6,
+      answerCap: 14,
+      timestamp: headerIndex_(headers, 'Timestamp'),
+      username: headerIndex_(headers, 'Username'),
+      testId: headerIndex_(headers, 'TestId') >= 0 ? headerIndex_(headers, 'TestId') : headerIndex_(headers, 'Lesson'),
+      lifetime: lifetime,
+      metaLifetime: -1,
+      score: headerIndex_(headers, 'Score'),
+      cycle: headerIndex_(headers, 'Cycle'),
+      submissionId: headerIndex_(headers, 'SubmissionId'),
+      status: headerIndex_(headers, 'Status'),
+      complete: headerIndex_(headers, 'Complete'),
+      programId: headerIndex_(headers, 'ProgramId'),
+      phase: headerIndex_(headers, 'Phase'),
+      answersJson: headerIndex_(headers, 'AnswersJson'),
+      questionCount: headerIndex_(headers, 'QuestionCount'),
+      assessmentVersion: headerIndex_(headers, 'AssessmentVersion'),
+    };
+  }
+  const meta = {};
+  function mark(label, field) {
+    for (let c = 0; c < row0.length; c++) {
+      if (String(row0[c] || '').trim().toLowerCase() === label) meta[field] = c;
     }
   }
-  sheet.appendRow(row);
-  SpreadsheetApp.flush();
-  return { submissionId: submissionId, correctSnapshot: correctSnapshot, questionsSnapshot: questionsSnapshot };
+  mark('cycle', 'cycle');
+  mark('lifetimeseq', 'metaLifetime');
+  mark('attempt', 'metaLifetime');
+  mark('submissionid', 'submissionId');
+  mark('status', 'status');
+  mark('complete', 'complete');
+  mark('programid', 'programId');
+  mark('phase', 'phase');
+  mark('answersjson', 'answersJson');
+  mark('questioncount', 'questionCount');
+  mark('assessmentversion', 'assessmentVersion');
+  const metaStart = meta.cycle != null ? meta.cycle : 19;
+  return {
+    mode: 'positional',
+    headers: row0.slice(),
+    answerStart: 5,
+    answerCap: Math.max(0, metaStart - 5),
+    timestamp: 0,
+    username: 1,
+    testId: 2,
+    lifetime: 3,
+    metaLifetime: meta.metaLifetime != null ? meta.metaLifetime : -1,
+    score: 4,
+    cycle: meta.cycle != null ? meta.cycle : -1,
+    submissionId: meta.submissionId != null ? meta.submissionId : -1,
+    status: meta.status != null ? meta.status : -1,
+    complete: meta.complete != null ? meta.complete : -1,
+    programId: meta.programId != null ? meta.programId : -1,
+    phase: meta.phase != null ? meta.phase : -1,
+    answersJson: meta.answersJson != null ? meta.answersJson : -1,
+    questionCount: meta.questionCount != null ? meta.questionCount : -1,
+    assessmentVersion: meta.assessmentVersion != null ? meta.assessmentVersion : -1,
+  };
+}
+
+function layoutWidth_(layout) {
+  const vals = [layout.timestamp, layout.username, layout.testId, layout.lifetime, layout.score, layout.cycle, layout.submissionId, layout.status, layout.complete, layout.programId, layout.phase, layout.answersJson, layout.questionCount, layout.assessmentVersion, layout.metaLifetime];
+  let max = layout.answerStart;
+  for (let i = 0; i < vals.length; i++) if (vals[i] > max) max = vals[i];
+  return max;
+}
+
+function ensureResultField_(sheet, data, layout, field, label, ops) {
+  if (layout[field] >= 0) return layout[field];
+  const row0 = (data && data[0]) || layout.headers || [];
+  let idx = -1;
+  if (layout.mode === 'header') {
+    idx = Math.max(row0.length, layoutWidth_(layout) + 1);
+  } else {
+    const used = {};
+    ['timestamp', 'username', 'testId', 'lifetime', 'score', 'cycle', 'submissionId', 'status', 'complete', 'programId', 'phase', 'answersJson', 'questionCount', 'assessmentVersion', 'metaLifetime'].forEach(function (key) {
+      if (layout[key] >= 0) used[layout[key]] = true;
+    });
+    for (let c = 19; c < Math.max(row0.length + 6, 30); c++) {
+      if (!String(row0[c] || '').trim() && !used[c]) { idx = c; break; }
+    }
+    if (idx < 0) idx = Math.max(row0.length, 24);
+  }
+  ops.push({ kind: 'set', sheet: 'Results', row: 1, col: idx + 1, value: label });
+  layout[field] = idx;
+  if (data && data[0]) {
+    while (data[0].length <= idx) data[0].push('');
+    data[0][idx] = label;
+  }
+  return idx;
+}
+
+function scriptToken_() {
+  try {
+    return ScriptApp.getOAuthToken();
+  } catch (err) {
+    return '';
+  }
+}
+
+function userEntered_(value) {
+  if (value === null || value === undefined) return { userEnteredValue: { stringValue: '' } };
+  if (Object.prototype.toString.call(value) === '[object Date]') {
+    return { userEnteredValue: { stringValue: value.toISOString() } };
+  }
+  if (typeof value === 'number' && isFinite(value)) return { userEnteredValue: { numberValue: value } };
+  return { userEnteredValue: { stringValue: String(value) } };
+}
+
+function opToRequest_(ss, op) {
+  if (op.kind === 'addSheet') {
+    return { addSheet: { properties: { sheetId: op.sheetId, title: op.sheet } } };
+  }
+  const sheet = ss.getSheetByName(op.sheet);
+  if (!sheet || !sheet.getSheetId) return null;
+  const sheetId = sheet.getSheetId();
+  if (op.kind === 'append') {
+    return {
+      appendCells: {
+        sheetId: sheetId,
+        rows: [{ values: (op.values || []).map(userEntered_) }],
+        fields: 'userEnteredValue',
+      },
+    };
+  }
+  if (op.kind === 'set') {
+    return {
+      updateCells: {
+        rows: [{ values: [userEntered_(op.value)] }],
+        fields: 'userEnteredValue',
+        start: { sheetId: sheetId, rowIndex: op.row - 1, columnIndex: op.col - 1 },
+      },
+    };
+  }
+  return null;
+}
+
+function commitOps_(ss, ops, accessToken) {
+  if (!ops || !ops.length) return { ok: true };
+  if (!accessToken) return { ok: false, error: 'not_allowed' };
+  const requests = [];
+  for (let i = 0; i < ops.length; i++) {
+    const req = opToRequest_(ss, ops[i]);
+    if (!req) return { ok: false, error: 'batch_failed' };
+    requests.push(req);
+  }
+  const resp = UrlFetchApp.fetch('https://sheets.googleapis.com/v4/spreadsheets/' + ss.getId() + ':batchUpdate', {
+    method: 'post',
+    contentType: 'application/json',
+    headers: { Authorization: 'Bearer ' + accessToken },
+    payload: JSON.stringify({ requests: requests }),
+    muteHttpExceptions: true,
+  });
+  if (resp.getResponseCode() === 403) return { ok: false, error: 'not_allowed' };
+  if (resp.getResponseCode() !== 200) return { ok: false, error: 'batch_failed' };
+  return { ok: true };
+}
+
+function verifyAccessToken_(accessToken) {
+  if (!accessToken) return { ok: false, error: 'not_allowed' };
+  const info = UrlFetchApp.fetch('https://www.googleapis.com/oauth2/v3/userinfo', {
+    method: 'get',
+    headers: { Authorization: 'Bearer ' + accessToken },
+    muteHttpExceptions: true,
+  });
+  if (info.getResponseCode() !== 200) return { ok: false, error: 'not_allowed' };
+  let data = {};
+  try { data = JSON.parse(info.getContentText()); } catch (e) { return { ok: false, error: 'not_allowed' }; }
+  const email = String(data.email || '').trim().toLowerCase();
+  if (!email) return { ok: false, error: 'not_allowed' };
+  const drive = UrlFetchApp.fetch(
+    'https://www.googleapis.com/drive/v3/files/' + encodeURIComponent(ss_().getId()) + '?fields=capabilities(canEdit,canModifyContent)&supportsAllDrives=true',
+    { method: 'get', headers: { Authorization: 'Bearer ' + accessToken }, muteHttpExceptions: true }
+  );
+  if (drive.getResponseCode() !== 200) return { ok: false, error: 'not_allowed' };
+  let caps = {};
+  try { caps = (JSON.parse(drive.getContentText()).capabilities) || {}; } catch (e2) { return { ok: false, error: 'not_allowed' }; }
+  if (!caps.canEdit && !caps.canModifyContent) return { ok: false, error: 'not_allowed' };
+  return { ok: true, email: email, token: accessToken };
+}
+
+function findAuditMutation_(ss, mutationId) {
+  const sheet = ss.getSheetByName('Audit');
+  if (!sheet || !mutationId) return null;
+  const data = sheet.getDataRange().getValues();
+  if (!data.length) return null;
+  const col = headerIndex_(data[0], 'MutationId');
+  const resultCol = headerIndex_(data[0], 'ResultJson');
+  if (col < 0) return null;
+  for (let i = 1; i < data.length; i++) {
+    if (String(data[i][col]) !== String(mutationId)) continue;
+    try { return JSON.parse(resultCol >= 0 ? data[i][resultCol] || '{}' : '{}'); } catch (e) { return { ok: true, replayed: true }; }
+  }
+  return null;
+}
+
+function auditHeaderOps_(ss) {
+  const sheet = ss.getSheetByName('Audit');
+  const ops = [];
+  if (!sheet) return ops;
+  const headers = sheet.getRange(1, 1, 1, Math.max(4, sheet.getLastColumn())).getValues()[0];
+  const needed = ['MutationId', 'ProgramId', 'TargetKey', 'ResultJson'];
+  let col = headers.length;
+  for (let i = 0; i < needed.length; i++) {
+    if (headerIndex_(headers, needed[i]) >= 0) continue;
+    col += 1;
+    ops.push({ kind: 'set', sheet: 'Audit', row: 1, col: col, value: needed[i] });
+    headers.push(needed[i]);
+  }
+  return ops;
+}
+
+function positiveInt_(value) {
+  const n = Number(value);
+  return Number.isInteger(n) && n > 0;
+}
+
+function windowInvalid_(openAt, closeAt) {
+  const open = String(openAt || '').trim();
+  const close = String(closeAt || '').trim();
+  if (!open || !close) return false;
+  const a = Date.parse(open);
+  const b = Date.parse(close);
+  if (isNaN(a) || isNaN(b)) return true;
+  return b < a;
+}
+
+function headerVacant_(sheet, col) {
+  return !String(sheet.getRange(1, col).getValue() || '').trim();
+}
+
+function commandPost_(body) {
+  const auth = verifyAccessToken_(body && body.accessToken);
+  if (!auth.ok) return respond({ ok: false, error: auth.error || 'not_allowed' });
+  const mutationId = String((body && body.mutationId) || '').trim();
+  const command = String((body && body.command) || '').trim();
+  if (command !== 'ping' && !mutationId) return respond({ ok: false, error: 'mutation_id_required' });
+  const ss = ss_();
+  const lockResult = withScriptLock_(START_LOCK_MS, function () {
+    if (command === 'ping') return { ok: true, actor: auth.email, canEdit: true, wrote: false };
+    if (command === 'mutation_status') {
+      const priorStatus = findAuditMutation_(ss, mutationId);
+      if (!priorStatus) return { ok: true, found: false, wrote: false, actor: auth.email };
+      return { ok: true, found: true, replayed: true, result: priorStatus, actor: auth.email };
+    }
+    const prior = findAuditMutation_(ss, mutationId);
+    if (prior) return { ok: true, replayed: true, result: prior, actor: auth.email };
+    const outcome = dispatchCommand_(ss, auth, body);
+    if (!outcome.ok) return outcome;
+    const ops = auditHeaderOps_(ss).concat(outcome.ops || []);
+    const publicResult = outcome.result || { ok: true };
+    ops.push({
+      kind: 'append',
+      sheet: 'Audit',
+      values: [
+        new Date().toISOString(),
+        auth.email,
+        command,
+        String(outcome.detail || '').slice(0, 500),
+        mutationId,
+        outcome.programId || '',
+        outcome.targetKey || '',
+        JSON.stringify(publicResult),
+      ],
+    });
+    const committed = commitOps_(ss, ops, auth.token);
+    if (!committed.ok && committed.error === 'not_allowed') return { ok: false, error: 'not_allowed' };
+    if (!committed.ok) return { ok: false, error: 'batch_failed', uncertain: true };
+    return { ok: true, replayed: false, actor: auth.email, result: publicResult };
+  });
+  if (lockResult && lockResult._busy) return respond({ ok: false, error: 'busy_try_again' });
+  return respond(lockResult);
+}
+
+function dispatchCommand_(ss, auth, body) {
+  const command = String(body.command || '');
+  if (command === 'launch_program') return commandLaunch_(ss, auth, body);
+  if (command === 'save_release') return commandSaveRelease_(ss, body);
+  if (command === 'save_assignments') return commandSaveAssignments_(ss, auth, body);
+  if (command === 'import_students') return commandImportStudents_(ss, body);
+  if (command === 'reset_cycle') return commandReset_(ss, body);
+  if (command === 'archive_program') return commandArchive_(ss, body);
+  if (command === 'init_sheets') return commandInitSheets_(ss);
+  if (command === 'seed_catalog') return commandSeedCatalog_(ss);
+  return { ok: false, error: 'unknown_action' };
+}
+
+function commandLaunch_(ss, auth, body) {
+  const program = body.program || {};
+  const programId = normalizeProgramId_(program.programId);
+  const programName = String(program.programName || '').trim();
+  const status = String(program.status || 'ACTIVE').toUpperCase();
+  if (!programId || !programName) return { ok: false, error: 'invalid_program' };
+  if (status !== 'ACTIVE' && status !== 'DRAFT') return { ok: false, error: 'invalid_program' };
+  const programs = ss.getSheetByName('Programs');
+  if (!programs) return { ok: false, error: 'schema' };
+  const existing = programs.getDataRange().getValues();
+  for (let i = 1; i < existing.length; i++) {
+    if (normalizeProgramId_(existing[i][0]) === programId) return { ok: false, error: 'stale' };
+  }
+  const students = body.students || [];
+  const tests = body.tests || [];
+  if (!students.length || !tests.length) return { ok: false, error: 'invalid_program' };
+  const seenStudents = {};
+  const seenTests = {};
+  for (let s = 0; s < students.length; s++) {
+    const name = normalizeUsername_(students[s].username);
+    if (!name || seenStudents[name]) return { ok: false, error: 'invalid_program' };
+    seenStudents[name] = true;
+  }
+  for (let t = 0; t < tests.length; t++) {
+    const testId = resolveTestId_(tests[t].testId);
+    const phase = normalizePhase_(tests[t].phase);
+    if (!testId) return { ok: false, error: 'invalid_program' };
+    if (!positiveInt_(tests[t].maxTries)) return { ok: false, error: 'invalid_program' };
+    if (Number(tests[t].timeLimitSec) < 0 || !isFinite(Number(tests[t].timeLimitSec))) return { ok: false, error: 'invalid_program' };
+    if (windowInvalid_(tests[t].openAt, tests[t].closeAt)) return { ok: false, error: 'invalid_program' };
+    const key = testId + '|' + phase;
+    if (seenTests[key]) return { ok: false, error: 'invalid_program' };
+    seenTests[key] = true;
+  }
+  const testsSheet = ss.getSheetByName('ProgramTests');
+  const stateSheet = ss.getSheetByName('ProgramStudentState');
+  if (!testsSheet || !stateSheet) return { ok: false, error: 'schema' };
+  const now = new Date().toISOString();
+  const ops = [];
+  const testHeaders = testsSheet.getDataRange().getValues()[0] || [];
+  if (headerIndex_(testHeaders, 'Phase') < 0) {
+    if (!headerVacant_(testsSheet, 12)) return { ok: false, error: 'schema' };
+    ops.push({ kind: 'set', sheet: 'ProgramTests', row: 1, col: 12, value: 'Phase' });
+  }
+  if (headerIndex_(testHeaders, 'LessonId') < 0 && headerVacant_(testsSheet, 13)) {
+    ops.push({ kind: 'set', sheet: 'ProgramTests', row: 1, col: 13, value: 'LessonId' });
+  }
+  if (headerIndex_(testHeaders, 'AssessmentVersion') < 0 && headerVacant_(testsSheet, 14)) {
+    ops.push({ kind: 'set', sheet: 'ProgramTests', row: 1, col: 14, value: 'AssessmentVersion' });
+  }
+  const stateHeaders = stateSheet.getDataRange().getValues()[0] || [];
+  if (headerIndex_(stateHeaders, 'Phase') < 0) {
+    if (!headerVacant_(stateSheet, 8)) return { ok: false, error: 'schema' };
+    ops.push({ kind: 'set', sheet: 'ProgramStudentState', row: 1, col: 8, value: 'Phase' });
+  }
+  ops.push({
+    kind: 'append',
+    sheet: 'Programs',
+    values: [programId, programName, status, program.startAt || '', program.endAt || '', now, auth.email, now, auth.email],
+  });
+  students.forEach(function (student) {
+    ops.push({ kind: 'append', sheet: 'ProgramStudents', values: [programId, normalizeUsername_(student.username), 'TRUE', now, auth.email] });
+  });
+  tests.forEach(function (test, index) {
+    const phase = normalizePhase_(test.phase);
+    const values = [
+      programId,
+      resolveTestId_(test.testId),
+      'TRUE',
+      String(test.sortOrder || index + 1),
+      String(test.manual || 'UNSET').toUpperCase(),
+      test.openAt || '',
+      test.closeAt || '',
+      String(Number(test.maxTries)),
+      String(Number(test.timeLimitSec) >= 0 ? Number(test.timeLimitSec) : 0),
+      now,
+      auth.email,
+    ];
+    while (values.length < 11) values.push('');
+    values[11] = phase;
+    values[12] = TEST_TO_LESSON[resolveTestId_(test.testId)] || '';
+    values[13] = '1';
+    ops.push({ kind: 'append', sheet: 'ProgramTests', values: values });
+    students.forEach(function (student) {
+      const state = [programId, normalizeUsername_(student.username), resolveTestId_(test.testId), '1', '0', now, auth.email];
+      state[7] = phase;
+      ops.push({ kind: 'append', sheet: 'ProgramStudentState', values: state });
+    });
+  });
+  return {
+    ok: true,
+    ops: ops,
+    programId: programId,
+    targetKey: programId,
+    detail: 'launch ' + programId + ' students=' + students.length + ' tests=' + tests.length,
+    result: { programId: programId, status: status, students: students.length, tests: tests.length },
+  };
+}
+
+function commandSaveRelease_(ss, body) {
+  const programId = normalizeProgramId_(body.programId);
+  const testId = resolveTestId_(body.testId);
+  const phase = normalizePhase_(body.phase);
+  const sheet = ss.getSheetByName('ProgramTests');
+  if (!sheet) return { ok: false, error: 'schema' };
+  const data = sheet.getDataRange().getValues();
+  const phaseCol = headerIndex_(data[0] || [], 'Phase');
+  let rowNumber = 0;
+  for (let i = 1; i < data.length; i++) {
+    if (normalizeProgramId_(data[i][0]) !== programId) continue;
+    if (resolveTestId_(data[i][1]) !== testId) continue;
+    const rowPhase = phaseCol >= 0 ? normalizePhase_(data[i][phaseCol]) : 'SINGLE';
+    if (rowPhase !== phase) continue;
+    rowNumber = i + 1;
+    break;
+  }
+  if (!rowNumber) return { ok: false, error: 'not_found' };
+  const live = data[rowNumber - 1];
+  const expected = body.expected || {};
+  if (String(expected.manual || '').toUpperCase() !== String(live[4] || '').toUpperCase()) return { ok: false, error: 'stale' };
+  if (String(expected.openAt || '') !== String(live[5] || '')) return { ok: false, error: 'stale' };
+  if (String(expected.closeAt || '') !== String(live[6] || '')) return { ok: false, error: 'stale' };
+  if (String(expected.maxTries || '') !== String(live[7] || '')) return { ok: false, error: 'stale' };
+  if (String(expected.timeLimitSec || '') !== String(live[8] || '')) return { ok: false, error: 'stale' };
+  if (!positiveInt_(body.maxTries)) return { ok: false, error: 'invalid_program' };
+  if (Number(body.timeLimitSec) < 0 || windowInvalid_(body.openAt, body.closeAt)) return { ok: false, error: 'invalid_program' };
+  const manual = String(body.manual || 'UNSET').toUpperCase();
+  if (['UNSET', 'OPEN', 'CLOSED', 'AUTO'].indexOf(manual) < 0) return { ok: false, error: 'invalid_program' };
+  const ops = [
+    { kind: 'set', sheet: 'ProgramTests', row: rowNumber, col: 5, value: manual },
+    { kind: 'set', sheet: 'ProgramTests', row: rowNumber, col: 6, value: body.openAt || '' },
+    { kind: 'set', sheet: 'ProgramTests', row: rowNumber, col: 7, value: body.closeAt || '' },
+    { kind: 'set', sheet: 'ProgramTests', row: rowNumber, col: 8, value: String(Number(body.maxTries)) },
+    { kind: 'set', sheet: 'ProgramTests', row: rowNumber, col: 9, value: String(Number(body.timeLimitSec) >= 0 ? Number(body.timeLimitSec) : 0) },
+  ];
+  return {
+    ok: true,
+    ops: ops,
+    programId: programId,
+    targetKey: programId + '|' + testId + '|' + phase,
+    detail: 'release ' + programId + ' ' + testId + ' ' + phase + ' ' + manual,
+    result: { programId: programId, testId: testId, phase: phase, manual: manual },
+  };
+}
+
+function commandReset_(ss, body) {
+  if (String(body.testId || '').toUpperCase() === 'ALL') return commandResetAll_(ss, body);
+  const programId = normalizeProgramId_(body.programId);
+  const username = normalizeUsername_(body.username);
+  const testId = resolveTestId_(body.testId);
+  const phase = normalizePhase_(body.phase);
+  const state = getProgramState_(ss, programId, username, testId, phase);
+  if (!state.sheetRow) return { ok: false, error: 'not_found' };
+  if (Number(body.expectedCycle) !== Number(state.cycle)) return { ok: false, error: 'stale' };
+  const ops = [
+    { kind: 'set', sheet: 'ProgramStudentState', row: state.sheetRow, col: 4, value: String(Number(state.cycle) + 1) },
+    { kind: 'set', sheet: 'ProgramStudentState', row: state.sheetRow, col: 5, value: '0' },
+  ];
+  const attempts = ss.getSheetByName('Attempts');
+  if (attempts) {
+    const data = attempts.getDataRange().getValues();
+    for (let i = 1; i < data.length; i++) {
+      if (normalizeUsername_(data[i][0]) !== username) continue;
+      if (resolveTestId_(data[i][1]) !== testId) continue;
+      if (Number(data[i][2]) !== Number(state.cycle)) continue;
+      if (!sameProgramAttempt_(data[i][11], programId)) continue;
+      if (normalizePhase_(data[i][12]) !== phase) continue;
+      if (String(data[i][9] || '') !== 'in_flight') continue;
+      ops.push({ kind: 'set', sheet: 'Attempts', row: i + 1, col: 10, value: 'reset' });
+    }
+  }
+  return {
+    ok: true,
+    ops: ops,
+    programId: programId,
+    targetKey: programId + '|' + username + '|' + testId + '|' + phase,
+    detail: 'reset ' + programId + ' ' + username + ' ' + testId + ' ' + phase,
+    result: { programId: programId, username: username, testId: testId, phase: phase, cycle: Number(state.cycle) + 1 },
+  };
+}
+
+function commandResetAll_(ss, body) {
+  const targets = body.targets || [];
+  if (!targets.length) return { ok: false, error: 'invalid_program' };
+  const ops = [];
+  for (let i = 0; i < targets.length; i++) {
+    const one = commandReset_(ss, {
+      programId: body.programId,
+      username: body.username,
+      testId: targets[i].testId,
+      phase: targets[i].phase,
+      expectedCycle: targets[i].expectedCycle,
+    });
+    if (!one.ok) return one;
+    for (let j = 0; j < (one.ops || []).length; j++) ops.push(one.ops[j]);
+  }
+  return {
+    ok: true,
+    ops: ops,
+    programId: normalizeProgramId_(body.programId),
+    targetKey: normalizeProgramId_(body.programId) + '|' + normalizeUsername_(body.username) + '|ALL',
+    detail: 'reset all ' + normalizeProgramId_(body.programId) + ' ' + normalizeUsername_(body.username),
+    result: { programId: normalizeProgramId_(body.programId), username: normalizeUsername_(body.username), count: targets.length },
+  };
+}
+
+function commandSaveAssignments_(ss, auth, body) {
+  const programId = normalizeProgramId_(body.programId);
+  const programs = ss.getSheetByName('Programs');
+  const members = ss.getSheetByName('ProgramStudents');
+  const testsSheet = ss.getSheetByName('ProgramTests');
+  const stateSheet = ss.getSheetByName('ProgramStudentState');
+  if (!programs || !members || !testsSheet || !stateSheet) return { ok: false, error: 'schema' };
+  const programRows = programs.getDataRange().getValues();
+  let programRow = 0;
+  let status = '';
+  for (let i = 1; i < programRows.length; i++) {
+    if (normalizeProgramId_(programRows[i][0]) !== programId) continue;
+    programRow = i + 1;
+    status = String(programRows[i][2] || '').toUpperCase();
+    break;
+  }
+  if (!programRow) return { ok: false, error: 'not_found' };
+  if (String(body.expectedStatus || '').toUpperCase() !== status) return { ok: false, error: 'stale' };
+  const desiredStudents = body.students || [];
+  const desiredTests = body.tests || [];
+  if (!desiredStudents.length || !desiredTests.length) return { ok: false, error: 'invalid_program' };
+  const seenStudents = {};
+  const seenTests = {};
+  for (let s = 0; s < desiredStudents.length; s++) {
+    const name = normalizeUsername_(desiredStudents[s].username);
+    if (!name || seenStudents[name]) return { ok: false, error: 'invalid_program' };
+    seenStudents[name] = true;
+  }
+  for (let t = 0; t < desiredTests.length; t++) {
+    const testId = resolveTestId_(desiredTests[t].testId);
+    const phase = normalizePhase_(desiredTests[t].phase);
+    if (!testId || !positiveInt_(desiredTests[t].maxTries)) return { ok: false, error: 'invalid_program' };
+    if (Number(desiredTests[t].timeLimitSec) < 0 || windowInvalid_(desiredTests[t].openAt, desiredTests[t].closeAt)) return { ok: false, error: 'invalid_program' };
+    const manual = String(desiredTests[t].manual || 'UNSET').toUpperCase();
+    if (['UNSET', 'OPEN', 'CLOSED', 'AUTO'].indexOf(manual) < 0) return { ok: false, error: 'invalid_program' };
+    const key = testId + '|' + phase;
+    if (seenTests[key]) return { ok: false, error: 'invalid_program' };
+    seenTests[key] = desiredTests[t];
+  }
+  const now = new Date().toISOString();
+  const ops = [];
+  const patch = body.program || null;
+  if (patch) {
+    const nextStatus = String(patch.status || status).toUpperCase();
+    if (nextStatus !== 'ACTIVE' && nextStatus !== 'DRAFT' && nextStatus !== 'ARCHIVED') return { ok: false, error: 'invalid_program' };
+    if (windowInvalid_(patch.startAt, patch.endAt)) return { ok: false, error: 'invalid_program' };
+    ops.push({ kind: 'set', sheet: 'Programs', row: programRow, col: 2, value: String(patch.programName || programRows[programRow - 1][1] || '') });
+    ops.push({ kind: 'set', sheet: 'Programs', row: programRow, col: 3, value: nextStatus });
+    ops.push({ kind: 'set', sheet: 'Programs', row: programRow, col: 4, value: patch.startAt || '' });
+    ops.push({ kind: 'set', sheet: 'Programs', row: programRow, col: 5, value: patch.endAt || '' });
+    ops.push({ kind: 'set', sheet: 'Programs', row: programRow, col: 8, value: now });
+    ops.push({ kind: 'set', sheet: 'Programs', row: programRow, col: 9, value: auth.email });
+  }
+  const testHeaders = testsSheet.getDataRange().getValues()[0] || [];
+  if (headerIndex_(testHeaders, 'Phase') < 0) {
+    if (!headerVacant_(testsSheet, 12)) return { ok: false, error: 'schema' };
+    ops.push({ kind: 'set', sheet: 'ProgramTests', row: 1, col: 12, value: 'Phase' });
+  }
+  const stateHeaders = stateSheet.getDataRange().getValues()[0] || [];
+  if (headerIndex_(stateHeaders, 'Phase') < 0) {
+    if (!headerVacant_(stateSheet, 8)) return { ok: false, error: 'schema' };
+    ops.push({ kind: 'set', sheet: 'ProgramStudentState', row: 1, col: 8, value: 'Phase' });
+  }
+  const memberRows = members.getDataRange().getValues();
+  const memberByUser = {};
+  for (let i = 1; i < memberRows.length; i++) {
+    if (normalizeProgramId_(memberRows[i][0]) !== programId) continue;
+    memberByUser[normalizeUsername_(memberRows[i][1])] = { row: i + 1, active: String(memberRows[i][2] || '').toUpperCase() };
+  }
+  Object.keys(seenStudents).forEach(function (username) {
+    const row = memberByUser[username];
+    if (!row) {
+      ops.push({ kind: 'append', sheet: 'ProgramStudents', values: [programId, username, 'TRUE', now, auth.email] });
+    } else if (row.active === 'FALSE' || row.active === '0' || row.active === 'NO') {
+      ops.push({ kind: 'set', sheet: 'ProgramStudents', row: row.row, col: 3, value: 'TRUE' });
+    }
+  });
+  Object.keys(memberByUser).forEach(function (username) {
+    if (seenStudents[username]) return;
+    const row = memberByUser[username];
+    if (row.active === 'FALSE' || row.active === '0' || row.active === 'NO') return;
+    ops.push({ kind: 'set', sheet: 'ProgramStudents', row: row.row, col: 3, value: 'FALSE' });
+  });
+  const testRows = testsSheet.getDataRange().getValues();
+  const phaseCol = headerIndex_(testRows[0] || [], 'Phase');
+  const testByKey = {};
+  for (let i = 1; i < testRows.length; i++) {
+    if (normalizeProgramId_(testRows[i][0]) !== programId) continue;
+    const key = resolveTestId_(testRows[i][1]) + '|' + (phaseCol >= 0 ? normalizePhase_(testRows[i][phaseCol]) : 'SINGLE');
+    testByKey[key] = { row: i + 1, enabled: String(testRows[i][2] || '').toUpperCase() };
+  }
+  Object.keys(seenTests).forEach(function (key) {
+    const test = seenTests[key];
+    const testId = resolveTestId_(test.testId);
+    const phase = normalizePhase_(test.phase);
+    const manual = String(test.manual || 'UNSET').toUpperCase();
+    if (['UNSET', 'OPEN', 'CLOSED', 'AUTO'].indexOf(manual) < 0) return;
+    const row = testByKey[key];
+    if (!row) {
+      const values = [programId, testId, 'TRUE', String(test.sortOrder || 1), manual, test.openAt || '', test.closeAt || '', String(Number(test.maxTries)), String(Number(test.timeLimitSec) || 0), now, auth.email, phase];
+      ops.push({ kind: 'append', sheet: 'ProgramTests', values: values });
+      return;
+    }
+    ops.push({ kind: 'set', sheet: 'ProgramTests', row: row.row, col: 3, value: 'TRUE' });
+    ops.push({ kind: 'set', sheet: 'ProgramTests', row: row.row, col: 4, value: String(test.sortOrder || 1) });
+    ops.push({ kind: 'set', sheet: 'ProgramTests', row: row.row, col: 5, value: manual });
+    ops.push({ kind: 'set', sheet: 'ProgramTests', row: row.row, col: 6, value: test.openAt || '' });
+    ops.push({ kind: 'set', sheet: 'ProgramTests', row: row.row, col: 7, value: test.closeAt || '' });
+    ops.push({ kind: 'set', sheet: 'ProgramTests', row: row.row, col: 8, value: String(Number(test.maxTries)) });
+    ops.push({ kind: 'set', sheet: 'ProgramTests', row: row.row, col: 9, value: String(Number(test.timeLimitSec) || 0) });
+  });
+  Object.keys(testByKey).forEach(function (key) {
+    if (seenTests[key]) return;
+    const row = testByKey[key];
+    if (row.enabled === 'FALSE' || row.enabled === '0' || row.enabled === 'NO') return;
+    ops.push({ kind: 'set', sheet: 'ProgramTests', row: row.row, col: 3, value: 'FALSE' });
+  });
+  const stateRows = stateSheet.getDataRange().getValues();
+  const statePhaseCol = headerIndex_(stateRows[0] || [], 'Phase');
+  const stateKeys = {};
+  for (let i = 1; i < stateRows.length; i++) {
+    if (normalizeProgramId_(stateRows[i][0]) !== programId) continue;
+    const key = normalizeUsername_(stateRows[i][1]) + '|' + resolveTestId_(stateRows[i][2]) + '|' + (statePhaseCol >= 0 ? normalizePhase_(stateRows[i][statePhaseCol]) : 'SINGLE');
+    stateKeys[key] = true;
+  }
+  let addedState = 0;
+  Object.keys(seenStudents).forEach(function (username) {
+    Object.keys(seenTests).forEach(function (key) {
+      const testId = key.split('|')[0];
+      const phase = key.split('|')[1];
+      const stateKey = username + '|' + testId + '|' + phase;
+      if (stateKeys[stateKey]) return;
+      stateKeys[stateKey] = true;
+      addedState += 1;
+      const state = [programId, username, testId, '1', '0', now, auth.email];
+      state[7] = phase;
+      ops.push({ kind: 'append', sheet: 'ProgramStudentState', values: state });
+    });
+  });
+  return {
+    ok: true,
+    ops: ops,
+    programId: programId,
+    targetKey: programId,
+    detail: 'assignments ' + programId + ' state=' + addedState,
+    result: { programId: programId, students: Object.keys(seenStudents).length, tests: Object.keys(seenTests).length, addedState: addedState },
+  };
+}
+
+function commandImportStudents_(ss, body) {
+  const sheet = ss.getSheetByName('Students');
+  if (!sheet) return { ok: false, error: 'schema' };
+  const data = sheet.getDataRange().getValues();
+  const layout = studentLayout_(data[0]);
+  const existing = {};
+  for (let i = 1; i < data.length; i++) existing[normalizeUsername_(data[i][layout.userCol])] = true;
+  const incoming = body.students || [];
+  if (!incoming.length) return { ok: false, error: 'invalid_program' };
+  const seen = {};
+  const ops = [];
+  const added = [];
+  const skipped = [];
+  for (let i = 0; i < incoming.length; i++) {
+    const username = normalizeUsername_(incoming[i].username);
+    const email = String(incoming[i].email || '').trim();
+    const password = String(incoming[i].password || '');
+    if (!username || !/^[a-z0-9._@+-]+$/.test(username) || !password) return { ok: false, error: 'invalid_program' };
+    if (seen[username]) return { ok: false, error: 'invalid_program' };
+    seen[username] = true;
+    if (existing[username]) {
+      skipped.push(username);
+      continue;
+    }
+    const row = [];
+    const width = Math.max(data[0].length, layout.cycle0 + 6, layout.passCol + 1);
+    for (let c = 0; c < width; c++) row.push('');
+    row[layout.userCol] = username;
+    if (layout.emailCol >= 0) row[layout.emailCol] = email;
+    row[layout.passCol] = password;
+    for (let n = 0; n < 6; n++) {
+      if (layout.sit0 + n < row.length) row[layout.sit0 + n] = '0';
+      if (layout.cycle0 + n < row.length) row[layout.cycle0 + n] = '1';
+    }
+    ops.push({ kind: 'append', sheet: 'Students', values: row });
+    added.push(username);
+  }
+  if (!added.length) return { ok: false, error: 'duplicate' };
+  return {
+    ok: true,
+    ops: ops,
+    programId: '',
+    targetKey: 'students',
+    detail: 'import ' + added.join(','),
+    result: { added: added, skipped: skipped },
+  };
+}
+
+function commandInitSheets_(ss) {
+  const names = ['Programs', 'ProgramStudents', 'ProgramTests', 'ProgramStudentState', 'TestCatalog', 'LessonCatalog', 'ProgramLessons'];
+  const ops = [];
+  const created = [];
+  names.forEach(function (name, index) {
+    if (ss.getSheetByName(name)) return;
+    created.push(name);
+    ops.push({ kind: 'addSheet', sheet: name, sheetId: 88000 + index });
+  });
+  return {
+    ok: true,
+    ops: ops,
+    programId: '',
+    targetKey: 'schema',
+    detail: 'init ' + created.join(','),
+    result: { created: created },
+  };
+}
+
+function commandSeedCatalog_(ss) {
+  const tests = ss.getSheetByName('TestCatalog');
+  const lessons = ss.getSheetByName('LessonCatalog');
+  const links = ss.getSheetByName('ProgramLessons');
+  if (!tests || !lessons || !links) return { ok: false, error: 'schema' };
+  const ops = [];
+  function emptySheet_(sheet) {
+    return sheet.getLastRow() < 1 || !String((sheet.getDataRange().getValues()[0] || [])[0] || '').trim();
+  }
+  if (emptySheet_(tests)) ops.push({ kind: 'append', sheet: 'TestCatalog', values: ['TestId', 'Title', 'Strand', 'QuestionGroup', 'Aliases', 'Version', 'Status'] });
+  if (emptySheet_(lessons)) ops.push({ kind: 'append', sheet: 'LessonCatalog', values: ['LessonId', 'Title', 'Version', 'URL', 'Status'] });
+  if (emptySheet_(links)) ops.push({ kind: 'append', sheet: 'ProgramLessons', values: ['ProgramId', 'LessonId', 'Enabled', 'SortOrder', 'LessonVersion', 'OpenAt', 'CloseAt', 'UpdatedAtHST', 'UpdatedBy'] });
+  const have = {};
+  const testRows = tests.getDataRange().getValues();
+  for (let i = 1; i < testRows.length; i++) have[resolveTestId_(testRows[i][0])] = true;
+  Object.keys(TEST_META).forEach(function (id) {
+    if (have[id]) return;
+    const loaded = loadQuestions(ss, id);
+    const ready = loaded && loaded.questions && loaded.questions.length && !loaded.error;
+    const alias = TEST_TO_LESSON[id] || '';
+    ops.push({
+      kind: 'append',
+      sheet: 'TestCatalog',
+      values: [id, TEST_META[id].title, TEST_META[id].strand, alias, alias, '1', ready ? 'READY' : 'DRAFT'],
+    });
+  });
+  const haveLesson = {};
+  const lessonRows = lessons.getDataRange().getValues();
+  for (let i = 1; i < lessonRows.length; i++) haveLesson[String(lessonRows[i][0] || '')] = true;
+  Object.keys(LESSON_NAMES).forEach(function (lessonId) {
+    if (haveLesson[lessonId]) return;
+    ops.push({ kind: 'append', sheet: 'LessonCatalog', values: [lessonId, LESSON_NAMES[lessonId], '1', '', 'DRAFT'] });
+  });
+  return {
+    ok: true,
+    ops: ops,
+    programId: '',
+    targetKey: 'catalog',
+    detail: 'seed catalog',
+    result: { tests: Object.keys(TEST_META).length, lessons: Object.keys(LESSON_NAMES).length },
+  };
+}
+
+function commandArchive_(ss, body) {
+  const programId = normalizeProgramId_(body.programId);
+  const sheet = ss.getSheetByName('Programs');
+  if (!sheet) return { ok: false, error: 'schema' };
+  const data = sheet.getDataRange().getValues();
+  let rowNumber = 0;
+  let status = '';
+  for (let i = 1; i < data.length; i++) {
+    if (normalizeProgramId_(data[i][0]) !== programId) continue;
+    rowNumber = i + 1;
+    status = String(data[i][2] || '').toUpperCase();
+    break;
+  }
+  if (!rowNumber) return { ok: false, error: 'not_found' };
+  if (String(body.expectedStatus || '').toUpperCase() !== status) return { ok: false, error: 'stale' };
+  return {
+    ok: true,
+    ops: [{ kind: 'set', sheet: 'Programs', row: rowNumber, col: 3, value: 'ARCHIVED' }],
+    programId: programId,
+    targetKey: programId,
+    detail: 'archive ' + programId,
+    result: { programId: programId, status: 'ARCHIVED' },
+  };
 }
 
 function finalizeAttempt_(ss, inFlight, answers, status, now) {
   const questions = parseQuestionsSnapshot_(inFlight.questionsSnapshot) || [];
   const graded = grade_(answers || {}, questions, inFlight.correctSnapshot);
   const complete = sitComplete_(questions, answers || {});
-  const lifetimeSeq = nextLifetimeSeq_(ss, inFlight.username, inFlight.testId);
+  const lifetimeSeq = nextLifetimeSeq_(ss, inFlight.username, inFlight.testId, inFlight.phase);
   const results = ss.getSheetByName('Results');
-  const answerLog = [];
-  for (let q = 1; q <= 5; q++) {
-    const g = graded.graded.filter(function (x) { return String(x.qNum) === String(q); })[0];
-    answerLog.push(g ? g.given : '');
+  const data = results ? results.getDataRange().getValues() : [];
+  const layout = resultsLayout_(data);
+  const ops = [];
+  const answerValues = [];
+  for (let i = 0; i < questions.length; i++) {
+    const g = graded.graded.filter(function (x) { return String(x.qNum) === String(questions[i].num); })[0];
+    answerValues.push(g ? g.given : '');
   }
-  const headers = results.getRange(1, 1, 1, Math.max(13, results.getLastColumn())).getValues()[0];
+  const programIdx = ensureResultField_(results, data, layout, 'programId', 'ProgramId', ops);
+  const phaseIdx = ensureResultField_(results, data, layout, 'phase', 'Phase', ops);
+  const jsonIdx = ensureResultField_(results, data, layout, 'answersJson', 'AnswersJson', ops);
+  const countIdx = ensureResultField_(results, data, layout, 'questionCount', 'QuestionCount', ops);
+  const versionIdx = ensureResultField_(results, data, layout, 'assessmentVersion', 'AssessmentVersion', ops);
+  const width = Math.max(layoutWidth_(layout), programIdx, phaseIdx, jsonIdx, countIdx, versionIdx, layout.answerStart + Math.min(answerValues.length, layout.answerCap)) + 1;
   const row = [];
-  for (let c = 0; c < headers.length; c++) row[c] = '';
-  function setCol(name, aliases, value) {
-    let idx = headerIndex_(headers, name);
-    if (idx < 0 && aliases) {
-      for (let a = 0; a < aliases.length; a++) {
-        idx = headerIndex_(headers, aliases[a]);
-        if (idx >= 0) break;
-      }
-    }
-    if (idx >= 0) row[idx] = value;
+  for (let c = 0; c < width; c++) row[c] = '';
+  function put(idx, value) {
+    if (idx == null || idx < 0) return;
+    while (row.length <= idx) row.push('');
+    row[idx] = value;
   }
-  setCol('Timestamp', null, now.toISOString());
-  setCol('Username', null, inFlight.username);
-  setCol('TestId', ['Lesson'], inFlight.testId);
-  setCol('Cycle', null, inFlight.cycle);
-  setCol('LifetimeSeq', ['Attempt'], lifetimeSeq);
-  setCol('Score', null, graded.score + '/' + graded.total);
-  setCol('Q1', null, answerLog[0]);
-  setCol('Q2', null, answerLog[1]);
-  setCol('Q3', null, answerLog[2]);
-  setCol('Q4', null, answerLog[3]);
-  setCol('Q5', null, answerLog[4]);
-  setCol('SubmissionId', null, inFlight.submissionId);
-  setCol('Status', null, status);
-  setCol('Complete', null, complete ? 'YES' : 'NO');
-  results.appendRow(row);
-  ss.getSheetByName('Attempts').getRange(inFlight.sheetRow, 10).setValue('done');
+  put(layout.timestamp, now.toISOString());
+  put(layout.username, inFlight.username);
+  put(layout.testId, inFlight.testId);
+  put(layout.lifetime, lifetimeSeq);
+  put(layout.score, graded.score + '/' + graded.total);
+  const cap = layout.answerCap > 0 ? layout.answerCap : 14;
+  for (let a = 0; a < answerValues.length && a < cap; a++) put(layout.answerStart + a, answerValues[a]);
+  put(layout.cycle, inFlight.cycle);
+  if (layout.metaLifetime >= 0) put(layout.metaLifetime, lifetimeSeq);
+  put(layout.submissionId, inFlight.submissionId);
+  put(layout.status, status);
+  put(layout.complete, complete ? 'YES' : 'NO');
+  put(programIdx, inFlight.programId || '');
+  put(phaseIdx, normalizePhase_(inFlight.phase));
+  put(jsonIdx, JSON.stringify(answerValues));
+  put(countIdx, questions.length);
+  put(versionIdx, inFlight.questionFingerprint || '');
+  ops.push({ kind: 'append', sheet: 'Results', values: row });
+  ops.push({ kind: 'set', sheet: 'Attempts', row: inFlight.sheetRow, col: 10, value: 'done' });
+  const sits = cycleSitsForContext_(ss, inFlight.username, inFlight.testId, inFlight.cycle, inFlight.programId, null, inFlight.phase) + 1;
   if (inFlight.programId) {
-    const st = getProgramState_(ss, inFlight.programId, inFlight.username, inFlight.testId);
-    const sits = cycleSitsForContext_(ss, inFlight.username, inFlight.testId, inFlight.cycle, inFlight.programId, null);
-    writeProgramSitCache_(ss, st, sits, 'system');
+    const st = getProgramState_(ss, inFlight.programId, inFlight.username, inFlight.testId, inFlight.phase);
+    if (st.sheetRow) {
+      ops.push({ kind: 'set', sheet: 'ProgramStudentState', row: st.sheetRow, col: 5, value: sits });
+    }
   }
-  SpreadsheetApp.flush();
+  const committed = commitOps_(ss, ops, scriptToken_());
+  if (!committed.ok) return { error: committed.error || 'batch_failed' };
   return {
     score: graded.score,
     total: graded.total,
@@ -1191,6 +2048,9 @@ function finalizeAttempt_(ss, inFlight, answers, status, now) {
     status: status,
     lifetimeSeq: lifetimeSeq,
     submissionId: inFlight.submissionId,
+    answers: answerValues,
+    programId: inFlight.programId || '',
+    phase: normalizePhase_(inFlight.phase),
   };
 }
 
@@ -1198,38 +2058,45 @@ function findResultsBySubmissionId_(ss, submissionId) {
   const sheet = ss.getSheetByName('Results');
   if (!sheet || !submissionId) return null;
   const data = sheet.getDataRange().getValues();
-  const headers = data[0] || [];
-  const idCol = headerIndex_(headers, 'SubmissionId');
-  if (idCol < 0) return null;
-  const scoreCol = headerIndex_(headers, 'Score');
-  const cycleCol = headerIndex_(headers, 'Cycle');
-  const seqCol = headerIndex_(headers, 'LifetimeSeq') >= 0 ? headerIndex_(headers, 'LifetimeSeq') : headerIndex_(headers, 'Attempt');
-  const statusCol = headerIndex_(headers, 'Status');
-  const q1 = headerIndex_(headers, 'Q1');
-  for (let i = 1; i < data.length; i++) {
-    if (String(data[i][idCol]) !== String(submissionId)) continue;
-    const scoreRaw = String(scoreCol >= 0 ? data[i][scoreCol] : '');
+  const layout = resultsLayout_(data);
+  if (layout.submissionId < 0) return null;
+  const start = layout.mode === 'header' ? 1 : 0;
+  for (let i = start; i < data.length; i++) {
+    const cellId = String(data[i][layout.submissionId] || '');
+    if (cellId !== String(submissionId)) continue;
+    if (cellId.toLowerCase() === 'submissionid') continue;
+    const scoreRaw = String(layout.score >= 0 ? data[i][layout.score] : '');
     const parts = scoreRaw.split('/');
     const scoreNum = Number(parts[0]) || 0;
-    const total = Number(parts[1]) || 5;
-    const graded = [];
-    for (let q = 1; q <= 5; q++) {
-      const qi = q1 >= 0 ? q1 + (q - 1) : 5 + q;
-      graded.push({ qNum: q, given: String(data[i][qi] || ''), isRight: false });
+    const total = Number(parts[1]) || 0;
+    let answers = [];
+    if (layout.answersJson >= 0 && String(data[i][layout.answersJson] || '').trim().charAt(0) === '[') {
+      try { answers = JSON.parse(data[i][layout.answersJson]); } catch (e) { answers = []; }
     }
-    const completeCol = headerIndex_(headers, 'Complete');
-    let complete = false;
-    if (completeCol >= 0) complete = String(data[i][completeCol]).toUpperCase() === 'YES';
-    else complete = answersAllFilled_(graded);
+    if (!answers.length) {
+      const end = layout.answerStart + (layout.answerCap > 0 ? layout.answerCap : 14);
+      for (let c = layout.answerStart; c < end && c < (data[i] || []).length; c++) answers.push(String(data[i][c] || ''));
+      while (answers.length && answers[answers.length - 1] === '') answers.pop();
+    }
+    const graded = answers.map(function (given, idx) { return { qNum: idx + 1, given: String(given || ''), isRight: false }; });
+    const complete = layout.complete >= 0
+      ? String(data[i][layout.complete] || '').toUpperCase() === 'YES'
+      : answersAllFilled_(graded);
+    const phaseCell = layout.phase >= 0 ? String(data[i][layout.phase] || '') : '';
     return {
       submissionId: submissionId,
-      cycle: cycleCol >= 0 ? (Number(data[i][cycleCol]) || 1) : 1,
-      lifetimeSeq: seqCol >= 0 ? (Number(data[i][seqCol]) || 1) : 1,
+      username: normalizeUsername_(data[i][layout.username]),
+      testId: resolveTestId_(data[i][layout.testId]),
+      programId: layout.programId >= 0 ? normalizeProgramId_(data[i][layout.programId]) : '',
+      phase: normalizePhase_(phaseCell.toLowerCase() === 'phase' ? '' : phaseCell),
+      cycle: layout.cycle >= 0 ? (Number(data[i][layout.cycle]) || 1) : 1,
+      lifetimeSeq: Number(data[i][layout.lifetime]) || 1,
       scoreNum: scoreNum,
-      total: total,
-      status: statusCol >= 0 ? String(data[i][statusCol] || 'submitted') : 'submitted',
+      total: total || answers.length,
+      status: layout.status >= 0 ? String(data[i][layout.status] || 'submitted') : 'submitted',
       complete: complete,
       graded: graded,
+      answers: answers,
     };
   }
   return null;
@@ -1329,6 +2196,10 @@ function ensureResultsHeaders_(ss) {
     sheet.setFrozenRows(1);
     return;
   }
+  const probe = sheet.getRange(1, 1, 1, 2).getValues()[0];
+  const stamp = String(probe[0] || '');
+  const userCell = String(probe[1] || '').trim().toLowerCase();
+  if ((/\d{4}-\d{2}-\d{2}/.test(stamp) || (!isNaN(Date.parse(stamp)) && stamp)) && userCell && userCell !== 'username') return;
   const lastCol = Math.max(10, sheet.getLastColumn());
   const headers = sheet.getRange(1, 1, 1, lastCol).getValues()[0];
   const extra = [];

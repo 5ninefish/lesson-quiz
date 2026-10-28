@@ -1,0 +1,282 @@
+import { describe, expect, it } from "vitest";
+import { loadCode } from "./codegs-harness";
+import { makeBook } from "./mock-workbook";
+
+function questions(lesson: string, count: number): string[][] {
+  const rows = [["Lesson", "Q#", "Question", "A", "B", "C", "D", "E", "F", "Correct"]];
+  for (let i = 1; i <= count; i++) rows.push([lesson, String(i), `Prompt ${i}`, "Alpha", "Beta", "Gamma", "Delta", "", "", "A"]);
+  return rows;
+}
+
+function legacyResult(): string[] {
+  const row = new Array(24).fill("");
+  row[0] = "2026-09-15T18:04:00-10:00";
+  row[1] = "old.student";
+  row[2] = "L1";
+  row[3] = "1";
+  row[4] = "4/5";
+  row[5] = "A";
+  row[6] = "B";
+  row[7] = "C";
+  row[8] = "A";
+  row[9] = "B";
+  row[19] = "Cycle";
+  row[20] = "LifetimeSeq";
+  row[21] = "SubmissionId";
+  row[22] = "Status";
+  row[23] = "Complete";
+  return row;
+}
+
+function book() {
+  const q = questions("L3", 6).concat(questions("L1", 15).slice(1));
+  return makeBook([
+    ["Students", [
+      ["Username", "Email", "Password", "L1", "L2", "L3", "L4", "L5", "L6", "CycleL1", "CycleL2", "CycleL3", "CycleL4", "CycleL5", "CycleL6"],
+      ["ada", "ada@example.edu", "secret", 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 1],
+      ["bee", "bee@example.edu", "other", 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 1],
+    ]],
+    ["Questions", q],
+    ["Releases", [["TestId", "Strand", "Title", "OpenAt", "CloseAt", "Manual", "MaxTries", "TimeLimitSec"]]],
+    ["Attempts", [["Username", "TestId", "Cycle", "SubmissionId", "StartedAt", "TimeLimitSec", "MaxTriesSnapshot", "QuestionFingerprint", "CorrectSnapshot", "Status", "QuestionsSnapshot"]]],
+    ["Results", [legacyResult()]],
+    ["Audit", [["TimestampHST", "Actor", "Action", "Detail"]]],
+    ["Programs", [["ProgramId", "ProgramName", "Status", "StartAt", "EndAt", "CreatedAtHST", "CreatedBy", "UpdatedAtHST", "UpdatedBy"]]],
+    ["ProgramStudents", [["ProgramId", "Username", "Active", "AssignedAtHST", "AssignedBy"]]],
+    ["ProgramTests", [["ProgramId", "TestId", "Enabled", "SortOrder", "Manual", "OpenAt", "CloseAt", "MaxTries", "TimeLimitSec", "UpdatedAtHST", "UpdatedBy"]]],
+    ["ProgramStudentState", [["ProgramId", "Username", "TestId", "Cycle", "SitCache", "UpdatedAtHST", "UpdatedBy"]]],
+  ]);
+}
+
+function payload(code: ReturnType<typeof loadCode>, value: unknown): Record<string, unknown> {
+  return (code as unknown as { json: (v: { getContent?: () => string }) => Record<string, unknown> }).json(value as { getContent?: () => string });
+}
+
+describe("Apps Script dashboard contract", () => {
+  it("runs the two-program synthetic operating flow on the legacy results shape", () => {
+    const live = book();
+    const code = loadCode(live) as unknown as Record<string, (...args: unknown[]) => { getContent?: () => string }>;
+    const batches = () => (code.batchCounter as unknown as { n: number }).n;
+
+    const denied = payload(code as unknown as ReturnType<typeof loadCode>, code.commandPost_({ accessToken: "viewer-token", command: "ping" }));
+    expect(denied.ok).toBe(false);
+    const expired = payload(code as unknown as ReturnType<typeof loadCode>, code.commandPost_({ accessToken: "expired-token", command: "ping" }));
+    expect(expired.ok).toBe(false);
+    const ping = payload(code as unknown as ReturnType<typeof loadCode>, code.commandPost_({ accessToken: "editor-token", command: "ping" }));
+    expect(ping).toMatchObject({ ok: true, actor: "editor@example.edu", canEdit: true });
+
+    const failBook = book();
+    const failCode = loadCode(failBook) as unknown as { commandPost_: (b: unknown) => { getContent?: () => string } };
+    const failedLaunch = payload(failCode as unknown as ReturnType<typeof loadCode>, failCode.commandPost_({
+      accessToken: "editor-failbatch",
+      mutationId: "fail-1",
+      command: "launch_program",
+      program: { programId: "program-a", programName: "Program A", status: "ACTIVE" },
+      students: [{ username: "ada" }, { username: "bee" }],
+      tests: [{ testId: "SCI-CS", phase: "SINGLE", sortOrder: 1, manual: "UNSET", maxTries: 2, timeLimitSec: 30 }],
+    }));
+    expect(failedLaunch.ok).toBe(false);
+    expect(failBook.getSheetByName("Programs")?.grid.length).toBe(1);
+    const noScope = payload(code as unknown as ReturnType<typeof loadCode>, code.commandPost_({
+      accessToken: "editor-noscope",
+      mutationId: "noscope-1",
+      command: "launch_program",
+      program: { programId: "program-a", programName: "Program A", status: "ACTIVE" },
+      students: [{ username: "ada" }, { username: "bee" }],
+      tests: [{ testId: "SCI-CS", phase: "SINGLE", maxTries: 2, timeLimitSec: 0 }],
+    }));
+    expect(noScope.ok).toBe(false);
+    expect(live.getSheetByName("Programs")?.grid.length).toBe(1);
+    void batches;
+
+    const launch = (id: string, name: string, tests: unknown[]) => payload(code as unknown as ReturnType<typeof loadCode>, code.commandPost_({
+      accessToken: "editor-token",
+      mutationId: `launch-${id}`,
+      command: "launch_program",
+      program: { programId: id, programName: name, status: "ACTIVE" },
+      students: [{ username: "ada" }, { username: "bee" }],
+      tests,
+    }));
+    expect(launch("program-a", "Program A", [
+      { testId: "SCI-CS", phase: "PRE", sortOrder: 1, manual: "UNSET", maxTries: 2, timeLimitSec: 30 },
+      { testId: "SCI-CS", phase: "POST", sortOrder: 2, manual: "UNSET", maxTries: 2, timeLimitSec: 0 },
+    ]).ok).toBe(true);
+    expect(launch("program-b", "Program B", [
+      { testId: "SCI-SOIL", phase: "SINGLE", sortOrder: 1, manual: "AUTO", openAt: "2099-01-01T00:00:00-10:00", closeAt: "", maxTries: 1, timeLimitSec: 0 },
+    ]).ok).toBe(true);
+    const duplicate = payload(code as unknown as ReturnType<typeof loadCode>, code.commandPost_({
+      accessToken: "editor-token",
+      mutationId: "launch-program-a-again",
+      command: "launch_program",
+      program: { programId: "program-a", programName: "Program A", status: "ACTIVE" },
+      students: [{ username: "ada" }],
+      tests: [{ testId: "SCI-CS", phase: "PRE", sortOrder: 1, manual: "UNSET", maxTries: 2, timeLimitSec: 30 }],
+    }));
+    expect(duplicate.ok).toBe(false);
+    expect(duplicate.error).toBe("stale");
+
+    const replay = payload(code as unknown as ReturnType<typeof loadCode>, code.commandPost_({
+      accessToken: "editor-token",
+      mutationId: "launch-program-a",
+      command: "launch_program",
+      program: { programId: "program-a", programName: "Duplicate", status: "ACTIVE" },
+      students: [{ username: "ada" }, { username: "bee" }],
+      tests: [{ testId: "SCI-CS", phase: "PRE", maxTries: 2, timeLimitSec: 30 }],
+    }));
+    expect(replay.replayed).toBe(true);
+    expect(live.getSheetByName("Programs")?.grid.filter((row) => row[0] === "program-a").length).toBe(1);
+
+    const started = payload(code as unknown as ReturnType<typeof loadCode>, code.authAndLoad("ada", "secret", "SCI-CS", "program-a", "PRE"));
+    expect(started.ok).toBe(true);
+    expect(started.submissionId).toBeTruthy();
+    expect(started).not.toHaveProperty("score");
+    const submissionId = String(started.submissionId);
+    const beforeClose = (code.batchCounter as unknown as { n: number }).n;
+
+    const closed = payload(code as unknown as ReturnType<typeof loadCode>, code.commandPost_({
+      accessToken: "editor-token",
+      mutationId: "close-pre",
+      command: "save_release",
+      programId: "program-a",
+      testId: "SCI-CS",
+      phase: "PRE",
+      manual: "CLOSED",
+      openAt: "",
+      closeAt: "",
+      maxTries: 2,
+      timeLimitSec: 30,
+      expected: { manual: "UNSET", openAt: "", closeAt: "", maxTries: "2", timeLimitSec: "30" },
+    }));
+    expect(closed.ok).toBe(true);
+
+    const resumed = payload(code as unknown as ReturnType<typeof loadCode>, code.authAndLoad("ada", "secret", "SCI-CS", "program-a", "PRE"));
+    expect(resumed.submissionId).toBe(submissionId);
+    expect((resumed.questions as unknown[]).length).toBe(6);
+
+    for (const row of live.getSheetByName("Questions")?.grid || []) {
+      if (row[0] === "L3") row[9] = "B";
+    }
+    const answers: Record<string, string> = {};
+    for (let i = 1; i <= 6; i++) answers[String(i)] = "A";
+    const submitted = payload(code as unknown as ReturnType<typeof loadCode>, code.submit("ada", "secret", "SCI-CS", answers, submissionId, "program-a", "PRE"));
+    expect(submitted.ok).toBe(true);
+    expect(submitted.complete).toBe(true);
+    expect(submitted).not.toHaveProperty("score");
+    const afterSubmit = (code.batchCounter as unknown as { n: number }).n;
+    expect(afterSubmit).toBe(beforeClose + 2);
+
+    const again = payload(code as unknown as ReturnType<typeof loadCode>, code.submit("ada", "secret", "SCI-CS", answers, submissionId, "program-a", "PRE"));
+    expect(again.ok).toBe(true);
+    expect((code.batchCounter as unknown as { n: number }).n).toBe(afterSubmit);
+    const results = live.getSheetByName("Results")?.grid || [];
+    const matches = results.filter((row) => row.join(" ").includes(submissionId));
+    expect(matches.length).toBe(1);
+    expect(results[0][1]).toBe("old.student");
+    expect(results[0][4]).toBe("4/5");
+    const saved = matches[0];
+    expect(saved[1]).toBe("ada");
+    expect(saved[2]).toBe("SCI-CS");
+    expect(saved[4]).toBe("6/6");
+    const jsonCol = results[0].findIndex((cell) => cell === "AnswersJson");
+    expect(JSON.parse(saved[jsonCol])).toEqual(["A", "A", "A", "A", "A", "A"]);
+    expect(saved[results[0].findIndex((cell) => cell === "ProgramId")]).toBe("program-a");
+    expect(saved[results[0].findIndex((cell) => cell === "Phase")]).toBe("PRE");
+
+    const foreign = payload(code as unknown as ReturnType<typeof loadCode>, code.submit("bee", "other", "SCI-CS", answers, submissionId, "program-a", "PRE"));
+    expect(foreign.error).toBe("invalid_attempt");
+    expect(results.filter((row) => row.join(" ").includes(submissionId)).length).toBe(1);
+    const otherProgram = payload(code as unknown as ReturnType<typeof loadCode>, code.submit("ada", "secret", "SCI-CS", answers, submissionId, "program-b", "SINGLE"));
+    expect(otherProgram.error).toBe("invalid_attempt");
+
+    const postStart = payload(code as unknown as ReturnType<typeof loadCode>, code.authAndLoad("ada", "secret", "SCI-CS", "program-a", "POST"));
+    expect(postStart.ok).toBe(true);
+    expect(postStart.submissionId).not.toBe(submissionId);
+    const badChoice = payload(code as unknown as ReturnType<typeof loadCode>, code.submit("ada", "secret", "SCI-CS", { 1: "Z" }, postStart.submissionId, "program-a", "POST"));
+    expect(badChoice.error).toBe("invalid_choice");
+    expect((live.getSheetByName("Results")?.grid || []).filter((row) => row.join(" ").includes(String(postStart.submissionId))).length).toBe(0);
+
+    const soil = payload(code as unknown as ReturnType<typeof loadCode>, code.authAndLoad("ada", "secret", "SCI-SOIL", "program-b", "SINGLE"));
+    expect(soil.error).toBe("not_released");
+
+    const resetA = payload(code as unknown as ReturnType<typeof loadCode>, code.commandPost_({
+      accessToken: "editor-token",
+      mutationId: "reset-a",
+      command: "reset_cycle",
+      programId: "program-a",
+      username: "ada",
+      testId: "SCI-CS",
+      phase: "PRE",
+      expectedCycle: 1,
+    }));
+    expect(resetA.ok).toBe(true);
+    const state = live.getSheetByName("ProgramStudentState")?.grid || [];
+    const pre = state.find((row) => row[0] === "program-a" && row[2] === "SCI-CS" && row[7] === "PRE");
+    const post = state.find((row) => row[0] === "program-a" && row[2] === "SCI-CS" && row[7] === "POST");
+    const soilState = state.find((row) => row[0] === "program-b");
+    expect(pre?.[3]).toBe("2");
+    expect(post?.[3]).toBe("1");
+    expect(soilState?.[3]).toBe("1");
+    expect(results.filter((row) => row[1] === "ada" && row.join(" ").includes("PRE")).length).toBe(1);
+
+    const longAnswers: Record<string, string> = {};
+    for (let i = 1; i <= 15; i++) longAnswers[String(i)] = i === 2 ? "B" : "A";
+    const soilOpen = payload(code as unknown as ReturnType<typeof loadCode>, code.commandPost_({
+      accessToken: "editor-token",
+      mutationId: "open-soil",
+      command: "save_release",
+      programId: "program-b",
+      testId: "SCI-SOIL",
+      phase: "SINGLE",
+      manual: "OPEN",
+      openAt: "2099-01-01T00:00:00-10:00",
+      closeAt: "",
+      maxTries: 1,
+      timeLimitSec: 0,
+      expected: { manual: "AUTO", openAt: "2099-01-01T00:00:00-10:00", closeAt: "", maxTries: "1", timeLimitSec: "0" },
+    }));
+    expect(soilOpen.ok).toBe(true);
+    const soilStart = payload(code as unknown as ReturnType<typeof loadCode>, code.authAndLoad("ada", "secret", "SCI-SOIL", "program-b", "SINGLE"));
+    expect(soilStart.ok).toBe(true);
+    const soilSubmit = payload(code as unknown as ReturnType<typeof loadCode>, code.submit("ada", "secret", "SCI-SOIL", longAnswers, soilStart.submissionId, "program-b", "SINGLE"));
+    expect(soilSubmit.complete).toBe(true);
+    const soilRow = (live.getSheetByName("Results")?.grid || []).find((row) => row.join(" ").includes(String(soilStart.submissionId)));
+    expect(soilRow?.[4]).toBe("14/15");
+    expect(JSON.parse(String(soilRow?.[jsonCol])).length).toBe(15);
+
+    const fractional = payload(code as unknown as ReturnType<typeof loadCode>, code.commandPost_({
+      accessToken: "editor-token",
+      mutationId: "fractional",
+      command: "launch_program",
+      program: { programId: "program-bad", programName: "Bad", status: "ACTIVE" },
+      students: [{ username: "ada" }],
+      tests: [{ testId: "SCI-CS", phase: "SINGLE", maxTries: 1.5, timeLimitSec: 0 }],
+    }));
+    expect(fractional.ok).toBe(false);
+    const alias = payload(code as unknown as ReturnType<typeof loadCode>, code.commandPost_({
+      accessToken: "editor-token",
+      mutationId: "alias",
+      command: "launch_program",
+      program: { programId: "program-alias", programName: "Alias", status: "ACTIVE" },
+      students: [{ username: "ada" }],
+      tests: [
+        { testId: "SCI-CS", phase: "SINGLE", maxTries: 1, timeLimitSec: 0 },
+        { testId: "L3", phase: "SINGLE", maxTries: 1, timeLimitSec: 0 },
+      ],
+    }));
+    expect(alias.ok).toBe(false);
+    expect(live.getSheetByName("Programs")?.grid.some((row) => row[0] === "program-bad" || row[0] === "program-alias")).toBe(false);
+    const draft = payload(code as unknown as ReturnType<typeof loadCode>, code.commandPost_({
+      accessToken: "editor-token",
+      mutationId: "draft-1",
+      command: "launch_program",
+      program: { programId: "program-draft", programName: "Draft", status: "DRAFT" },
+      students: [{ username: "bee" }],
+      tests: [{ testId: "SCI-HEALTH", phase: "SINGLE", maxTries: 1, timeLimitSec: 0 }],
+    }));
+    expect(draft.ok).toBe(true);
+    const hidden = payload(code as unknown as ReturnType<typeof loadCode>, code.authAndLoad("bee", "other", "SCI-HEALTH", "program-draft", "SINGLE"));
+    expect(hidden.error).toBe("not_in_program");
+    const pinned = (live.getSheetByName("Attempts")?.grid || []).find((row) => row.join(" ").includes(submissionId));
+    expect(pinned?.[5]).toBe("30");
+  });
+});

@@ -1,3 +1,11 @@
+export type AssessmentPhase = "SINGLE" | "PRE" | "POST";
+
+export function phaseOf(raw: string | null | undefined): AssessmentPhase {
+  const value = String(raw || "").trim().toUpperCase();
+  if (value === "PRE" || value === "POST") return value;
+  return "SINGLE";
+}
+
 export const PROGRAM_ID_RE = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
 
 export function normalizeProgramId(raw: string | null | undefined): string {

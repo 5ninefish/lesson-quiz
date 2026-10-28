@@ -1,5 +1,6 @@
 import type { TestId } from "../ids";
 import type { AttemptView, ProgramStateView } from "../types";
+import { phaseOf } from "./ids";
 import { attemptInProgram } from "./summaries";
 
 export type CycleResetPlan = {
@@ -13,6 +14,7 @@ export function planCycleReset(opts: {
   programId: string;
   username: string;
   testId: string;
+  phase?: string;
   state: ProgramStateView[];
   enabledTestIds: TestId[];
   attempts: AttemptView[];
@@ -27,17 +29,21 @@ export function planCycleReset(opts: {
 
   const updates: CycleResetPlan["updates"] = [];
   const stateRows: string[][] = [];
-  for (const testId of testIds) {
-    const row = opts.state.find(
-      (s) => s.programId === opts.programId && s.username === username && s.testId === testId,
-    );
+  const wantPhase = opts.phase ? phaseOf(opts.phase) : "";
+  const rows = opts.state.filter((row) => {
+    if (row.programId !== opts.programId || row.username !== username) return false;
+    if (opts.testId !== "ALL" && row.testId !== opts.testId) return false;
+    if (wantPhase && phaseOf(row.phase) !== wantPhase) return false;
+    return true;
+  });
+  for (const row of rows) {
     if (row?.rowNumber) {
       updates.push({
         range: `ProgramStudentState!D${row.rowNumber}:G${row.rowNumber}`,
         values: [[String((row.cycle || 1) + 1), "0", opts.nowHst, opts.actor]],
       });
     } else {
-      stateRows.push([opts.programId, username, testId, "2", "0", opts.nowHst, opts.actor]);
+      stateRows.push([opts.programId, username, row.testId, "2", "0", opts.nowHst, opts.actor, phaseOf(row.phase)]);
     }
   }
   const appends: CycleResetPlan["appends"] = [];
@@ -47,6 +53,7 @@ export function planCycleReset(opts: {
   for (const attempt of opts.attempts) {
     if (attempt.username !== username) continue;
     if (!attempt.testId || !wanted.has(attempt.testId)) continue;
+    if (wantPhase && phaseOf(attempt.phase) !== wantPhase) continue;
     if (!attemptInProgram(attempt, opts.programId)) continue;
     if (attempt.status !== "in_flight" && attempt.displayStatus !== "in_flight") continue;
     updates.push({

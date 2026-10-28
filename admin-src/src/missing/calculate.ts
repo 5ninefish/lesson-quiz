@@ -1,4 +1,5 @@
 import type { TestId } from "../ids";
+import { phaseOf } from "../programs/ids";
 import type { MissingRow, ProgramStudentView, ProgramTestView, ResultView } from "../types";
 
 export function missingTestsForProgram(opts: {
@@ -14,18 +15,17 @@ export function missingTestsForProgram(opts: {
   const complete = new Set<string>();
   for (const r of opts.results) {
     if (r.complete && r.testId && r.programId === opts.programId) {
-      complete.add(`${r.username}::${r.testId}`);
+      complete.add(`${r.username}::${r.testId}::${phaseOf(r.phase)}`);
     }
   }
   const rows: MissingRow[] = [];
   for (const m of members) {
-    const missing = tests.filter((t) => !complete.has(`${m.username}::${t.testId}`)).map((t) => t.testId);
-    if (!missing.length) continue;
-    const availability = tests
-      .filter((t) => missing.includes(t.testId))
-      .map((t) => `${t.testId}:${t.state}`)
-      .join(", ");
-    rows.push({ username: m.username, missing, availability });
+    const missingTests = tests.filter((t) => !complete.has(`${m.username}::${t.testId}::${phaseOf(t.phase)}`));
+    if (!missingTests.length) continue;
+    const missing = missingTests.map((t) => t.testId);
+    const phases = missingTests.map((t) => phaseOf(t.phase));
+    const availability = missingTests.map((t) => `${t.testId}${phaseOf(t.phase) === "SINGLE" ? "" : `:${phaseOf(t.phase)}`}:${t.state}`).join(", ");
+    rows.push({ username: m.username, missing, phases, availability });
   }
   return rows.sort((a, b) => b.missing.length - a.missing.length || a.username.localeCompare(b.username));
 }

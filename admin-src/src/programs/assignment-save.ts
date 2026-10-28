@@ -1,7 +1,7 @@
 import type { TestId } from "../ids";
 import type { ProgramStateView, ProgramStudentView, ProgramTestView, ProgramView } from "../types";
 import type { WizardDraft } from "./launcher";
-import { minutesToSeconds } from "./ids";
+import { minutesToSeconds, phaseOf } from "./ids";
 
 export type AssignmentUpdate = {
   appends: Array<{ tab: string; values: string[][] }>;
@@ -14,8 +14,8 @@ export type AssignmentUpdate = {
   blocking: string[];
 };
 
-function stateKey(programId: string, username: string, testId: string): string {
-  return `${programId}\t${username}\t${testId}`;
+function stateKey(programId: string, username: string, testId: string, phase?: string): string {
+  return `${programId}\t${username}\t${testId}\t${phaseOf(phase)}`;
 }
 
 export function planProgramConfigUpdate(
@@ -53,7 +53,7 @@ export function planAssignmentUpdate(opts: {
 }): AssignmentUpdate {
   const blocking: string[] = [];
   const nextUsers = new Set(opts.draft.usernames);
-  const nextTests = new Set(opts.draft.tests.map((t) => t.testId));
+  const nextTests = new Set(opts.draft.tests.map((t) => `${t.testId}|${phaseOf(t.phase)}`));
   if (!nextUsers.size) blocking.push("Select at least one student.");
   if (!nextTests.size) blocking.push("Select at least one test.");
 
@@ -93,9 +93,9 @@ export function planAssignmentUpdate(opts: {
     }
   }
 
-  const testById = new Map(currentTests.map((t) => [t.testId, t]));
+  const testById = new Map(currentTests.map((t) => [`${t.testId}|${phaseOf(t.phase)}`, t]));
   opts.draft.tests.forEach((t, i) => {
-    const row = testById.get(t.testId as TestId);
+    const row = testById.get(`${t.testId}|${phaseOf(t.phase)}`);
     const sort = String(t.sortOrder || i + 1);
     const limit = String(minutesToSeconds(t.timeLimitMinutes));
     if (!row) {
@@ -149,7 +149,7 @@ export function planAssignmentUpdate(opts: {
     }
   });
   for (const row of currentTests) {
-    if (row.enabled && !nextTests.has(row.testId)) {
+    if (row.enabled && !nextTests.has(`${row.testId}|${phaseOf(row.phase)}`)) {
       removedTests.push(row.testId);
       updates.push({ range: `ProgramTests!C${row.rowNumber}`, values: [["FALSE"]] });
     }
@@ -158,15 +158,15 @@ export function planAssignmentUpdate(opts: {
   const seen = new Set(
     opts.state
       .filter((s) => s.programId === opts.programId)
-      .map((s) => stateKey(s.programId, s.username, s.testId)),
+      .map((s) => stateKey(s.programId, s.username, s.testId, s.phase)),
   );
   const stateRows: string[][] = [];
   for (const username of nextUsers) {
     for (const t of opts.draft.tests) {
-      const key = stateKey(opts.programId, username, t.testId);
+      const key = stateKey(opts.programId, username, t.testId, t.phase);
       if (seen.has(key)) continue;
       seen.add(key);
-      stateRows.push([opts.programId, username, t.testId, "1", "0", opts.draft.nowHst, opts.draft.actor]);
+      stateRows.push([opts.programId, username, t.testId, "1", "0", opts.draft.nowHst, opts.draft.actor, phaseOf(t.phase)]);
     }
   }
   if (stateRows.length) appends.push({ tab: "ProgramStudentState", values: stateRows });

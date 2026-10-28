@@ -1,5 +1,6 @@
 import type { BestScoreRow, ResultView } from "../types";
 import type { TestId } from "../ids";
+import { phaseOf } from "../programs/ids";
 
 function denMatchesBank(den: number, expected: number | undefined): boolean {
   return expected != null && expected > 0 && den === expected;
@@ -21,7 +22,8 @@ export function bestCompleteScores(results: ResultView[], questionCounts: Partia
   const map = new Map<string, BestScoreRow>();
   for (const r of results) {
     if (!r.complete || !r.testId || r.scoreNum == null || r.scoreDen == null || r.scoreDen <= 0) continue;
-    const key = `${r.username}::${r.testId}`;
+    const phase = phaseOf(r.phase);
+    const key = `${r.username}::${r.testId}::${phase}`;
     const percent = r.scoreNum / r.scoreDen;
     const prev = map.get(key);
     const next: BestScoreRow = {
@@ -35,6 +37,8 @@ export function bestCompleteScores(results: ResultView[], questionCounts: Partia
       cycle: r.cycle,
       complete: r.complete,
       answers: r.answers,
+      phase,
+      submissionId: r.submissionId,
     };
     if (!prev) {
       map.set(key, next);

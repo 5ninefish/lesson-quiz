@@ -9,9 +9,10 @@ export function studentProgramUrl(programId: string): string {
   return `${base}/?program=${encodeURIComponent(programId)}`;
 }
 
-export function studentTestUrl(programId: string, testId: string): string {
+export function studentTestUrl(programId: string, testId: string, phase?: string): string {
   const base = publicOrigin().replace(/\/$/, "");
-  return `${base}/?program=${encodeURIComponent(programId)}&test=${encodeURIComponent(testId)}`;
+  const extra = phase === "PRE" || phase === "POST" ? `&phase=${encodeURIComponent(phase)}` : "";
+  return `${base}/?program=${encodeURIComponent(programId)}&test=${encodeURIComponent(testId)}${extra}`;
 }
 
 export function instructorProgramUrl(programId: string): string {

@@ -13,19 +13,26 @@ export const PROGRAM = {
   adminPath: "/admin-v2/",
   legacyAdminPath: "/lesson-quiz/admin-v2/",
   legacyDefaultProgramId: "hokulani",
+  /** Existing Apps Script web app. New versions keep this deployment id and URL. */
+  studentServiceUrl:
+    "https://script.google.com/macros/s/AKfycbz3Acc6aICeaolVb1KaFiVG4HSMH83NkRWv-2YIcvrHdVAT8-E39uShWuJ25dqB37V9/exec",
+  studentDeploymentId: "AKfycbz3Acc6aICeaolVb1KaFiVG4HSMH83NkRWv-2YIcvrHdVAT8-E39uShWuJ25dqB37V9",
 } as const;
 
 export const RANGES = {
   students: "Students!A:P",
   questions: "Questions!A:J",
   releases: "Releases!A:H",
-  attempts: "Attempts!A:L",
-  results: "Results!A:X",
-  audit: "Audit!A:D",
+  attempts: "Attempts!A:N",
+  results: "Results!A:AZ",
+  audit: "Audit!A:H",
   programs: "Programs!A:I",
   programStudents: "ProgramStudents!A:E",
-  programTests: "ProgramTests!A:K",
-  programStudentState: "ProgramStudentState!A:G",
+  programTests: "ProgramTests!A:N",
+  programStudentState: "ProgramStudentState!A:H",
+  testCatalog: "TestCatalog!A:G",
+  lessonCatalog: "LessonCatalog!A:E",
+  programLessons: "ProgramLessons!A:I",
 } as const;
 
 export const PROGRAM_TABLES = ["Programs", "ProgramStudents", "ProgramTests", "ProgramStudentState"] as const;
@@ -45,8 +52,11 @@ export const PROGRAM_HEADERS = {
     "TimeLimitSec",
     "UpdatedAtHST",
     "UpdatedBy",
+    "Phase",
+    "LessonId",
+    "AssessmentVersion",
   ],
-  ProgramStudentState: ["ProgramId", "Username", "TestId", "Cycle", "SitCache", "UpdatedAtHST", "UpdatedBy"],
+  ProgramStudentState: ["ProgramId", "Username", "TestId", "Cycle", "SitCache", "UpdatedAtHST", "UpdatedBy", "Phase"],
 } as const;
 
 export function workbookUrl(spreadsheetId: string = PROGRAM.spreadsheetId): string {

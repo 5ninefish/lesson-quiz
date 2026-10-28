@@ -3,7 +3,7 @@ import { TEST_TITLES, canonicalTestId, normalizeUsername, type TestId } from "..
 import type { HealthIssue, ProgramStatus, ProgramStudentView, ProgramTestView, ProgramView, ReleaseManual } from "../types";
 import { asBool, asInt, cell, headerIndex, looksLikeHeaderRow, rowHasContent, type SheetValues } from "../workbook/cells";
 import { evaluateRelease } from "../workbook/releases";
-import { isValidProgramId, normalizeProgramId } from "./ids";
+import { isValidProgramId, normalizeProgramId, phaseOf } from "./ids";
 
 function asStatus(raw: string): ProgramStatus | null {
   const v = raw.trim().toUpperCase();
@@ -192,7 +192,8 @@ export function parseProgramTests(values: SheetValues, now = new Date()): Progra
       });
       continue;
     }
-    const key = `${programId}::${testId}`;
+    const phase = phaseOf(headerIndex(headers, "Phase") >= 0 ? cell(row, headerIndex(headers, "Phase")) : "");
+    const key = `${programId}::${testId}::${phase}`;
     const prev = seen.get(key);
     if (prev) {
       issues.push({
@@ -225,6 +226,7 @@ export function parseProgramTests(values: SheetValues, now = new Date()): Progra
       updatedBy: cell(row, col("UpdatedBy", 10)),
       rowNumber,
       title: TEST_TITLES[testId],
+      phase,
       ...ev,
     });
   }
@@ -264,7 +266,8 @@ export function parseProgramStudentState(values: SheetValues): ProgramStateParse
       });
       continue;
     }
-    const key = `${programId}::${username}::${testId}`;
+    const phase = phaseOf(headerIndex(headers, "Phase") >= 0 ? cell(row, headerIndex(headers, "Phase")) : "");
+    const key = `${programId}::${username}::${testId}::${phase}`;
     const prev = seen.get(key);
     if (prev) {
       issues.push({
@@ -287,6 +290,7 @@ export function parseProgramStudentState(values: SheetValues): ProgramStateParse
       updatedAtHst: cell(row, col("UpdatedAtHST", 5)),
       updatedBy: cell(row, col("UpdatedBy", 6)),
       rowNumber,
+      phase,
     });
     if (!cycle || cycle < 1) {
       issues.push({

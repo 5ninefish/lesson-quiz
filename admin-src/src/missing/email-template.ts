@@ -1,4 +1,5 @@
 import { TEST_TITLES, type TestId } from "../ids";
+import { phaseOf, type AssessmentPhase } from "../programs/ids";
 import { studentTestUrl } from "../programs/urls";
 
 const REQUIRED_SENTENCE = "Please complete these assessments this week.";
@@ -21,8 +22,13 @@ export function missingEmailBody(opts: {
   programId: string;
   programName: string;
   missing: TestId[];
+  phases?: AssessmentPhase[];
 }): string {
-  const lines = opts.missing.map((id) => `- ${TEST_TITLES[id]}: ${studentTestUrl(opts.programId, id)}`);
+  const lines = opts.missing.map((id, index) => {
+    const phase = phaseOf(opts.phases?.[index]);
+    const label = phase === "SINGLE" ? TEST_TITLES[id] : `${TEST_TITLES[id]} (${phase})`;
+    return `- ${label}: ${studentTestUrl(opts.programId, id, phase)}`;
+  });
   return [
     `Hi ${studentDisplayName(opts.username)},`,
     "",

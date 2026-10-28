@@ -1,4 +1,5 @@
 import { canonicalTestId, normalizeUsername } from "../ids";
+import { phaseOf } from "../programs/ids";
 import type { HealthIssue, ResultView } from "../types";
 import { asInt, cell, headerIndex, looksLikeHeaderRow, rowHasContent, type SheetValues } from "./cells";
 
@@ -97,6 +98,9 @@ export function parseResults(values: SheetValues): ResultsParse {
     let answers: string[];
     let submissionId: string;
     let status: string;
+    let explicitProgram = "";
+    let phaseRaw = "";
+    let completeCell = "";
     let source: ResultView["source"];
 
     if (headered) {
@@ -112,6 +116,24 @@ export function parseResults(values: SheetValues): ResultsParse {
       answers = answersFrom(row, answerStart, row.length);
       submissionId = cell(row, col("SubmissionId", 11));
       status = cell(row, col("Status", 12));
+      explicitProgram = cell(row, col("ProgramId", -1));
+      phaseRaw = cell(row, col("Phase", -1));
+      completeCell = cell(row, col("Complete", -1));
+      const jsonRaw = cell(row, col("AnswersJson", -1));
+      if (jsonRaw.trim().startsWith("[")) {
+        try {
+          const parsed = JSON.parse(jsonRaw);
+          if (Array.isArray(parsed)) answers = parsed.map((item) => String(item ?? ""));
+        } catch {
+          issues.push({
+            id: `results-json-${rowNumber}`,
+            severity: "warn",
+            tab: "Results",
+            rowNumber,
+            message: "AnswersJson could not be parsed. Legacy answer columns were kept.",
+          });
+        }
+      }
     } else {
       source = "positional";
       timestamp = cell(row, 0);
@@ -128,8 +150,25 @@ export function parseResults(values: SheetValues): ResultsParse {
         const prev = cell(values[0], c).toLowerCase();
         if (prev === "cycle") cycle = asInt(v) ?? cycle;
         if (prev === "lifetimeseq" || prev === "attempt") lifetimeSeq = asInt(v) ?? lifetimeSeq;
-        if (prev === "submissionid") submissionId = v || submissionId;
-        if (prev === "status") status = v || status;
+        if (prev === "submissionid" && v.toLowerCase() !== "submissionid") submissionId = v || submissionId;
+        if (prev === "status" && v.toLowerCase() !== "status") status = v || status;
+        if (prev === "complete" && v.toLowerCase() !== "complete") completeCell = v || completeCell;
+        if (prev === "programid" && v.toLowerCase() !== "programid") explicitProgram = v || explicitProgram;
+        if (prev === "phase" && v.toLowerCase() !== "phase") phaseRaw = v || phaseRaw;
+        if (prev === "answersjson" && v.trim().startsWith("[")) {
+          try {
+            const parsed = JSON.parse(v);
+            if (Array.isArray(parsed)) answers = parsed.map((item) => String(item ?? ""));
+          } catch {
+            issues.push({
+              id: `results-json-${rowNumber}`,
+              severity: "warn",
+              tab: "Results",
+              rowNumber,
+              message: "AnswersJson could not be parsed. Legacy answer columns were kept.",
+            });
+          }
+        }
       }
     }
 
@@ -155,7 +194,8 @@ export function parseResults(values: SheetValues): ResultsParse {
       });
     }
     const { num, den } = parseScore(scoreRaw);
-    const complete = isComplete(answers, den);
+    const marked = completeCell.toUpperCase();
+    const complete = marked === "YES" ? true : marked === "NO" ? false : isComplete(answers, den);
     results.push({
       username,
       testId,
@@ -171,7 +211,8 @@ export function parseResults(values: SheetValues): ResultsParse {
       status,
       rowNumber,
       source,
-      programId: "",
+      programId: explicitProgram.trim().toLowerCase(),
+      phase: phaseOf(phaseRaw),
       attribution: "unassigned",
     });
   }
