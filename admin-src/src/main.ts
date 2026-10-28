@@ -15,6 +15,8 @@ import { requestWriteScope } from "./auth/google-token";
 import { seedHokulaniPlan } from "./programs/seed";
 import { minutesToSeconds, phaseOf } from "./programs/ids";
 import { postInstructorCommand, type CommandResponse } from "./google/backend-client";
+import { PUBLISHED_LESSONS } from "./teaching";
+import type { LessonDraft } from "./ui/lessons";
 import { confirmDialog } from "./ui/dialogs";
 import { clearStaySignedIn } from "./ui/relogin-warning";
 
@@ -246,7 +248,58 @@ function paint(): void {
     onResetCycle: (username, testId) => {
       void resetCycle(username, testId);
     },
+    onSaveLessons: (programId, lessons) => {
+      void saveProgramLessons(programId, lessons);
+    },
+    onRegisterLessons: () => {
+      void registerPublishedLessons();
+    },
   });
+}
+
+async function registerPublishedLessons(): Promise<void> {
+  const write = async () => {
+    const result = await postInstructorCommand("register_lessons", {}, crypto.randomUUID());
+    const next = await refreshLive(true);
+    const have = new Set((next?.lessonCatalog || []).map((row) => row.lessonId));
+    const missing = PUBLISHED_LESSONS.filter((pack) => !have.has(pack.lessonId)).map((pack) => pack.lessonId);
+    if (!result.ok || missing.length) showCommandResult(result.ok ? { ok: false, error: "verify" } : result, "");
+    else banner = { kind: "ok", text: "Published lessons are on the catalog. Assign them from Edit lessons. Existing tests were not changed." };
+    paint();
+  };
+  armWrite(write, "Google will ask for permission to edit this workbook.");
+}
+
+async function saveProgramLessons(programId: string, lessons: LessonDraft[]): Promise<void> {
+  const write = async () => {
+    const result = await postInstructorCommand("save_program_lessons", {
+      programId,
+      lessons: lessons.map((lesson) => ({
+        lessonId: lesson.lessonId,
+        enabled: lesson.enabled,
+        sortOrder: lesson.sortOrder,
+        openAt: lesson.openAt,
+        closeAt: lesson.closeAt,
+        requirePre: lesson.requirePre,
+      })),
+    }, crypto.randomUUID());
+    const next = await refreshLive(true);
+    const saved = (next?.programLessons || []).filter((row) => row.programId === programId);
+    const matches = lessons.every((lesson) => {
+      const row = saved.find((item) => item.lessonId === lesson.lessonId);
+      if (!lesson.enabled) return !row || !row.enabled;
+      return !!row &&
+        row.enabled &&
+        row.sortOrder === lesson.sortOrder &&
+        row.openAt === lesson.openAt &&
+        row.closeAt === lesson.closeAt &&
+        row.requirePre === lesson.requirePre;
+    });
+    if (!result.ok || !matches) showCommandResult(result.ok ? { ok: false, error: "verify" } : result, "");
+    else banner = { kind: "ok", text: "Lessons saved. Assessment release was not changed." };
+    paint();
+  };
+  armWrite(write, "Google will ask for permission to edit this workbook.");
 }
 
 function armWrite(start: () => void, pending: string): void {

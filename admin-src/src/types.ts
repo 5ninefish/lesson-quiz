@@ -232,4 +232,41 @@ export type DashboardSnapshot = {
   missingProgramTables: string[];
   legacyAttributedResults: number;
   unassignedResults: number;
+  lessonCatalog: LessonCatalogView[];
+  programLessons: ProgramLessonView[];
+  lessonProgress: LessonProgressView[];
+};
+
+export type LessonCatalogView = {
+  lessonId: string;
+  title: string;
+  version: string;
+  url: string;
+  status: string;
+};
+
+export type ProgramLessonView = {
+  programId: string;
+  lessonId: string;
+  enabled: boolean;
+  sortOrder: number;
+  lessonVersion: string;
+  openAt: string;
+  closeAt: string;
+  updatedAtHst: string;
+  updatedBy: string;
+  requirePre: boolean;
+  rowNumber: number;
+};
+
+export type LessonProgressView = {
+  programId: string;
+  username: string;
+  lessonId: string;
+  lessonVersion: string;
+  topicId: string;
+  status: string;
+  artifact: string;
+  support: boolean;
+  updatedAt: string;
 };

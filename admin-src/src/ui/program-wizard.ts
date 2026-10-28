@@ -206,6 +206,7 @@ function readWizardDom(draft: WizardDraft): WizardDraft {
 }
 
 function stepTests(main: HTMLElement, snap: DashboardSnapshot, wizard: WizardState, onChange: (next: WizardState) => void): void {
+  main.append(el("p", { class: "muted" }, "These checkboxes are assessments. Teaching lessons are chosen with Edit lessons, and that list does not change who can start a PRE or POST."));
   TEST_IDS.forEach((id) => {
     const count = snap.questionCounts[id] || 0;
     const row = el("label", { class: "picker-row" });

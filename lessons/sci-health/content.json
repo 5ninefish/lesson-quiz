@@ -1,0 +1,53 @@
+{
+  "lessonId": "sci-health@2026-10",
+  "title": "Health",
+  "topics": [
+    { "id": "start", "title": "Start", "teach": "The pre-check asks what you think before the teaching. The official questions stay on the assessment, not on this page.", "fields": [{ "type": "ready", "label": " I am ready for the pre-check" }] },
+    { "id": "heart", "title": "Heart", "teach": "Name one traditional food that supports health and one practice that gets people moving. Pulse, breathing, and body temperature are vital signs.", "fields": [
+      { "type": "text", "name": "food", "label": "One traditional food" },
+      { "type": "text", "name": "practice", "label": "One way people move" },
+      { "type": "choices", "name": "sort", "items": [
+        { "key": "pulse", "label": "Pulse", "options": ["vital", "not"] },
+        { "key": "breathing", "label": "Breathing", "options": ["vital", "not"] },
+        { "key": "temperature", "label": "Body temperature", "options": ["vital", "not"] },
+        { "key": "song", "label": "A favorite song", "options": ["vital", "not"] }
+      ]}
+    ]},
+    { "id": "method", "title": "Method", "teach": "The if-then sentence is a hypothesis. Name the activity you will change and the signal you will measure.", "fields": [
+      { "type": "select", "name": "kind", "label": "What kind of sentence is the if-then?", "options": ["hypothesis", "opinion"] },
+      { "type": "text", "name": "hypothesis", "label": "Your if-then hypothesis", "long": true },
+      { "type": "text", "name": "independent", "label": "What you change" },
+      { "type": "text", "name": "dependent", "label": "What you measure" }
+    ]},
+    { "id": "rest", "title": "Rest", "teach": "Count beats for 15 seconds and breaths for one quiet minute. The wrist is the method in this lesson.", "fields": [
+      { "type": "number", "name": "beats15", "label": "Beats in 15 seconds" },
+      { "type": "number", "name": "breaths", "label": "Breaths in one quiet minute" },
+      { "type": "text", "name": "where", "label": "Where you felt the pulse" }
+    ]},
+    { "id": "move", "title": "Move", "teach": "Choose march in place, or lift a book if you should not march. Record the standing counts and the counts right after two minutes.", "fields": [
+      { "type": "select", "name": "how", "label": "Movement", "options": ["march", "lift"] },
+      { "type": "number", "name": "stand_beats", "label": "Standing beats in 15 seconds" },
+      { "type": "number", "name": "stand_breaths", "label": "Standing breaths in one minute" },
+      { "type": "number", "name": "move_beats", "label": "Beats in 15 seconds after moving" },
+      { "type": "number", "name": "move_breaths", "label": "Breaths in one minute after moving" },
+      { "type": "text", "name": "stopped", "label": "If you did not do an extra minute, say why" }
+    ]},
+    { "id": "data", "title": "Data", "teach": "Say whether your heart rate rose, stayed, or fell. Repeated calm mornings tell you more than one count while talking.", "fields": [
+      { "type": "select", "name": "change", "label": "After you moved, heart rate", "options": ["rise", "stay", "fall"] },
+      { "type": "select", "name": "claim", "label": "The numbers and your hypothesis", "options": ["support", "reject", "unsure"] },
+      { "type": "text", "name": "error", "label": "One mistake that could change a number", "long": true },
+      { "type": "select", "name": "reliable", "label": "Which method is more reliable?", "options": ["a", "b"] },
+      { "type": "select", "name": "valid", "label": "Which method measures breathing?", "options": ["a", "b", "c"] }
+    ]},
+    { "id": "community", "title": "Community", "teach": "Say what you would do if a number stayed far from your usual baseline, and name one community condition.", "fields": [
+      { "type": "text", "name": "action", "label": "What you would do", "long": true },
+      { "type": "text", "name": "condition", "label": "One community condition", "long": true },
+      { "type": "text", "name": "note", "label": "Two sentences your family could use", "long": true }
+    ]},
+    { "id": "wrap", "title": "Wrap", "teach": "Write the question your experiment asked, what you measured, and what the numbers did.", "fields": [
+      { "type": "text", "name": "question", "label": "The question", "long": true },
+      { "type": "text", "name": "measured", "label": "What you measured" },
+      { "type": "text", "name": "result", "label": "What the numbers did", "long": true }
+    ]}
+  ]
+}

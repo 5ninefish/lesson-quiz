@@ -1,0 +1,56 @@
+{
+  "lessonId": "sci-astro@2026-10",
+  "title": "Astronomy",
+  "topics": [
+    { "id": "start", "title": "Start", "teach": "Read the route. The pre-check is the official assessment, opened from your program page.", "fields": [{ "type": "ready", "label": " I have read the route" }] },
+    { "id": "sky", "title": "Sky", "teach": "Name a real use of the sky, such as navigation, farming, fishing, or a calendar. Say why stars are hard to see in the daytime.", "fields": [
+      { "type": "text", "name": "use", "label": "One use of the sky", "long": true },
+      { "type": "text", "name": "daylight", "label": "Why stars are hard to see in the daytime", "long": true },
+      { "type": "choices", "name": "sorted", "items": [
+        { "key": "twinkle", "label": "A twinkling point", "options": ["star", "planet", "meteor"] },
+        { "key": "steady", "label": "A steady light that does not make its own light", "options": ["star", "planet", "meteor"] },
+        { "key": "streak", "label": "A quick streak that can burn", "options": ["star", "planet", "meteor"] }
+      ]}
+    ]},
+    { "id": "place", "title": "Place", "teach": "Hours and the eastern horizon are right ascension. The north-south degrees are declination.", "fields": [
+      { "type": "choices", "name": "coordinates", "items": [
+        { "key": "hours", "label": "Hours", "options": ["ra", "dec"] },
+        { "key": "latitude", "label": "North-south degrees", "options": ["ra", "dec"] },
+        { "key": "east", "label": "Eastern horizon", "options": ["ra", "dec"] }
+      ]},
+      { "type": "select", "name": "eyepiece", "label": "Which eyepiece magnifies more?", "options": ["a", "b"] },
+      { "type": "text", "name": "reason", "label": "Why does that eyepiece magnify more?", "long": true }
+    ]},
+    { "id": "lines", "title": "Star lines", "teach": "Order the four star families the way the year moves, then name one family and its season.", "fields": [
+      { "type": "rank", "name": "order", "label": "Family", "items": ["bailer", "backbone", "fishhook", "kite"] },
+      { "type": "text", "name": "note", "label": "One family and the season when it dominates", "long": true }
+    ]},
+    { "id": "time", "title": "Time", "teach": "Makahiki follows the moon. Clock time is equal hours. Awakea is the sun at its highest.", "fields": [
+      { "type": "choices", "name": "matched", "items": [
+        { "key": "makahiki", "label": "Makahiki", "options": ["moon", "hours", "sun"] },
+        { "key": "clock", "label": "Clock time", "options": ["moon", "hours", "sun"] },
+        { "key": "awakea", "label": "Awakea", "options": ["moon", "hours", "sun"] }
+      ]},
+      { "type": "text", "name": "explain", "label": "How solar time and clock time differ", "long": true }
+    ]},
+    { "id": "light", "title": "Light", "teach": "Rainbow wavelengths are visible light. Bending in a new material is refraction. Radio waves are part of the electromagnetic spectrum.", "fields": [
+      { "type": "choices", "name": "tagged", "items": [
+        { "key": "rainbow", "label": "Rainbow wavelengths", "options": ["visible", "refraction", "electromagnetic", "pair"] },
+        { "key": "bend", "label": "Bending in a new material", "options": ["visible", "refraction", "electromagnetic", "pair"] },
+        { "key": "radio", "label": "Radio waves", "options": ["visible", "refraction", "electromagnetic", "pair"] },
+        { "key": "lines", "label": "Matching wavelengths", "options": ["visible", "refraction", "electromagnetic", "pair"] }
+      ]},
+      { "type": "text", "name": "match", "label": "Absorption and emission for the same element", "long": true }
+    ]},
+    { "id": "scope", "title": "Spectroscope", "teach": "Build order is fold, grating, tape, then look. Sunlight is a continuous rainbow. A compact fluorescent lamp shows separate bright lines. Do not look at the sun or a laser.", "fields": [
+      { "type": "rank", "name": "order", "label": "Step", "items": ["fold", "grating", "tape", "look"] },
+      { "type": "choices", "name": "predict", "items": [
+        { "key": "sun", "label": "Sunlight", "options": ["continuous", "lines"] },
+        { "key": "cfl", "label": "Compact fluorescent lamp", "options": ["continuous", "lines"] }
+      ]},
+      { "type": "text", "name": "safety", "label": "A bright source you must not look at", "long": true },
+      { "type": "text", "name": "community", "label": "One community use", "long": true }
+    ]},
+    { "id": "wrap", "title": "Wrap", "teach": "Connect the sky with light in a few sentences.", "fields": [{ "type": "text", "name": "response", "label": "Sky and light", "long": true }] }
+  ]
+}

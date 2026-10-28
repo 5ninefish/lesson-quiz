@@ -11,7 +11,8 @@ export type HelpTopic =
   | "results"
   | "missing"
   | "health"
-  | "wizard";
+  | "wizard"
+  | "lessons";
 
 const HELP: Record<HelpTopic, { title: string; body: string }> = {
   start: {
@@ -154,6 +155,22 @@ const HELP: Record<HelpTopic, { title: string; body: string }> = {
       "5. Read the changes, then Save assignments (existing cohort) or Launch (new cohort).",
       "",
       "Saving writes the live student workbook. It asks you to confirm first.",
+      "",
+      "Teaching lessons are a separate list. Use Edit lessons. Turning a lesson on does not open or close its PRE or POST.",
+    ].join("\n"),
+  },
+  lessons: {
+    title: "Lessons",
+    body: [
+      "Register published lessons once. That writes the catalog. It does not assign a lesson to a cohort.",
+      "",
+      "Edit lessons on a program to choose which teaching lessons that cohort sees, the order, and the dates. Require a submitted PRE only when you check that box.",
+      "",
+      "Assessment release stays on Releases. A support save on a lesson does not use a test attempt.",
+      "",
+      "Sustainability has no official assessment link. The 3D printing and coral test keeps its own name and history.",
+      "",
+      "The table under the form is lesson participation for the program selected at the top.",
     ].join("\n"),
   },
 };

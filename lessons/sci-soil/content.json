@@ -1,0 +1,59 @@
+{
+  "lessonId": "sci-soil@2026-10",
+  "title": "Soil",
+  "topics": [
+    { "id": "start", "title": "Start", "teach": "Read the route. The pre-check is the official assessment on your program page.", "fields": [{ "type": "ready", "label": " I have read the route" }] },
+    { "id": "texture", "title": "Texture", "teach": "Sand is the largest of the three. Silt is in the middle. Clay is the smallest. A human hair is about sand, a spider web about silt, and cornstarch about clay.", "fields": [
+      { "type": "rank", "name": "order", "label": "Particle", "items": ["sand", "silt", "clay"] },
+      { "type": "choices", "name": "matches", "items": [
+        { "key": "hair", "label": "Human hair", "options": ["sand", "silt", "clay"] },
+        { "key": "web", "label": "Spider web", "options": ["sand", "silt", "clay"] },
+        { "key": "starch", "label": "Cornstarch", "options": ["sand", "silt", "clay"] }
+      ]},
+      { "type": "text", "name": "reason", "label": "Why clay holds water", "long": true }
+    ]},
+    { "id": "ribbon", "title": "Ribbon", "teach": "A ribbon longer than 2 inches is clayey. From 1 to 2 inches is clay loam. A lump that holds its shape but makes no ribbon is silty loam. A lump that falls apart is sandy.", "fields": [
+      { "type": "select", "name": "prediction", "label": "Your prediction for the rough lump", "options": ["sandy", "silty loam", "clay loam", "clayey"] },
+      { "type": "choices", "name": "samples", "items": [
+        { "key": "A", "label": "Sample A", "options": ["sandy", "silty loam", "clay loam", "clayey"] },
+        { "key": "B", "label": "Sample B", "options": ["sandy", "silty loam", "clay loam", "clayey"] },
+        { "key": "C", "label": "Sample C", "options": ["sandy", "silty loam", "clay loam", "clayey"] },
+        { "key": "D", "label": "Sample D", "options": ["sandy", "silty loam", "clay loam", "clayey"] }
+      ]},
+      { "type": "text", "name": "note", "label": "What a longer ribbon tells you about clay", "long": true }
+    ]},
+    { "id": "water", "title": "Water", "teach": "Slower than 0.2 inches in an hour is clayey. From 0.2 to 6 inches in an hour is silty. Faster than 6 inches in an hour is sandy. Wetland kalo grows best where water stays.", "fields": [
+      { "type": "select", "name": "prediction", "label": "A long sticky ribbon means water moves", "options": ["slow", "fast"] },
+      { "type": "choices", "name": "rates", "items": [
+        { "key": "A", "label": "Rate A", "options": ["clayey", "silty", "sandy"] },
+        { "key": "B", "label": "Rate B", "options": ["clayey", "silty", "sandy"] },
+        { "key": "C", "label": "Rate C", "options": ["clayey", "silty", "sandy"] }
+      ]},
+      { "type": "text", "name": "wetland", "label": "Which texture wetland kalo needs, and what the water does", "long": true }
+    ]},
+    { "id": "slope", "title": "Slope", "teach": "Up to 8 percent is slight. From 8 percent through 15 percent is moderate. More than 15 percent is extreme.", "fields": [
+      { "type": "choices", "name": "bands", "items": [
+        { "key": "low", "label": "4 percent", "options": ["slight", "moderate", "extreme"] },
+        { "key": "mid", "label": "11 percent", "options": ["slight", "moderate", "extreme"] },
+        { "key": "high", "label": "20 percent", "options": ["slight", "moderate", "extreme"] }
+      ]},
+      { "type": "text", "name": "extreme", "label": "What an extreme slope does, or how a terrace changes it", "long": true },
+      { "type": "text", "name": "flat", "label": "What to do when water ponds on flat land", "long": true }
+    ]},
+    { "id": "life", "title": "Life", "teach": "White fuzzy threads are the fungus group. A small animal with jointed legs is the insect group. A soft body making a tunnel is the worm group.", "fields": [
+      { "type": "choices", "name": "cards", "items": [
+        { "key": "fuzzy", "label": "White fuzzy threads", "options": ["fungus", "insect", "worm"] },
+        { "key": "legs", "label": "Jointed legs", "options": ["fungus", "insect", "worm"] },
+        { "key": "tunnel", "label": "A soft body making a tunnel", "options": ["fungus", "insect", "worm"] }
+      ]},
+      { "type": "text", "name": "role", "label": "One job a named soil organism does for plants", "long": true }
+    ]},
+    { "id": "land", "title": "Land", "teach": "For most plants, silty soil holds a useful amount of water. Sandy soil usually needs clay or other organic material. Clay soil usually needs larger particles so water can move.", "fields": [
+      { "type": "select", "name": "texture", "label": "Usual texture for most plants", "options": ["silty", "depends", "sandy"] },
+      { "type": "text", "name": "sandy", "label": "What you add to sandy soil", "long": true },
+      { "type": "text", "name": "clay", "label": "What you add to clay soil", "long": true },
+      { "type": "text", "name": "severe", "label": "What a severe slope needs", "long": true }
+    ]},
+    { "id": "wrap", "title": "Wrap", "teach": "A mahiʻai checks soil texture, slope, and soil organisms before choosing the crop and the water.", "fields": [{ "type": "text", "name": "response", "label": "Texture, slope, and living soil", "long": true }] }
+  ]
+}

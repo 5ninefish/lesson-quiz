@@ -51,6 +51,9 @@ export async function loadRawWorkbook(signal?: AbortSignal): Promise<RawWorkbook
     programStudents: pick("programStudents"),
     programTests: pick("programTests"),
     programStudentState: pick("programStudentState"),
+    lessonCatalog: pick("lessonCatalog"),
+    programLessons: pick("programLessons"),
+    lessonProgress: pick("lessonProgress"),
   };
 }
 

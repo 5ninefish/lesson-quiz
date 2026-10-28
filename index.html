@@ -120,6 +120,16 @@
   .lesson-btn:hover:not(:disabled) { border-color: var(--primary); background: #eff6ff; }
   .lesson-btn:disabled { opacity: .5; cursor: not-allowed; }
 
+  .teach-card {
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    background: var(--card);
+    padding: .9rem 1rem;
+  }
+  .teach-card h3 { margin: 0 0 .35rem; font-size: 1rem; }
+  .teach-actions { display: flex; flex-wrap: wrap; gap: .45rem; margin-top: .55rem; }
+  .teach-actions button { flex: 1 1 8rem; }
+
   .lesson-badge {
     font-size: .75rem;
     font-weight: 700;
@@ -420,6 +430,7 @@ function freshState() {
     pendingPhaseSpecified: params.phaseSpecified,
     tryCounts: {},
     tests: [],
+    lessons: [],
     testsLoaded: false,
     questions: [],
     timerInterval: null,
@@ -492,6 +503,7 @@ async function login() {
     state.password = p;
     state.tryCounts = r.allTries || {};
     state.tests = r.tests || [];
+    state.lessons = r.lessons || [];
     state.testsLoaded = Array.isArray(r.tests);
     if (r.programId) state.programId = r.programId;
     if (r.needProgram && r.programs && r.programs.length) {
@@ -537,6 +549,7 @@ function showProgramPicker(programs, names) {
       const r = await api({ action: 'get_tries', username: state.username, password: state.password, programId: id });
       if (r.error) { setError('lesson-select-error', friendlyError(r.error)); return; }
       state.tests = r.tests || [];
+      state.lessons = r.lessons || [];
       state.testsLoaded = Array.isArray(r.tests);
       state.tryCounts = r.allTries || {};
       showLessons();
@@ -567,11 +580,82 @@ function maybeOpenPendingTest() {
   startLesson(hit.lesson || hit.testId, hit.testId, phaseOf(hit.phase));
 }
 
+function assessmentLabel(card) {
+  if (!card || !card.linked) return 'Not linked';
+  if (card.state === 'not_assigned') return 'Not assigned';
+  if (card.state === 'done') return 'Complete';
+  if (card.state === 'upcoming') return 'Upcoming';
+  if (card.state === 'locked') return 'Closed';
+  if (card.state === 'unavailable') return 'Unavailable';
+  if (!card.tries) return 'Not started';
+  return card.tries + '/' + (card.maxTries || 0);
+}
+
+function coveredByLesson(test) {
+  const phase = phaseOf(test.phase);
+  return (state.lessons || []).some(function (lesson) {
+    const pre = lesson.pre || {};
+    const post = lesson.post || {};
+    return (pre.linked && pre.state !== 'not_assigned' && pre.testId === test.testId && phaseOf(pre.phase) === phase)
+      || (post.linked && post.state !== 'not_assigned' && post.testId === test.testId && phaseOf(post.phase) === phase);
+  });
+}
+
+function openTeachingLesson(lesson) {
+  try {
+    sessionStorage.setItem('hokulani-lesson-session', JSON.stringify({
+      username: state.username,
+      password: state.password,
+      programId: state.programId,
+      lessonId: lesson.lessonId,
+      api: API_URL,
+    }));
+  } catch (e) {}
+  location.href = lesson.url;
+}
+
 function renderLessonGrid() {
   const grid = document.getElementById('lesson-grid');
   grid.innerHTML = '';
+  const lessons = state.lessons || [];
+  lessons.forEach(function (lesson) {
+    const card = document.createElement('article');
+    card.className = 'teach-card';
+    const progress = lesson.progress || { done: 0, total: 0, resumeTopic: '' };
+    const title = document.createElement('h3');
+    title.textContent = lesson.title || lesson.lessonId;
+    const meta = document.createElement('p');
+    meta.textContent = progress.done + ' of ' + progress.total + ' topics' + (progress.resumeTopic ? ' · resume ' + progress.resumeTopic : '');
+    const actions = document.createElement('div');
+    actions.className = 'teach-actions';
+    function phaseButton(label, cardInfo) {
+      const btn = document.createElement('button');
+      btn.type = 'button';
+      btn.className = 'lesson-btn';
+      btn.textContent = label + ' · ' + assessmentLabel(cardInfo);
+      if (!cardInfo || !cardInfo.linked || cardInfo.state === 'not_assigned' || cardInfo.state === 'unlinked') {
+        btn.disabled = true;
+      } else {
+        const blocked = cardInfo.state === 'done' || cardInfo.state === 'upcoming' || cardInfo.state === 'locked' || cardInfo.state === 'unavailable';
+        btn.disabled = blocked;
+        btn.onclick = function () { startLesson(cardInfo.testId, cardInfo.testId, phaseOf(cardInfo.phase)); };
+      }
+      return btn;
+    }
+    const start = document.createElement('button');
+    start.type = 'button';
+    start.className = 'lesson-btn';
+    const started = progress.done > 0 || (lesson.topics || []).some(function (topic) { return topic.status; });
+    start.textContent = started ? 'Resume Lesson' : 'Start Lesson';
+    start.disabled = lesson.availability === 'locked' || lesson.availability === 'upcoming';
+    start.onclick = function () { openTeachingLesson(lesson); };
+    actions.append(phaseButton('PRE', lesson.pre), start, phaseButton('POST', lesson.post));
+    card.append(title, meta, actions);
+    grid.appendChild(card);
+  });
+
   const tests = state.testsLoaded
-    ? (state.tests || [])
+    ? (state.tests || []).filter(function (test) { return !coveredByLesson(test); })
     : ALL_LESSONS.map(lid => ({
         lesson: lid,
         testId: lid,
@@ -580,7 +664,12 @@ function renderLessonGrid() {
         tries: state.tryCounts[lid] ?? 0,
         maxTries: 2,
       }));
-  if (state.testsLoaded && !tests.length) {
+  if (lessons.length && tests.length) {
+    const heading = document.createElement('h3');
+    heading.textContent = 'Assessments';
+    grid.appendChild(heading);
+  }
+  if (state.testsLoaded && !tests.length && !lessons.length) {
     grid.textContent = 'No assessments are assigned in this program.';
     return;
   }
@@ -632,6 +721,8 @@ function friendlyError(code) {
   if (code === 'need_program') return 'Choose which program to open.';
   if (code === 'test_not_assigned') return 'This test is not assigned in this program.';
   if (code === 'no_program') return 'You are not assigned to a program. Contact your instructor.';
+  if (code === 'pre_required') return 'Complete the PRE for this lesson before the activities. That is a setting on this program.';
+  if (code === 'lesson_not_assigned') return 'This lesson is not assigned in this program.';
   return code ? ('Could not load: ' + code) : 'Unknown error';
 }
 
@@ -914,12 +1005,21 @@ function showSubmitted(r) {
 }
 
 // ── Back to lessons ────────────────────────────────────────────────────────────
-function backToLessons() {
+async function backToLessons() {
   stopTimer();
   state.currentLesson = null;
   state.questions = [];
-  renderLessonGrid();
   show('view-lessons');
+  try {
+    const r = await api({ action: 'get_tries', username: state.username, password: state.password, programId: state.programId });
+    if (!r.error) {
+      state.tests = r.tests || [];
+      state.lessons = r.lessons || [];
+      state.testsLoaded = Array.isArray(r.tests);
+      state.tryCounts = r.allTries || state.tryCounts;
+    }
+  } catch (e) {}
+  renderLessonGrid();
 }
 
 // ── Timer ──────────────────────────────────────────────────────────────────────

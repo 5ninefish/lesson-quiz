@@ -1,0 +1,245 @@
+WEBVTT
+
+1
+00:00:00.600 --> 00:00:01.785
+This is Draw.
+
+2
+00:00:01.835 --> 00:00:06.689
+You'll build three things with blocks: a square, a hexagon, and a pattern.
+
+3
+00:00:07.239 --> 00:00:08.668
+Run shows the path.
+
+4
+00:00:08.718 --> 00:00:11.343
+Check scores the puzzle named on its button.
+
+5
+00:00:11.993 --> 00:00:14.574
+First, the two blocks that steer the path.
+
+6
+00:00:15.024 --> 00:00:18.536
+The path starts at the dot, and the turtle faces right.
+
+7
+00:00:18.886 --> 00:00:21.889
+Move goes forward, the way the turtle faces.
+
+8
+00:00:21.939 --> 00:00:24.723
+Move 100 draws one straight line.
+
+9
+00:00:25.073 --> 00:00:27.263
+Turn changes the way it faces.
+
+10
+00:00:27.313 --> 00:00:31.612
+Turn 90 is a quarter turn, to the left. It draws nothing.
+
+11
+00:00:31.962 --> 00:00:37.010
+Now move 100 again, and the line goes up, because the turtle faces up.
+
+12
+00:00:37.660 --> 00:00:41.690
+To build that, type a number, then press Add move, or Add turn.
+
+13
+00:00:41.740 --> 00:00:43.979
+Each press adds a block at the end.
+
+14
+00:00:44.329 --> 00:00:47.989
+For a square, you could add move, turn, four times over.
+
+15
+00:00:48.039 --> 00:00:49.537
+That's eight blocks.
+
+16
+00:00:49.987 --> 00:00:51.782
+Repeat saves the copying.
+
+17
+00:00:51.832 --> 00:00:55.950
+Clear, then add one move 100, and one turn 90.
+
+18
+00:00:56.300 --> 00:00:58.395
+Run it, and you get one side.
+
+19
+00:00:58.945 --> 00:01:02.554
+Type 4 in the repeat box, and press Wrap in repeat.
+
+20
+00:01:02.604 --> 00:01:05.682
+Everything so far goes inside a repeat 4.
+
+21
+00:01:06.032 --> 00:01:07.099
+Run again.
+
+22
+00:01:07.149 --> 00:01:10.304
+The same square, from three blocks instead of eight.
+
+23
+00:01:10.854 --> 00:01:14.400
+Undo takes back the last block, or unwraps a wrap.
+
+24
+00:01:14.450 --> 00:01:16.290
+Clear empties the program.
+
+25
+00:01:16.940 --> 00:01:20.757
+That's the square task. Predict, then build, then Run.
+
+26
+00:01:20.807 --> 00:01:24.313
+The path starts at the dot, and the first move leaves it.
+
+27
+00:01:24.663 --> 00:01:31.310
+Four quarter turns make 360 degrees, one full turn, so the path closes at the dot.
+
+28
+00:01:31.360 --> 00:01:33.100
+Then press Check the square.
+
+29
+00:01:33.850 --> 00:01:37.644
+Next, a triangle demonstration, not your next puzzle.
+
+30
+00:01:37.694 --> 00:01:41.445
+Repeat 3: move 100, turn 120.
+
+31
+00:01:41.795 --> 00:01:44.299
+The three turns still make one full turn.
+
+32
+00:01:44.349 --> 00:01:48.672
+360 divided by 3 is 120.
+
+33
+00:01:49.022 --> 00:01:51.963
+The turn is the outside change of direction.
+
+34
+00:01:52.013 --> 00:01:54.512
+The inside corner is a different number.
+
+35
+00:01:54.562 --> 00:01:57.236
+Type the turn, not the inside corner.
+
+36
+00:01:57.986 --> 00:02:02.288
+Hide this example before the hexagon. It's a different task.
+
+37
+00:02:02.838 --> 00:02:06.075
+Your practice shape is a hexagon, with six sides.
+
+38
+00:02:06.125 --> 00:02:09.306
+The turns in a closed shape add up to a full turn.
+
+39
+00:02:09.356 --> 00:02:11.455
+Divide by the number of sides.
+
+40
+00:02:11.805 --> 00:02:18.201
+The page can show a program that does not close: repeat 6, move 100, turn 90.
+
+41
+00:02:18.551 --> 00:02:21.605
+Six turns of 90 are more than a full turn.
+
+42
+00:02:21.655 --> 00:02:25.329
+The path runs over itself, and ends away from the dot.
+
+43
+00:02:25.879 --> 00:02:29.054
+Now you try. What turn closes six sides?
+
+44
+00:02:29.104 --> 00:02:31.931
+Build it, Run it, and check that it closes.
+
+45
+00:02:35.881 --> 00:02:38.608
+Last, a pattern inspired by a rose.
+
+46
+00:02:38.658 --> 00:02:41.845
+It's geometric, not a simulation of weaving.
+
+47
+00:02:42.195 --> 00:02:44.868
+Vary the repeat, the move, or the turn.
+
+48
+00:02:44.918 --> 00:02:48.592
+Predict what will change, Run, then say what you changed.
+
+49
+00:02:49.142 --> 00:02:53.556
+Here's one start: move 40, turn 45, in a repeat 8.
+
+50
+00:02:53.606 --> 00:02:57.544
+Eight turns of 45 make one full turn, so it closes.
+
+51
+00:02:57.894 --> 00:03:02.462
+Change just the turn, to 135. Predict, then Run.
+
+52
+00:03:02.512 --> 00:03:03.853
+Now it's a star.
+
+53
+00:03:03.903 --> 00:03:08.840
+Eight turns of 135 go around three times, and still close.
+
+54
+00:03:09.390 --> 00:03:14.538
+Or wrap twice: a square, then turn 30, all inside a repeat 12.
+
+55
+00:03:14.588 --> 00:03:16.473
+That makes a ring of squares.
+
+56
+00:03:17.023 --> 00:03:19.158
+It doesn't have to look like a flower.
+
+57
+00:03:19.508 --> 00:03:20.679
+Now you try.
+
+58
+00:03:20.729 --> 00:03:23.713
+Which number will you change, and what do you predict?
+
+59
+00:03:23.763 --> 00:03:27.181
+Run it, write what changed, and press Check the pattern.
+
+60
+00:03:31.131 --> 00:03:34.919
+Each puzzle keeps its own result. The blocks are the program.
+
+61
+00:03:34.969 --> 00:03:37.086
+The drawing is the output.

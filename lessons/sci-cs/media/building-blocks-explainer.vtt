@@ -1,0 +1,77 @@
+WEBVTT
+
+1
+00:00:00.600 --> 00:00:04.001
+Every program is built from a few simple building blocks.
+
+2
+00:00:04.051 --> 00:00:06.346
+Let's find them in everyday life.
+
+3
+00:00:06.996 --> 00:00:10.758
+First, sequence. Shoes on, then walk out, then done.
+
+4
+00:00:11.308 --> 00:00:14.335
+A sequence is actions in a specific order.
+
+5
+00:00:14.985 --> 00:00:18.236
+Swap two steps, and you're out the door without your shoes.
+
+6
+00:00:18.286 --> 00:00:20.967
+A list in the wrong order is still a sequence.
+
+7
+00:00:21.017 --> 00:00:23.092
+It's just not the one you wanted.
+
+8
+00:00:24.042 --> 00:00:28.218
+Next, a loop. Stir, stir, stir, until the sauce is thick.
+
+9
+00:00:28.868 --> 00:00:31.230
+The stirring is the repeated body.
+
+10
+00:00:31.280 --> 00:00:34.271
+And "until thick" is the stopping condition.
+
+11
+00:00:35.121 --> 00:00:38.816
+Now, a conditional. If it's raining, take an umbrella.
+
+12
+00:00:38.866 --> 00:00:40.461
+Otherwise, leave it.
+
+13
+00:00:41.211 --> 00:00:43.011
+The rain is the condition.
+
+14
+00:00:43.061 --> 00:00:46.231
+Taking the umbrella, or leaving it, is the action.
+
+15
+00:00:47.081 --> 00:00:51.904
+Finally, a program: instructions expressed so a machine can run them.
+
+16
+00:00:52.454 --> 00:00:55.096
+A recipe on paper is an algorithm.
+
+17
+00:00:55.146 --> 00:00:59.603
+That same recipe, written so a machine can follow it, is a program.
+
+18
+00:01:00.553 --> 00:01:03.240
+Sequence, loop, conditional, program.
+
+19
+00:01:03.290 --> 00:01:06.323
+Look for them in the instructions around you.

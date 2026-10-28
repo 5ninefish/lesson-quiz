@@ -10,7 +10,7 @@ export type CodeRuntime = {
 };
 
 export function loadCode(book: MockBook, options: { failBatch?: boolean } = {}): CodeRuntime & Record<string, unknown> {
-  const source = fs.readFileSync(path.resolve("Code.gs"), "utf8");
+  const source = [fs.readFileSync(path.resolve("Code.gs"), "utf8"), fs.readFileSync(path.resolve("LessonBridge.gs"), "utf8")].join("\n");
   const batchCalls = { n: 0 };
   const context: Record<string, unknown> = {
     console,

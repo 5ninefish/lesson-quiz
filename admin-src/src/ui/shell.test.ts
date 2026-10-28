@@ -39,6 +39,8 @@ function opts(over: Partial<Parameters<typeof renderShell>[0]> = {}) {
     onDuplicate: () => {},
     onImportRoster: () => {},
     onResetCycle: () => {},
+    onSaveLessons: () => {},
+    onRegisterLessons: () => {},
     ...over,
   };
   renderShell(o);
@@ -98,6 +100,8 @@ describe("search input", () => {
         onDuplicate: () => {},
         onImportRoster: () => {},
         onResetCycle: () => {},
+        onSaveLessons: () => {},
+        onRegisterLessons: () => {},
       });
     };
     draw();

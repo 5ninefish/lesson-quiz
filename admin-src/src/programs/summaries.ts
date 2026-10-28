@@ -63,6 +63,8 @@ export function filterSnapshot(snap: DashboardSnapshot, programId: string): Dash
     })),
     attempts: snap.attempts.filter((a) => attemptInProgram(a, programId)),
     results: snap.results.filter((r) => r.programId === programId),
+    programLessons: (snap.programLessons || []).filter((row) => row.programId === programId),
+    lessonProgress: (snap.lessonProgress || []).filter((row) => row.programId === programId),
     missing,
   };
 }

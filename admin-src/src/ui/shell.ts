@@ -8,6 +8,7 @@ import { toCsv, downloadCsv } from "../csv";
 import { el } from "./dom";
 import { openHelp, pageHeading } from "./help";
 import { renderPrograms } from "./programs";
+import { renderLessons, type LessonDraft } from "./lessons";
 import { emptyWizard, renderWizard, type WizardState } from "./program-wizard";
 import { pageOf, parseRosterPaste, type RosterImportRow } from "../programs/roster-import";
 import { studentTestUrl } from "../programs/urls";
@@ -27,7 +28,8 @@ export type Screen =
   | "attempts"
   | "results"
   | "missing"
-  | "health";
+  | "health"
+  | "lessons";
 
 export type ShellOpts = {
   snap: DashboardSnapshot | null;
@@ -58,6 +60,8 @@ export type ShellOpts = {
   onDuplicate: (id: string) => void;
   onImportRoster: (rows: RosterImportRow[]) => void;
   onResetCycle: (username: string, testId: string) => void;
+  onSaveLessons: (programId: string, lessons: LessonDraft[]) => void;
+  onRegisterLessons: () => void;
 };
 
 let onSearchCb: (q: string) => void = () => {};
@@ -78,6 +82,8 @@ let onArchiveCb: (id: string) => void = () => {};
 let onDuplicateCb: (id: string) => void = () => {};
 let onImportRosterCb: (rows: RosterImportRow[]) => void = () => {};
 let onResetCycleCb: (username: string, testId: string) => void = () => {};
+let onSaveLessonsCb: (programId: string, lessons: LessonDraft[]) => void = () => {};
+let onRegisterLessonsCb: () => void = () => {};
 let chromeReady = false;
 let rosterPage = 1;
 let rosterQuery = "";
@@ -283,6 +289,7 @@ function mountChrome(): void {
     ["attempts", "Attempts"],
     ["results", "Results"],
     ["missing", "Missing tests"],
+    ["lessons", "Lessons"],
     ["health", "Data Health"],
   ];
   for (const [id, label] of items) {
@@ -447,6 +454,10 @@ function renderMain(opts: ShellOpts): void {
       },
       onWizard: () => onNavCb("wizard"),
       onEdit: (id) => onEditAssignmentsCb(id),
+      onLessons: (id) => {
+        onSelectProgramCb(id);
+        onNavCb("lessons");
+      },
       onArchive: (id) => onArchiveCb(id),
       onDuplicate: (id) => onDuplicateCb(id),
       onInit: () => onInitTablesCb(),
@@ -460,6 +471,15 @@ function renderMain(opts: ShellOpts): void {
       (w) => onWizardChangeCb(w),
       () => onNavCb("programs"),
       (plan) => onLaunchCb(plan),
+    );
+  } else if (opts.screen === "lessons") {
+    renderLessons(
+      main,
+      snap,
+      opts.selectedProgramId || PROGRAM.legacyDefaultProgramId,
+      opts.writeEnabled,
+      (id, lessons) => onSaveLessonsCb(id, lessons),
+      () => onRegisterLessonsCb(),
     );
   } else if (opts.screen === "releases") {
     renderReleases(
@@ -636,6 +656,8 @@ export function renderShell(opts: ShellOpts): void {
   onDuplicateCb = opts.onDuplicate;
   onImportRosterCb = opts.onImportRoster;
   onResetCycleCb = opts.onResetCycle;
+  onSaveLessonsCb = opts.onSaveLessons;
+  onRegisterLessonsCb = opts.onRegisterLessons;
 
   if (!chromeReady || !document.getElementById("instructor-search")) mountChrome();
 

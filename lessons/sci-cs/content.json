@@ -1,0 +1,95 @@
+{
+  "lessonId": "sci-cs@2026-10",
+  "title": "Computer Science",
+  "topics": [
+    {
+      "id": "start",
+      "title": "Start",
+      "teach": "You will make a drawing run by a program and a three-screen app. Weaving is the shared example, not a weaving certificate. Read the route, then start the pre-check.",
+      "fields": [{ "type": "ready", "label": " I have read the route" }]
+    },
+    {
+      "id": "algorithms",
+      "title": "Algorithms",
+      "teach": "An algorithm is a sequence of instructions for a task. A program is instructions a computer can execute. Write a familiar sequence, revise one vague step, then sort the card stack, the blocks, and the swapped cards.",
+      "video": "media/algorithm-or-program-explainer.mp4",
+      "vtt": "media/algorithm-or-program-explainer.vtt",
+      "transcript": "media/algorithm-or-program-explainer.md",
+      "fields": [
+        { "type": "lines", "name": "steps", "count": 3, "label": "Step" },
+        { "type": "text", "name": "revision", "label": "Revise one vague step", "long": true },
+        { "type": "choices", "name": "placed", "items": [
+          { "key": "cards", "label": "Card stack a person can follow", "options": ["person", "program"] },
+          { "key": "blocks", "label": "Blocks a machine can run", "options": ["person", "program"] },
+          { "key": "wrong_order", "label": "A swapped list", "options": ["person", "program"] }
+        ]},
+        { "type": "text", "name": "reason", "label": "Why did you choose that category?", "long": true }
+      ]
+    },
+    {
+      "id": "blocks",
+      "title": "Building blocks",
+      "teach": "Sequence, loop, conditional, and program are different jobs. Shoes then walking is a sequence. Stirring until thick is a loop. An umbrella when it rains is a conditional. A recipe a machine can run is a program.",
+      "video": "media/building-blocks-explainer.mp4",
+      "vtt": "media/building-blocks-explainer.vtt",
+      "transcript": "media/building-blocks-explainer.md",
+      "fields": [
+        { "type": "choices", "name": "tags", "items": [
+          { "key": "brush", "label": "Brush, then put the shoes away", "options": ["sequence", "loop", "conditional", "program"] },
+          { "key": "stir", "label": "Stir until thick", "options": ["sequence", "loop", "conditional", "program"] },
+          { "key": "rain", "label": "An umbrella when it rains", "options": ["sequence", "loop", "conditional", "program"] },
+          { "key": "recipe", "label": "A recipe a machine can run", "options": ["sequence", "loop", "conditional", "program"] }
+        ]},
+        { "type": "select", "name": "repeated", "label": "In the rice example, what repeats?", "options": ["rinse", "serve"] },
+        { "type": "select", "name": "decision", "label": "What does the decision check?", "options": ["hot", "cold"] },
+        { "type": "text", "name": "conditional", "label": "Write one everyday if", "long": true }
+      ]
+    },
+    {
+      "id": "weave",
+      "title": "Weave",
+      "teach": "This is virtual. No real leaves are needed. Save a proposed order and one dependency. The full weave order is still under review. Then order boil, bag, pour, and drink from the stated prerequisites.",
+      "video": "media/weave-explainer.mp4",
+      "vtt": "media/weave-explainer.vtt",
+      "transcript": "media/weave-explainer.md",
+      "photos": ["media/hala-leaf.jpg", "media/lauhala-strip.jpg", "media/lauhala-rolling.jpg", "media/lauhala-rose.jpg", "media/rose-moon.png", "media/rose-pentagon.png", "media/rose-sun.png", "media/rose-triangle.png", "media/rose-slash.png", "media/rose-cloud.png", "media/rose-heart.png", "media/rose-lightning.png", "media/rose-cube.png", "media/rose-cylinder.png"],
+      "fields": [
+        { "type": "rank", "name": "rose_order", "label": "Photo", "items": ["moon", "pentagon", "sun", "triangle", "slash", "cloud", "heart", "lightning", "cube", "cylinder"] },
+        { "type": "text", "name": "dependency", "label": "Which card has to come first, and what changes in the leaf?", "long": true },
+        { "type": "select", "name": "first_card", "label": "First of the two cards you are comparing", "options": ["moon", "pentagon", "sun", "triangle", "slash", "cloud", "heart", "lightning", "cube", "cylinder"] },
+        { "type": "select", "name": "second_card", "label": "Second of those two cards", "options": ["moon", "pentagon", "sun", "triangle", "slash", "cloud", "heart", "lightning", "cube", "cylinder"] },
+        { "type": "rank", "name": "transfer_order", "label": "Tea", "items": ["boil", "bag", "pour", "drink"] }
+      ]
+    },
+    {
+      "id": "parts",
+      "title": "Parts",
+      "teach": "The whole ordered list is the algorithm. Fold and roll repeat until about 4 inches remain. The cube card is the if. A longer leaf changes the number of repeats. The 4-inch check stays.",
+      "fields": [{ "type": "parts" }]
+    },
+    {
+      "id": "draw",
+      "title": "Draw",
+      "teach": "The square is a repeat of equal moves and quarter turns. A triangle is only the demonstration of an exterior turn. The practice shape after that is a hexagon. The pattern is inspired by a rose and is not a weaving simulation.",
+      "video": "media/draw-explainer.mp4",
+      "vtt": "media/draw-explainer.vtt",
+      "transcript": "media/draw-explainer.md",
+      "fields": [{ "type": "draw" }]
+    },
+    {
+      "id": "app",
+      "title": "App",
+      "teach": "The reference app is What is lauhala, How the rose is made, then Finished rose, with a way back. A button press is an event. Walk screen 1 to 2 to 3 and back to 1 in the preview.",
+      "video": "media/app-explainer.mp4",
+      "vtt": "media/app-explainer.vtt",
+      "transcript": "media/app-explainer.md",
+      "fields": [{ "type": "app" }]
+    },
+    {
+      "id": "wrap",
+      "title": "Wrap",
+      "teach": "Connect the algorithm, the instructions the computer executed, and the output. One short connection is enough.",
+      "fields": [{ "type": "text", "name": "response", "label": "What was the algorithm, what did the computer execute, and what was the output?", "long": true }]
+    }
+  ]
+}

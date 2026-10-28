@@ -1,0 +1,59 @@
+{
+  "lessonId": "sci-sust@2026-10",
+  "title": "Sustainability",
+  "topics": [
+    { "id": "start", "title": "Start", "teach": "This lesson is not the 3D printing and coral assessment. Read the route. An official PRE or POST appears on your program page only when an instructor links one.", "fields": [{ "type": "ready", "label": " I have read the route" }] },
+    { "id": "coral", "title": "Coral", "teach": "Coral is an animal. Algae sharing food they made is symbiosis. Tentacles sweeping food from the water is the animal capturing food.", "fields": [
+      { "type": "text", "name": "kind", "label": "What kind of living thing coral is, and how it gets food", "long": true },
+      { "type": "text", "name": "care", "label": "One way a reef cares for other living things", "long": true },
+      { "type": "choices", "name": "partner", "items": [
+        { "key": "algae", "label": "Algae sharing food they made", "options": ["symbiosis", "animal"] },
+        { "key": "capture", "label": "Tentacles sweeping food from the water", "options": ["symbiosis", "animal"] }
+      ]}
+    ]},
+    { "id": "species", "title": "Species", "teach": "Use the features. Wave and verrucae point to rose coral. Papillae point to rice coral. Fingers in a calm bay point to finger coral. One free disk is mushroom coral.", "fields": [
+      { "type": "choices", "name": "matched", "items": [
+        { "key": "rose", "label": "Rose", "options": ["meandrina", "capitata", "compressa", "scutaria"] },
+        { "key": "rice", "label": "Rice", "options": ["meandrina", "capitata", "compressa", "scutaria"] },
+        { "key": "finger", "label": "Finger", "options": ["meandrina", "capitata", "compressa", "scutaria"] },
+        { "key": "disk", "label": "One free disk", "options": ["meandrina", "capitata", "compressa", "scutaria"] }
+      ]}
+    ]},
+    { "id": "harm", "title": "Harm", "teach": "Plain water leaves the chalk looking the same. An acid changes calcium carbonate in a way you do not undo.", "fields": [
+      { "type": "choices", "name": "sorted", "items": [
+        { "key": "water", "label": "Plain water", "options": ["stays", "chemical"] },
+        { "key": "acid", "label": "Acid", "options": ["stays", "chemical"] }
+      ]},
+      { "type": "text", "name": "change", "label": "What the acid does, and whether you can undo it", "long": true }
+    ]},
+    { "id": "record", "title": "Record", "teach": "A card has a role, who depends on it, the conditions, and where it lives. A clean model for another app is mesh. A photorealistic scene is splat. Move slowly and cover above and below.", "fields": [
+      { "type": "text", "name": "role", "label": "Role on the reef", "long": true },
+      { "type": "text", "name": "depend", "label": "Who depends on it", "long": true },
+      { "type": "text", "name": "conditions", "label": "Conditions", "long": true },
+      { "type": "text", "name": "where", "label": "Where it lives", "long": true },
+      { "type": "choices", "name": "scan", "items": [
+        { "key": "precise", "label": "A clean model for another app", "options": ["mesh", "splat"] },
+        { "key": "scene", "label": "A photorealistic scene with the background", "options": ["mesh", "splat"] }
+      ]},
+      { "type": "text", "name": "habits", "label": "How you move the scanner", "long": true },
+      { "type": "choices", "name": "mapped", "items": [
+        { "key": "bounce", "label": "Timing the bounce of light", "options": ["lidar", "photogrammetry"] },
+        { "key": "photos", "label": "Stacking many photos", "options": ["lidar", "photogrammetry"] }
+      ]}
+    ]},
+    { "id": "shape", "title": "Shape", "teach": "Name a change in form and a condition such as wave, depth, or light. The species stays the same.", "fields": [
+      { "type": "text", "name": "changes", "label": "What changes in the form, and which condition", "long": true },
+      { "type": "text", "name": "stays", "label": "What stays the same", "long": true },
+      { "type": "choices", "name": "placed", "items": [
+        { "key": "lace", "label": "Lace coral that stays shallow", "options": ["shallow", "protected"] },
+        { "key": "fingerbay", "label": "Finger coral in a calm bay", "options": ["shallow", "protected"] }
+      ]}
+    ]},
+    { "id": "change", "title": "Change", "teach": "Scientists map a reef for health, for events such as runoff, and for which species are there. A map can cover more area than one swim.", "fields": [
+      { "type": "select", "name": "why", "label": "Why map a reef?", "options": ["all", "one"] },
+      { "type": "text", "name": "advantage", "label": "One advantage of a map", "long": true },
+      { "type": "text", "name": "difference", "label": "One visible difference you would look for", "long": true }
+    ]},
+    { "id": "wrap", "title": "Wrap", "teach": "Connect the animal, a condition of the place, and the scan or the map.", "fields": [{ "type": "text", "name": "response", "label": "Animal, place, and record", "long": true }] }
+  ]
+}

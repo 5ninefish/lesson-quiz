@@ -12,6 +12,7 @@ import { reconcileOrphans } from "../reports/data-health";
 import { FORBIDDEN_VIEW_KEYS, PROGRAM, PROGRAM_TABLES } from "../config";
 import type { SheetValues } from "./cells";
 import { parsePrograms, parseProgramStudents, parseProgramStudentState, parseProgramTests } from "../programs/parser";
+import { parseLessonCatalog, parseLessonProgress, parseProgramLessons } from "./lessons";
 import { attributeResults, countByAttribution } from "../programs/attribution";
 
 export type RawWorkbook = {
@@ -25,6 +26,9 @@ export type RawWorkbook = {
   programStudents?: SheetValues;
   programTests?: SheetValues;
   programStudentState?: SheetValues;
+  lessonCatalog?: SheetValues;
+  programLessons?: SheetValues;
+  lessonProgress?: SheetValues;
 };
 
 export function buildSnapshot(raw: RawWorkbook, now = new Date()): DashboardSnapshot {
@@ -99,6 +103,9 @@ export function buildSnapshot(raw: RawWorkbook, now = new Date()): DashboardSnap
     missingProgramTables,
     legacyAttributedResults: countByAttribution(attributed, "legacy_default"),
     unassignedResults: countByAttribution(attributed, "unassigned"),
+    lessonCatalog: parseLessonCatalog(raw.lessonCatalog || []),
+    programLessons: parseProgramLessons(raw.programLessons || []),
+    lessonProgress: parseLessonProgress(raw.lessonProgress || []),
   };
   assertSafeSnapshot(snap);
   return snap;

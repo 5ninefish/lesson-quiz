@@ -1,0 +1,49 @@
+WEBVTT
+
+00:00:00.600 --> 00:00:03.111
+Ever followed a list of steps to make something?
+
+00:00:03.161 --> 00:00:06.858
+Native Hawaiian weavers have done it for generations.
+
+00:00:07.208 --> 00:00:13.444
+Lauhala is the dried leaf of the hala tree, woven into mats, baskets, even sails.
+
+00:00:13.994 --> 00:00:19.871
+To make a rose, a weaver goes step by step: leaf, strip, fold and roll, rose.
+
+00:00:20.521 --> 00:00:23.087
+A sequence of steps that finishes a task?
+
+00:00:23.137 --> 00:00:24.596
+That's an algorithm.
+
+00:00:24.646 --> 00:00:28.204
+And anyone can follow one, a person or a machine.
+
+00:00:28.954 --> 00:00:32.630
+Now let's look at an algorithm a computer can execute.
+
+00:00:32.980 --> 00:00:37.013
+A program is an algorithm written so a computer can run it.
+
+00:00:37.063 --> 00:00:40.324
+Under When run, each block is one instruction.
+
+00:00:40.674 --> 00:00:43.958
+Press Run, and the tablet does every step on its own.
+
+00:00:44.008 --> 00:00:46.485
+Nobody has to choose what comes next.
+
+00:00:47.535 --> 00:00:51.173
+But what if we swap two steps? Now the path goes wrong.
+
+00:00:52.323 --> 00:00:56.375
+Is it still an algorithm? Yes. Just a wrong one.
+
+00:00:57.125 --> 00:00:58.880
+So, the steps come first.
+
+00:00:58.930 --> 00:01:02.815
+A program is steps written so a computer can run them.

@@ -30,6 +30,7 @@ export function renderPrograms(
     onOpen: (id: string) => void;
     onWizard: () => void;
     onEdit: (programId: string) => void;
+    onLessons: (programId: string) => void;
     onArchive: (id: string) => void;
     onDuplicate: (id: string) => void;
     onInit: () => void;
@@ -112,6 +113,8 @@ export function renderPrograms(
     copyI.onclick = () => void copyText(instructorProgramUrl(program.programId));
     const edit = el("button", { type: "button" }, "Edit assignments");
     edit.onclick = () => opts.onEdit(program.programId);
+    const lessons = el("button", { type: "button" }, "Edit lessons");
+    lessons.onclick = () => opts.onLessons(program.programId);
     const arch = el("button", { type: "button" }, "Archive");
     arch.disabled = program.status === "ARCHIVED";
     arch.onclick = () => {
@@ -123,7 +126,7 @@ export function renderPrograms(
     };
     const dup = el("button", { type: "button" }, "Duplicate configuration");
     dup.onclick = () => opts.onDuplicate(program.programId);
-    actions.append(open, copyS, copyI, edit, arch, dup);
+    actions.append(open, copyS, copyI, edit, lessons, arch, dup);
     card.append(actions);
     main.append(card);
   }

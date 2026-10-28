@@ -167,6 +167,9 @@ function doPost(e) {
     if (action === 'get_tries' || action === 'login') {
       return getTries(username, password, programId);
     }
+    if (action === 'lesson_progress' || action === 'lesson_state') {
+      return lessonProgressPost_(body);
+    }
     if (action === 'lesson_list') {
       return respond({ error: 'unknown_action' });
     }
@@ -183,7 +186,7 @@ function doGet(e) {
       googleClientId: PropertiesService.getScriptProperties().getProperty('GOOGLE_OAUTH_CLIENT_ID') || '',
     });
   }
-  return respond({ ok: true, service: 'lesson-quiz', contract: 'dashboard-t9' });
+  return respond({ ok: true, service: 'lesson-quiz', contract: 'dashboard-t9', teaching: 'v1' });
 }
 
 function isSpreadsheetEditorEmail_(email) {
@@ -446,6 +449,7 @@ function getTries(username, password, programId) {
       programs: ctx.memberships,
       programNames: programNames_(ss, ctx.memberships),
       tests: [],
+      lessons: [],
       allTries: {},
     });
   }
@@ -455,6 +459,7 @@ function getTries(username, password, programId) {
     ok: true,
     allTries: allTriesFor(student),
     tests: tests,
+    lessons: buildTeachingLessonsPayload_(ss, student, ctx.programId, tests),
     timeLimit: QUIZ_TIME_SECONDS,
     programId: ctx.programId || '',
   });
@@ -1535,6 +1540,8 @@ function dispatchCommand_(ss, auth, body) {
   if (command === 'archive_program') return commandArchive_(ss, body);
   if (command === 'init_sheets') return commandInitSheets_(ss);
   if (command === 'seed_catalog') return commandSeedCatalog_(ss);
+  if (command === 'register_lessons') return commandRegisterLessons_(ss, auth);
+  if (command === 'save_program_lessons') return commandSaveProgramLessons_(ss, auth, body);
   return { ok: false, error: 'unknown_action' };
 }
 
@@ -1942,7 +1949,7 @@ function commandImportStudents_(ss, body) {
 }
 
 function commandInitSheets_(ss) {
-  const names = ['Programs', 'ProgramStudents', 'ProgramTests', 'ProgramStudentState', 'TestCatalog', 'LessonCatalog', 'ProgramLessons'];
+  const names = ['Programs', 'ProgramStudents', 'ProgramTests', 'ProgramStudentState', 'TestCatalog', 'LessonCatalog', 'ProgramLessons', 'LessonProgress'];
   const ops = [];
   const created = [];
   names.forEach(function (name, index) {

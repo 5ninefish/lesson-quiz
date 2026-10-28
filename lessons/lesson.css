@@ -1,0 +1,15 @@
+body { font-family: Georgia, serif; margin: 0; background: #f6f3ec; color: #1f2933; }
+main { max-width: 46rem; margin: 0 auto; padding: 1.25rem; }
+a { color: #1d4e89; }
+button, input, select, textarea { font: inherit; }
+button { background: #1d4e89; color: white; border: 0; border-radius: 6px; padding: .45rem .7rem; cursor: pointer; }
+button.secondary { background: #e8e0d0; color: #1f2933; }
+nav { display: flex; flex-wrap: wrap; gap: .35rem; margin: .8rem 0; }
+nav button[aria-current="true"] { outline: 2px solid #1d4e89; }
+.topic { background: white; border-radius: 8px; padding: 1rem; }
+label { display: block; margin: .55rem 0; }
+textarea, input[type="text"], input[type="number"], select { width: 100%; box-sizing: border-box; }
+.note { color: #52606d; }
+.cards { display: flex; flex-wrap: wrap; gap: .4rem; }
+.cards img { width: 5.5rem; height: 5.5rem; object-fit: cover; background: #efe8da; }
+video { width: 100%; max-height: 22rem; background: black; }

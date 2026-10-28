@@ -1,0 +1,177 @@
+WEBVTT
+
+1
+00:00:00.600 --> 00:00:01.677
+This is App.
+
+2
+00:00:01.727 --> 00:00:05.384
+The goal: three screens you can walk, including a way back.
+
+3
+00:00:06.034 --> 00:00:09.415
+An app can be a few screens, connected by buttons.
+
+4
+00:00:09.765 --> 00:00:11.583
+A button press is an event.
+
+5
+00:00:11.633 --> 00:00:15.163
+It runs one instruction: go to the screen you chose.
+
+6
+00:00:15.513 --> 00:00:19.441
+The person supplies the tap. The computer runs the program.
+
+7
+00:00:20.291 --> 00:00:24.028
+Here's the reference app. Screen 1: What is lauhala?
+
+8
+00:00:24.078 --> 00:00:27.056
+Button A, How to coil, goes to screen 2.
+
+9
+00:00:27.406 --> 00:00:29.751
+Screen 2: How the rose is made.
+
+10
+00:00:29.801 --> 00:00:32.730
+Button A, See the rose, goes to screen 3.
+
+11
+00:00:32.780 --> 00:00:35.337
+Button B, Back, goes to screen 1.
+
+12
+00:00:35.687 --> 00:00:37.683
+Screen 3: Finished rose.
+
+13
+00:00:37.733 --> 00:00:40.702
+Button A, Start over, goes to screen 1.
+
+14
+00:00:41.552 --> 00:00:44.906
+Now, the editor. Leave Editing screen on 1.
+
+15
+00:00:45.256 --> 00:00:51.386
+Before you type, the preview says Untitled screen, and This screen has no explanation yet.
+
+16
+00:00:51.936 --> 00:00:54.646
+Type a title, and a short explanation.
+
+17
+00:00:54.696 --> 00:00:56.786
+The preview updates as you type.
+
+18
+00:00:57.336 --> 00:01:00.391
+Next, label Button A, and choose where it goes.
+
+19
+00:01:00.441 --> 00:01:02.945
+Here, How to coil goes to screen 2.
+
+20
+00:01:03.295 --> 00:01:08.457
+Button A starts out pointing at screen 1, so check where it goes on every screen.
+
+21
+00:01:09.107 --> 00:01:11.169
+Now change Editing screen to 2.
+
+22
+00:01:11.219 --> 00:01:16.025
+The boxes show that screen's own words, and the preview moves to screen 2.
+
+23
+00:01:16.375 --> 00:01:19.507
+Fill in screen 2 the same way, then screen 3.
+
+24
+00:01:20.057 --> 00:01:23.323
+Button B is optional. Use it for a way back.
+
+25
+00:01:23.373 --> 00:01:26.201
+On screen 2, Back goes to screen 1.
+
+26
+00:01:26.551 --> 00:01:28.871
+Copying the reference app is allowed.
+
+27
+00:01:29.721 --> 00:01:30.842
+Now walk it.
+
+28
+00:01:30.892 --> 00:01:37.320
+Tap the buttons in the preview: screen 1, screen 2, screen 3, then back to screen 1.
+
+29
+00:01:37.670 --> 00:01:40.642
+The line under the preview tells you where you are.
+
+30
+00:01:41.192 --> 00:01:43.780
+The preview uses your destinations.
+
+31
+00:01:43.830 --> 00:01:45.794
+There's no hidden Next order.
+
+32
+00:01:46.344 --> 00:01:50.955
+So if Button A on screen 2 points at screen 2, the preview stays put.
+
+33
+00:01:51.305 --> 00:01:55.200
+That's a bug. To repair it, point Button A at screen 3.
+
+34
+00:01:55.750 --> 00:01:57.622
+Then press Reset the walk.
+
+35
+00:01:57.672 --> 00:02:01.307
+It clears the walk, and the preview goes back to screen 1.
+
+36
+00:02:01.857 --> 00:02:05.206
+Walk it again: 1, 2, 3, and back to 1.
+
+37
+00:02:06.056 --> 00:02:09.857
+Last, write one sentence about a connection, or a repair.
+
+38
+00:02:09.907 --> 00:02:11.690
+Make the sentence yours.
+
+39
+00:02:12.040 --> 00:02:13.211
+Now you try.
+
+40
+00:02:13.261 --> 00:02:16.560
+Which connection, or which repair, will you write about?
+
+41
+00:02:16.610 --> 00:02:18.902
+Pause, and write it in your own words.
+
+42
+00:02:22.852 --> 00:02:24.516
+Then press Check the app.
+
+43
+00:02:25.166 --> 00:02:26.633
+A tap is the event.
+
+44
+00:02:26.683 --> 00:02:30.462
+It runs one instruction: go to the screen you chose.

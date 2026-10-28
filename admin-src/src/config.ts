@@ -32,7 +32,8 @@ export const RANGES = {
   programStudentState: "ProgramStudentState!A:H",
   testCatalog: "TestCatalog!A:G",
   lessonCatalog: "LessonCatalog!A:E",
-  programLessons: "ProgramLessons!A:I",
+  programLessons: "ProgramLessons!A:J",
+  lessonProgress: "LessonProgress!A:I",
 } as const;
 
 export const PROGRAM_TABLES = ["Programs", "ProgramStudents", "ProgramTests", "ProgramStudentState"] as const;

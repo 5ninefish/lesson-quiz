@@ -279,4 +279,52 @@ describe("Apps Script dashboard contract", () => {
     const pinned = (live.getSheetByName("Attempts")?.grid || []).find((row) => row.join(" ").includes(submissionId));
     expect(pinned?.[5]).toBe("30");
   });
+
+  it("records lesson support without using an attempt", () => {
+    const live = book();
+    live.getSheetByName("Programs")!.appendRow(["teach-cs", "Teach CS", "ACTIVE", "", "", "", "", "", ""]);
+    live.getSheetByName("ProgramStudents")!.appendRow(["teach-cs", "ada", "TRUE", "", ""]);
+    const links = live.insertSheet("ProgramLessons");
+    links.appendRow(["ProgramId", "LessonId", "Enabled", "SortOrder", "LessonVersion", "OpenAt", "CloseAt", "UpdatedAtHST", "UpdatedBy", "RequirePre"]);
+    links.appendRow(["teach-cs", "sci-cs@2026-10", "TRUE", "1", "2026-10", "", "", "", "editor", "YES"]);
+    const code = loadCode(live) as unknown as {
+      lessonProgressPost_: (body: unknown) => { getContent: () => string };
+      judgeTeaching_: (lessonId: string, topicId: string, evidence: unknown) => { status: string };
+      getTries: (username: string, password: string, programId: string) => { getContent: () => string };
+    };
+    expect(code.judgeTeaching_("sci-cs@2026-10", "start", { ready: true }).status).toBe("met");
+    expect(code.judgeTeaching_("sci-sust@2026-10", "start", { ready: true }).status).toBe("met");
+    const before = live.getSheetByName("Attempts")!.getLastRow();
+    const blocked = JSON.parse(code.lessonProgressPost_({
+      action: "lesson_progress",
+      username: "ada",
+      password: "secret",
+      programId: "teach-cs",
+      lessonId: "sci-cs@2026-10",
+      topicId: "start",
+      mode: "support",
+    }).getContent());
+    expect(blocked.error).toBe("pre_required");
+    expect(live.getSheetByName("Attempts")!.getLastRow()).toBe(before);
+    links.getRange(2, 10).setValue("NO");
+    const saved = JSON.parse(code.lessonProgressPost_({
+      action: "lesson_progress",
+      username: "ada",
+      password: "secret",
+      programId: "teach-cs",
+      lessonId: "sci-cs@2026-10",
+      topicId: "start",
+      mode: "support",
+    }).getContent());
+    expect(saved.ok).toBe(true);
+    expect(saved.support).toBe(true);
+    expect(live.getSheetByName("Attempts")!.getLastRow()).toBe(before);
+    const progress = live.getSheetByName("LessonProgress")!.grid;
+    expect(progress.some((row) => row[5] === "support" && row[7] === "YES")).toBe(true);
+    const listed = JSON.parse(code.getTries("ada", "secret", "teach-cs").getContent());
+    expect(listed.lessons[0].lessonId).toBe("sci-cs@2026-10");
+    expect(listed.lessons[0].progress.done).toBe(1);
+    expect(listed.lessons[0].pre.linked).toBe(true);
+    expect(listed.tests).toEqual([]);
+  });
 });
