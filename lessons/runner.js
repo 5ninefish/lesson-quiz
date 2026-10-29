@@ -51,8 +51,16 @@
     }).then(function (res) { return res.json(); });
   }
 
+  function currentLesson() {
+    const lessons = remote && remote.lessons || [];
+    for (let i = 0; i < lessons.length; i++) {
+      if (lessons[i] && lessons[i].lessonId === lessonId) return lessons[i];
+    }
+    return null;
+  }
+
   function topicState(id) {
-    const lesson = remote && remote.lessons && remote.lessons[0];
+    const lesson = currentLesson();
     const topics = lesson && lesson.topics || [];
     for (let i = 0; i < topics.length; i++) if (topics[i].id === id) return topics[i];
     return { status: "" };
@@ -352,7 +360,7 @@
     return post({ action: "lesson_state" });
   }).then(function (body) {
     remote = body && body.ok ? body : { lessons: [] };
-    const lesson = remote.lessons && remote.lessons[0];
+    const lesson = currentLesson();
     const resume = lesson && lesson.progress && lesson.progress.resumeTopic;
     const first = (content.topics || []).filter(function (topic) { return topic.id === resume; })[0] || content.topics[0];
     paintNav(first.id);
