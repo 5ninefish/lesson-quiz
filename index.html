@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Lesson Post-Tests</title>
+<title>Hōkūlani</title>
 <style>
   /* ── Reset & base ─────────────────────────────────────────────────── */
   *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
@@ -26,6 +26,8 @@
     background: var(--bg);
     color: var(--text);
     min-height: 100vh;
+  }
+  body.signed-out {
     display: flex;
     align-items: center;
     justify-content: center;
@@ -303,6 +305,72 @@
 
   .hidden { display: none !important; }
 
+  #portal {
+    --hk-bg: light-dark(#f5f4ef, #151c20);
+    --hk-panel: light-dark(#ffffff, #20292f);
+    --hk-ink: light-dark(#17302f, #e5eee9);
+    --hk-muted: light-dark(#566966, #b0c2bb);
+    --hk-line: light-dark(#dce3de, #3c4e4b);
+    --hk-soft: light-dark(#eaf2ed, #2b3b34);
+    --hk-action: light-dark(#145b4c, #9dd7c0);
+    --hk-onaction: light-dark(#ffffff, #102c23);
+    --hk-warn: light-dark(#80501a, #f0ca8b);
+    --hk-warnbg: light-dark(#fff3dd, #3d3425);
+    color: var(--hk-ink);
+    background: var(--hk-bg);
+    color-scheme: light dark;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+  }
+  #portal h1 { font-size: 28px; line-height: 1.18; letter-spacing: -.6px; margin: 0 0 8px; font-weight: 600; color: var(--hk-ink); }
+  #portal h2 { font-size: 19px; margin: 0 0 6px; font-weight: 600; color: var(--hk-ink); }
+  #portal h3 { font-size: 16px; margin: 0 0 8px; font-weight: 600; }
+  #portal p { color: var(--hk-ink); }
+  #portal button, #portal select { font: inherit; color: inherit; }
+  #portal button { cursor: pointer; }
+  #portal button:focus-visible, #portal select:focus-visible { outline: 3px solid var(--hk-action); outline-offset: 3px; }
+  #portal .hk-top { display: flex; align-items: center; gap: 20px; flex-wrap: wrap; background: var(--hk-panel); padding: 18px 24px; border-bottom: 1px solid var(--hk-line); }
+  #portal .hk-brand { letter-spacing: -.6px; font-size: 23px; font-weight: 700; line-height: 1.1; }
+  #portal .hk-brand small { display: block; font-size: 11px; font-weight: 500; letter-spacing: 1.7px; color: var(--hk-muted); margin-top: 5px; }
+  #portal .hk-context { margin-left: auto; display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+  #portal .hk-context label { font-size: 12px; font-weight: 600; }
+  #portal .hk-context select { display: block; margin-top: 4px; min-width: 180px; background: var(--hk-panel); padding: 8px 10px; border: 1px solid var(--hk-line); border-radius: 6px; }
+  #portal .hk-person { border-left: 1px solid var(--hk-line); padding-left: 16px; font-weight: 500; }
+  #portal .hk-person small { display: block; color: var(--hk-muted); font-weight: 400; }
+  #portal .hk-layout { flex: 1; display: grid; grid-template-columns: 166px minmax(0, 1fr); }
+  #portal .hk-side { background: var(--hk-panel); border-right: 1px solid var(--hk-line); padding: 22px 12px; display: flex; flex-direction: column; gap: 5px; }
+  #portal .hk-side button { border: 0; background: transparent; text-align: left; padding: 10px 12px; border-radius: 6px; color: var(--hk-muted); }
+  #portal .hk-side button[aria-current="page"] { background: var(--hk-soft); color: var(--hk-action); font-weight: 600; }
+  #portal .hk-main { padding: 28px; min-width: 0; }
+  #portal .hk-kicker { font-size: 11px; letter-spacing: 1.3px; color: var(--hk-action); font-weight: 600; text-transform: uppercase; margin-bottom: 9px; }
+  #portal .hk-muted { color: var(--hk-muted); }
+  #portal .hk-heading { display: flex; align-items: flex-start; justify-content: space-between; gap: 15px; flex-wrap: wrap; margin-bottom: 24px; }
+  #portal .hk-button, #portal a.hk-button { border: 1px solid var(--hk-line); background: var(--hk-panel); padding: 8px 12px; border-radius: 6px; font-weight: 500; color: inherit; text-decoration: none; }
+  #portal .hk-button.hk-primary { background: var(--hk-action); color: var(--hk-onaction); border-color: var(--hk-action); }
+  #portal .hk-button:disabled { opacity: .65; cursor: default; }
+  #portal .hk-button.hk-link { border: 0; padding: 3px 0; background: transparent; color: var(--hk-action); text-align: left; }
+  #portal .hk-continue { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 20px; align-items: center; padding: 22px; background: var(--hk-soft); border-radius: 9px; margin-bottom: 28px; }
+  #portal .hk-tag { font-size: 11px; display: inline-block; padding: 3px 8px; background: var(--hk-soft); border-radius: 4px; color: var(--hk-action); font-weight: 500; }
+  #portal .hk-tag.hk-warning { background: var(--hk-warnbg); color: var(--hk-warn); }
+  #portal .hk-bar { height: 6px; background: light-dark(#d5e2d9, #41554a); border-radius: 4px; overflow: hidden; margin: 12px 0 7px; }
+  #portal .hk-bar span { display: block; height: 100%; background: var(--hk-action); }
+  #portal .hk-small { font-size: 12px; }
+  #portal .hk-cards { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px; }
+  #portal .hk-card { background: var(--hk-panel); padding: 20px; border: 1px solid var(--hk-line); border-radius: 8px; }
+  #portal .hk-card-top { display: flex; justify-content: space-between; gap: 10px; align-items: center; margin-bottom: 13px; }
+  #portal .hk-index { font-size: 12px; color: var(--hk-muted); font-weight: 500; letter-spacing: .5px; }
+  #portal .hk-phase { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; border-top: 1px solid var(--hk-line); padding-top: 12px; margin: 14px 0; }
+  #portal .hk-phase small { display: block; color: var(--hk-muted); }
+  #portal .hk-footer { padding: 12px 24px; border-top: 1px solid var(--hk-line); background: var(--hk-panel); font-size: 11px; color: var(--hk-muted); display: flex; justify-content: space-between; gap: 10px; flex-wrap: wrap; }
+  #portal .hk-quiz { background: var(--hk-panel); border: 1px solid var(--hk-line); border-radius: 8px; padding: 20px; max-width: 720px; }
+  @media (max-width: 760px) {
+    #portal .hk-layout { grid-template-columns: 1fr; }
+    #portal .hk-side { flex-direction: row; flex-wrap: wrap; border-right: 0; border-bottom: 1px solid var(--hk-line); padding: 9px; }
+    #portal .hk-cards, #portal .hk-continue { grid-template-columns: 1fr; }
+    #portal .hk-main { padding: 16px; }
+  }
+
   footer {
     text-align: center;
     font-size: .75rem;
@@ -311,7 +379,7 @@
   }
 </style>
 </head>
-<body>
+<body class="signed-out">
 
 <!-- ── Configuration ───────────────────────────────────────────────────────── -->
 <script>
@@ -361,36 +429,48 @@ const ALL_LESSONS = ['L1','L2','L3','L4','L5','L6'];
   <button class="btn btn-primary" onclick="login()">Sign In</button>
 </div>
 
-<!-- VIEW: Lesson selector -->
-<div class="card hidden" id="view-lessons">
-  <h2 id="lessons-greeting">Select a Lesson</h2>
-  <p>Choose the test you'd like to take.</p>
-  <div id="lesson-select-error" class="error hidden"></div>
-  <div class="lesson-grid" id="lesson-grid"></div>
-  <button class="btn btn-outline btn-sm" onclick="logout()" style="margin-top:.5rem">Sign Out</button>
-</div>
-
-<!-- VIEW: Quiz -->
-<div class="card hidden" id="view-quiz">
-  <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:1rem">
-    <h2 id="quiz-title" style="margin-bottom:0"></h2>
-    <button class="btn btn-outline btn-sm" onclick="backToLessons()">← Back</button>
+<div id="portal" class="hidden">
+  <header class="hk-top">
+    <div class="hk-brand">Hōkūlani<small>LEARN · EXPLORE · CREATE</small></div>
+    <div class="hk-context">
+      <label id="program-label" class="hidden">Program
+        <select id="program-select" aria-label="Program"></select>
+      </label>
+      <div class="hk-person" id="account-name">Student<small>Student</small></div>
+    </div>
+  </header>
+  <div class="hk-layout">
+    <nav class="hk-side" id="student-nav" aria-label="Student sections"></nav>
+    <main class="hk-main">
+      <div id="view-lessons">
+        <div id="lesson-select-error" class="error hidden"></div>
+        <div id="lesson-grid"></div>
+      </div>
+      <div class="hk-quiz hidden" id="view-quiz">
+        <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:1rem">
+          <h2 id="quiz-title" style="margin-bottom:0"></h2>
+          <button class="hk-button" type="button" onclick="backToLessons()">Back to My Lessons</button>
+        </div>
+        <div id="quiz-timer" class="timer-bar hidden"></div>
+        <div id="quiz-info" class="info hidden"></div>
+        <div id="quiz-error" class="error hidden"></div>
+        <form id="quiz-form" onsubmit="return false">
+          <div id="quiz-questions"></div>
+          <div id="quiz-loading" class="hidden"><div class="spinner"></div></div>
+          <button class="hk-button hk-primary" id="submit-btn" type="button" onclick="submitQuiz()">Submit Answers</button>
+        </form>
+      </div>
+      <div class="hk-quiz hidden" id="view-score">
+        <h2 id="score-title">Submitted</h2>
+        <p id="score-msg"></p>
+        <button class="hk-button hk-primary" type="button" onclick="backToLessons()">Back to My Lessons</button>
+      </div>
+    </main>
   </div>
-  <div id="quiz-timer" class="timer-bar hidden"></div>
-  <div id="quiz-info" class="info hidden"></div>
-  <div id="quiz-error" class="error hidden"></div>
-  <form id="quiz-form" onsubmit="return false">
-    <div id="quiz-questions"></div>
-    <div id="quiz-loading" class="hidden"><div class="spinner"></div></div>
-    <button class="btn btn-primary" id="submit-btn" onclick="submitQuiz()">Submit Answers</button>
-  </form>
-</div>
-
-<!-- VIEW: Submitted (no score, no keys) -->
-<div class="card hidden" id="view-score">
-  <h2 id="score-title">Submitted</h2>
-  <p id="score-msg" style="text-align:center"></p>
-  <button class="btn btn-primary" onclick="backToLessons()" style="margin-top:1.25rem">← Back to Lessons</button>
+  <footer class="hk-footer">
+    <span id="portal-context">Student portal</span>
+    <span>Your saved lesson work stays in this program.</span>
+  </footer>
 </div>
 
 <!-- ── App logic ───────────────────────────────────────────────────────────── -->
@@ -432,6 +512,9 @@ function freshState() {
     tests: [],
     lessons: [],
     testsLoaded: false,
+    programs: [],
+    programNames: {},
+    section: 'home',
     questions: [],
     timerInterval: null,
     timeLimit: 0,
@@ -444,9 +527,14 @@ function sleep(ms) { return new Promise(r => setTimeout(r, ms)); }
 
 // ── View helpers ──────────────────────────────────────────────────────────────
 function show(id) {
-  ['view-login','view-lessons','view-quiz','view-score'].forEach(v => {
+  const signedOut = id === 'view-login';
+  document.body.classList.toggle('signed-out', signedOut);
+  document.getElementById('view-login').classList.toggle('hidden', !signedOut);
+  document.getElementById('portal').classList.toggle('hidden', signedOut);
+  ['view-lessons', 'view-quiz', 'view-score'].forEach(v => {
     document.getElementById(v).classList.toggle('hidden', v !== id);
   });
+  if (!signedOut) paintChrome();
 }
 
 function setError(id, msg) {
@@ -505,10 +593,14 @@ async function login() {
     state.tests = r.tests || [];
     state.lessons = r.lessons || [];
     state.testsLoaded = Array.isArray(r.tests);
+    rememberPrograms(r);
     if (r.programId) state.programId = r.programId;
     if (r.needProgram && r.programs && r.programs.length) {
-      showProgramPicker(r.programs, r.programNames || {});
+      state.programId = '';
+      state.section = 'home';
+      showLessons();
     } else {
+      if (!state.programs.length && state.programId) state.programs = [state.programId];
       showLessons();
       maybeOpenPendingTest();
     }
@@ -528,36 +620,36 @@ function logout() {
 }
 
 // ── Lesson selector ────────────────────────────────────────────────────────────
+function rememberPrograms(r) {
+  if (r && Array.isArray(r.programs) && r.programs.length) state.programs = r.programs.slice();
+  if (r && r.programNames) state.programNames = r.programNames;
+  if (r && r.programName && r.programId) {
+    state.programNames[r.programId] = r.programName;
+  }
+}
+
+function programLabel(id) {
+  return (state.programNames && state.programNames[id]) || id || 'Program';
+}
+
 function showLessons() {
-  document.getElementById('lessons-greeting').textContent = 'Hello, ' + state.username;
   setError('lesson-select-error', '');
   renderLessonGrid();
   show('view-lessons');
 }
 
-function showProgramPicker(programs, names) {
-  document.getElementById('lessons-greeting').textContent = 'Choose a program';
-  setError('lesson-select-error', '');
-  const grid = document.getElementById('lesson-grid');
-  grid.innerHTML = '';
-  (programs || []).forEach(function (id) {
-    const btn = document.createElement('button');
-    btn.className = 'lesson-btn';
-    btn.textContent = (names && names[id]) || id;
-    btn.onclick = async function () {
-      state.programId = id;
-      const r = await api({ action: 'get_tries', username: state.username, password: state.password, programId: id });
-      if (r.error) { setError('lesson-select-error', friendlyError(r.error)); return; }
-      state.tests = r.tests || [];
-      state.lessons = r.lessons || [];
-      state.testsLoaded = Array.isArray(r.tests);
-      state.tryCounts = r.allTries || {};
-      showLessons();
-      maybeOpenPendingTest();
-    };
-    grid.appendChild(btn);
-  });
-  show('view-lessons');
+async function chooseProgram(id) {
+  state.programId = id;
+  state.section = 'home';
+  const r = await api({ action: 'get_tries', username: state.username, password: state.password, programId: id });
+  if (r.error) { setError('lesson-select-error', friendlyError(r.error)); return; }
+  state.tests = r.tests || [];
+  state.lessons = r.lessons || [];
+  state.testsLoaded = Array.isArray(r.tests);
+  state.tryCounts = r.allTries || {};
+  rememberPrograms(r);
+  showLessons();
+  maybeOpenPendingTest();
 }
 
 function sameTest(t, pending) {
@@ -614,97 +706,418 @@ function openTeachingLesson(lesson) {
   location.href = lesson.url;
 }
 
+const LESSON_BLURB = {
+  'sci-cs@2026-10': 'Algorithms, code, and your own app',
+  'sci-health@2026-10': 'Heart, movement, and community',
+  'sci-astro@2026-10': 'Sky, time, and light',
+  'sci-soil@2026-10': 'Texture, water, and land',
+  'sci-sust@2026-10': 'Coral, species, and change',
+};
+const MEDIA_LAB = 'https://5ninefish.github.io/hokulani-media-lab/';
+
+function paintChrome() {
+  const account = document.getElementById('account-name');
+  account.replaceChildren(document.createTextNode(state.username || 'Student'), document.createElement('small'));
+  account.querySelector('small').textContent = 'Student';
+  const label = document.getElementById('program-label');
+  const select = document.getElementById('program-select');
+  const ids = state.programs || [];
+  if (ids.length > 1) {
+    label.classList.remove('hidden');
+    const current = select.value;
+    select.replaceChildren();
+    ids.forEach(function (id) {
+      const option = document.createElement('option');
+      option.value = id;
+      option.textContent = programLabel(id);
+      select.appendChild(option);
+    });
+    if (state.programId && ids.indexOf(state.programId) >= 0) select.value = state.programId;
+    else if (current && ids.indexOf(current) >= 0) select.value = current;
+    select.onchange = function () {
+      if (select.value && select.value !== state.programId) chooseProgram(select.value);
+    };
+  } else {
+    label.classList.add('hidden');
+  }
+  const nav = document.getElementById('student-nav');
+  nav.replaceChildren();
+  [['home', 'Home'], ['lessons', 'My Lessons'], ['help', 'Help'], ['account', 'Account']].forEach(function (item) {
+    const button = document.createElement('button');
+    button.type = 'button';
+    button.textContent = item[1];
+    if (state.section === item[0] && document.getElementById('view-lessons') && !document.getElementById('view-lessons').classList.contains('hidden')) {
+      button.setAttribute('aria-current', 'page');
+    }
+    button.onclick = function () {
+      stopTimer();
+      state.section = item[0];
+      showLessons();
+    };
+    nav.appendChild(button);
+  });
+  const context = document.getElementById('portal-context');
+  context.textContent = (state.programId ? programLabel(state.programId) : 'Choose a program') + ' · Student portal';
+}
+
+function lessonStarted(lesson) {
+  const progress = lesson.progress || { done: 0, total: 0 };
+  return progress.done > 0 || (lesson.topics || []).some(function (topic) { return topic.status; });
+}
+
+function lessonStatus(lesson) {
+  if (lesson.availability === 'upcoming') return { text: 'Scheduled', warn: false };
+  if (lesson.availability === 'locked') return { text: 'Closed', warn: false };
+  const progress = lesson.progress || { done: 0, total: 0 };
+  const finished = progress.total > 0 && progress.done >= progress.total;
+  const unlinked = String(lesson.status || '').toUpperCase() === 'UNLINKED'
+    || ((lesson.pre && lesson.pre.linked === false) && (lesson.post && lesson.post.linked === false));
+  const post = lesson.post || {};
+  const postOwed = post.linked && post.state !== 'not_assigned' && post.state !== 'unlinked' && post.state !== 'done';
+  if (finished && unlinked) return { text: 'Assessment unlinked', warn: true };
+  if (finished && postOwed) return { text: 'POST outstanding', warn: true };
+  if (finished) return { text: 'Finished', warn: false };
+  if (lessonStarted(lesson)) return { text: 'In progress', warn: false };
+  return { text: 'Not started', warn: false };
+}
+
+function phaseText(card) {
+  if (!card || card.linked === false || card.state === 'unlinked') return 'Not connected';
+  if (card.state === 'not_assigned') return 'Not assigned';
+  if (card.state === 'upcoming') {
+    const match = (state.tests || []).find(function (test) {
+      return test.testId === card.testId && phaseOf(test.phase) === phaseOf(card.phase);
+    });
+    if (match && match.openAt) {
+      const when = new Date(match.openAt);
+      if (!isNaN(when.getTime())) {
+        return 'Opens ' + when.toLocaleString('en-US', { timeZone: 'Pacific/Honolulu', month: 'short', day: 'numeric' });
+      }
+    }
+    return 'Scheduled';
+  }
+  if (card.state === 'locked') return 'Closed';
+  if (card.state === 'unavailable') return 'Unavailable';
+  if (card.state === 'done') return 'Submitted';
+  const tries = Number(card.tries) || 0;
+  const max = Number(card.maxTries) || 0;
+  if (tries > 0 && max > 0) return tries + ' of ' + max + ' attempts used';
+  return 'Ready to start';
+}
+
+function phaseActionable(card) {
+  return !!(card && card.linked && card.state === 'open');
+}
+
+function nextTopicTitle(lesson) {
+  const topics = lesson.topics || [];
+  const open = topics.find(function (topic) { return topic.status !== 'met' && topic.status !== 'support'; });
+  if (open) return open.title || open.id;
+  const resume = (lesson.progress && lesson.progress.resumeTopic) || '';
+  const named = topics.find(function (topic) { return topic.id === resume; });
+  return (named && (named.title || named.id)) || resume || 'the saved topic';
+}
+
+function latestTouch(lesson) {
+  return (lesson.topics || []).reduce(function (latest, topic) {
+    return topic.updatedAt && topic.updatedAt > latest ? topic.updatedAt : latest;
+  }, '');
+}
+
+function continueLesson(lessons) {
+  return lessons.filter(function (lesson) {
+    if (lesson.availability === 'locked' || lesson.availability === 'upcoming') return false;
+    const progress = lesson.progress || { done: 0, total: 0 };
+    return lessonStarted(lesson) && progress.total && progress.done < progress.total;
+  }).sort(function (a, b) { return latestTouch(b).localeCompare(latestTouch(a)); })[0] || null;
+}
+
+function tag(text, warn) {
+  const span = document.createElement('span');
+  span.className = 'hk-tag' + (warn ? ' hk-warning' : '');
+  span.textContent = text;
+  return span;
+}
+
+function lessonAction(lesson, status) {
+  if (lesson.availability === 'upcoming') return { label: 'Not open yet', disabled: true };
+  if (lesson.availability === 'locked') return { label: 'Closed', disabled: true };
+  if (!lesson.url) return { label: 'No lesson link', disabled: true };
+  if (status.text === 'Finished' || status.text === 'POST outstanding' || status.text === 'Assessment unlinked') {
+    if ((lesson.progress || {}).done > 0) return { label: 'Review lesson', disabled: false };
+  }
+  return { label: lessonStarted(lesson) ? 'Resume lesson' : 'Start lesson', disabled: false };
+}
+
+function appendPhase(parent, label, card) {
+  const cell = document.createElement('div');
+  const small = document.createElement('small');
+  small.textContent = label;
+  const line = document.createElement('div');
+  line.textContent = phaseText(card);
+  cell.append(small, line);
+  if (phaseActionable(card)) {
+    const button = document.createElement('button');
+    button.type = 'button';
+    button.className = 'hk-button hk-link';
+    button.textContent = 'Start ' + label;
+    button.onclick = function () { startLesson(card.testId, card.testId, phaseOf(card.phase)); };
+    cell.appendChild(button);
+  }
+  parent.appendChild(cell);
+}
+
+function teachingCard(lesson, index) {
+  const status = lessonStatus(lesson);
+  const progress = lesson.progress || { done: 0, total: 0 };
+  const card = document.createElement('article');
+  card.className = 'hk-card';
+  const top = document.createElement('div');
+  top.className = 'hk-card-top';
+  const idx = document.createElement('span');
+  idx.className = 'hk-index';
+  idx.textContent = String(index + 1).padStart(2, '0') + ' / SCIENCE';
+  top.append(idx, tag(status.text, status.warn));
+  const title = document.createElement('h3');
+  title.textContent = lesson.title || lesson.lessonId;
+  const blurb = document.createElement('p');
+  blurb.className = 'hk-small hk-muted';
+  blurb.textContent = LESSON_BLURB[lesson.lessonId] || lesson.title || '';
+  card.append(top, title, blurb);
+  if (progress.total) {
+    const bar = document.createElement('div');
+    bar.className = 'hk-bar';
+    bar.setAttribute('role', 'progressbar');
+    bar.setAttribute('aria-label', (lesson.title || 'Lesson') + ' topics complete');
+    bar.setAttribute('aria-valuemin', '0');
+    bar.setAttribute('aria-valuemax', String(progress.total));
+    bar.setAttribute('aria-valuenow', String(progress.done));
+    const fill = document.createElement('span');
+    fill.style.width = Math.round((progress.done / progress.total) * 100) + '%';
+    bar.appendChild(fill);
+    const count = document.createElement('div');
+    count.className = 'hk-small';
+    count.textContent = progress.done + ' of ' + progress.total + ' topics complete';
+    card.append(bar, count);
+  }
+  const supported = (lesson.topics || []).filter(function (topic) { return topic.support || topic.status === 'support'; });
+  if (supported.length) {
+    const note = document.createElement('p');
+    note.className = 'hk-small';
+    note.textContent = 'Continued with support on ' + supported.map(function (topic) { return topic.title || topic.id; }).join(', ') + '. Support is help, not an official test attempt.';
+    card.appendChild(note);
+  }
+  const phases = document.createElement('div');
+  phases.className = 'hk-phase';
+  appendPhase(phases, 'PRE', lesson.pre);
+  appendPhase(phases, 'POST', lesson.post);
+  card.appendChild(phases);
+  const action = lessonAction(lesson, status);
+  const button = document.createElement('button');
+  button.type = 'button';
+  button.className = 'hk-button' + (action.disabled ? '' : ' hk-primary');
+  button.textContent = action.label;
+  button.disabled = action.disabled;
+  if (!action.disabled) button.onclick = function () { openTeachingLesson(lesson); };
+  card.appendChild(button);
+  return card;
+}
+
+function assessmentCard(test, index) {
+  const card = document.createElement('article');
+  card.className = 'hk-card';
+  const top = document.createElement('div');
+  top.className = 'hk-card-top';
+  const idx = document.createElement('span');
+  idx.className = 'hk-index';
+  const id = String(test.testId || '').toUpperCase();
+  idx.textContent = (id === 'SCI-DM' || String(test.lesson || '').toUpperCase() === 'L6') ? 'LAB' : 'ASSESSMENT';
+  const phase = phaseOf(test.phase);
+  const statusText = phaseText({
+    linked: true,
+    state: test.state,
+    tries: test.tries,
+    maxTries: test.maxTries,
+    testId: test.testId,
+    phase: phase,
+  });
+  top.append(idx, tag(statusText, test.state === 'unavailable' || test.state === 'locked'));
+  const title = document.createElement('h3');
+  title.textContent = test.title || LESSON_NAMES[test.lesson] || test.testId;
+  const blurb = document.createElement('p');
+  blurb.className = 'hk-small hk-muted';
+  const media = id === 'SCI-DM' || String(test.lesson || '').toUpperCase() === 'L6';
+  blurb.textContent = media
+    ? 'Separate lab. The assessment stays on this card.'
+    : (phase === 'SINGLE' ? 'Assigned on its own. It is not part of a teaching lesson card.' : phase + ' assessment');
+  card.append(top, title, blurb);
+  const phases = document.createElement('div');
+  phases.className = 'hk-phase';
+  appendPhase(phases, phase === 'SINGLE' ? 'TEST' : phase, {
+    linked: true,
+    state: test.state,
+    tries: test.tries,
+    maxTries: test.maxTries,
+    testId: test.testId,
+    phase: phase,
+  });
+  card.appendChild(phases);
+  if (media) {
+    const lab = document.createElement('a');
+    lab.className = 'hk-button';
+    lab.href = MEDIA_LAB;
+    lab.textContent = 'Open lab';
+    lab.style.display = 'inline-block';
+    lab.style.marginRight = '8px';
+    card.appendChild(lab);
+  }
+  return card;
+}
+
+function renderHelp(grid) {
+  const box = document.createElement('div');
+  box.className = 'hk-card';
+  const title = document.createElement('h2');
+  title.textContent = 'How this page works';
+  const copy = document.createElement('p');
+  copy.textContent = 'Sign in with the username and password your instructor assigned. This page does not show official scores or answer keys. Home lists the teaching lessons enabled for the program you are in. Start and Resume open your saved place. Review opens finished work and does not start a new official attempt. PRE and POST are separate. Practice checks and Continue with support do not use those attempts. A topic continued with support is help, not the same as finishing it on your own. Not connected means that lesson has no official test yet. Digital Media, when it is assigned, opens its own lab and keeps its test on a separate card. Sign out from Account.';
+  box.append(title, copy);
+  grid.appendChild(box);
+}
+
+function renderAccount(grid) {
+  const box = document.createElement('div');
+  box.className = 'hk-card';
+  const title = document.createElement('h2');
+  title.textContent = 'Account';
+  const who = document.createElement('p');
+  who.textContent = 'Signed in as ' + state.username + '.';
+  const program = document.createElement('p');
+  program.textContent = state.programId
+    ? 'Program: ' + programLabel(state.programId) + '.'
+    : 'Choose a program to see your assignments.';
+  const button = document.createElement('button');
+  button.type = 'button';
+  button.className = 'hk-button';
+  button.textContent = 'Sign out';
+  button.onclick = logout;
+  box.append(title, who, program, button);
+  grid.appendChild(box);
+}
+
 function renderLessonGrid() {
   const grid = document.getElementById('lesson-grid');
-  grid.innerHTML = '';
-  const lessons = state.lessons || [];
-  lessons.forEach(function (lesson) {
-    const card = document.createElement('article');
-    card.className = 'teach-card';
-    const progress = lesson.progress || { done: 0, total: 0, resumeTopic: '' };
-    const title = document.createElement('h3');
-    title.textContent = lesson.title || lesson.lessonId;
-    const meta = document.createElement('p');
-    meta.textContent = progress.done + ' of ' + progress.total + ' topics' + (progress.resumeTopic ? ' · resume ' + progress.resumeTopic : '');
-    const actions = document.createElement('div');
-    actions.className = 'teach-actions';
-    function phaseButton(label, cardInfo) {
-      const btn = document.createElement('button');
-      btn.type = 'button';
-      btn.className = 'lesson-btn';
-      btn.textContent = label + ' · ' + assessmentLabel(cardInfo);
-      if (!cardInfo || !cardInfo.linked || cardInfo.state === 'not_assigned' || cardInfo.state === 'unlinked') {
-        btn.disabled = true;
-      } else {
-        const blocked = cardInfo.state === 'done' || cardInfo.state === 'upcoming' || cardInfo.state === 'locked' || cardInfo.state === 'unavailable';
-        btn.disabled = blocked;
-        btn.onclick = function () { startLesson(cardInfo.testId, cardInfo.testId, phaseOf(cardInfo.phase)); };
-      }
-      return btn;
-    }
-    const start = document.createElement('button');
-    start.type = 'button';
-    start.className = 'lesson-btn';
-    const started = progress.done > 0 || (lesson.topics || []).some(function (topic) { return topic.status; });
-    start.textContent = started ? 'Resume Lesson' : 'Start Lesson';
-    start.disabled = lesson.availability === 'locked' || lesson.availability === 'upcoming';
-    start.onclick = function () { openTeachingLesson(lesson); };
-    actions.append(phaseButton('PRE', lesson.pre), start, phaseButton('POST', lesson.post));
-    card.append(title, meta, actions);
-    grid.appendChild(card);
-  });
+  grid.replaceChildren();
+  const section = state.section || 'home';
+  if (section === 'help') { renderHelp(grid); return; }
+  if (section === 'account') { renderAccount(grid); return; }
 
-  const tests = state.testsLoaded
-    ? (state.tests || []).filter(function (test) { return !coveredByLesson(test); })
-    : ALL_LESSONS.map(lid => ({
-        lesson: lid,
-        testId: lid,
-        title: (LESSON_NAMES[lid] || lid).replace(/^Lesson \d+ – /, ''),
-        state: 'open',
-        tries: state.tryCounts[lid] ?? 0,
-        maxTries: 2,
-      }));
-  if (lessons.length && tests.length) {
-    const heading = document.createElement('h3');
-    heading.textContent = 'Assessments';
-    grid.appendChild(heading);
-  }
-  if (state.testsLoaded && !tests.length && !lessons.length) {
-    grid.textContent = 'No assessments are assigned in this program.';
+  const heading = document.createElement('div');
+  heading.className = 'hk-heading';
+  const titles = document.createElement('div');
+  const kicker = document.createElement('div');
+  kicker.className = 'hk-kicker';
+  kicker.textContent = state.programId ? programLabel(state.programId) : 'Program';
+  const h1 = document.createElement('h1');
+  h1.textContent = section === 'home' ? ('Aloha, ' + (state.username || 'student') + '.') : 'My lessons';
+  const sub = document.createElement('p');
+  sub.className = 'hk-muted';
+  sub.textContent = state.programId
+    ? 'Your work for this program, all in one place.'
+    : 'Choose the program your instructor assigned.';
+  titles.append(kicker, h1, sub);
+  heading.appendChild(titles);
+  grid.appendChild(heading);
+
+  if (!state.programId) {
+    const picker = document.createElement('div');
+    picker.className = 'hk-cards';
+    (state.programs || []).forEach(function (id) {
+      const card = document.createElement('article');
+      card.className = 'hk-card';
+      const name = document.createElement('h3');
+      name.textContent = programLabel(id);
+      const button = document.createElement('button');
+      button.type = 'button';
+      button.className = 'hk-button hk-primary';
+      button.textContent = 'Open program';
+      button.onclick = function () { chooseProgram(id); };
+      card.append(name, button);
+      picker.appendChild(card);
+    });
+    grid.appendChild(picker);
     return;
   }
 
-  tests.forEach(t => {
-    const lid = t.lesson || t.testId;
-    const tries = t.tries ?? state.tryCounts[lid] ?? 0;
-    const maxTries = t.maxTries || 2;
-    const done = t.state === 'done' || tries >= maxTries;
-    const upcoming = t.state === 'upcoming';
-    const locked = t.state === 'locked';
-    const unavailable = t.state === 'unavailable';
-    const blocked = done || upcoming || locked || unavailable;
+  const lessons = (state.lessons || []).slice().sort(function (a, b) { return (a.sort || 0) - (b.sort || 0); });
+  if (section === 'home') {
+    const current = continueLesson(lessons);
+    if (current) {
+      const progress = current.progress || { done: 0, total: 0 };
+      const panel = document.createElement('section');
+      panel.className = 'hk-continue';
+      const copy = document.createElement('div');
+      const k = document.createElement('div');
+      k.className = 'hk-kicker';
+      k.textContent = 'Continue where you left off';
+      const h2 = document.createElement('h2');
+      h2.textContent = current.title || current.lessonId;
+      const next = document.createElement('p');
+      next.textContent = 'Up next: ' + nextTopicTitle(current);
+      const bar = document.createElement('div');
+      bar.className = 'hk-bar';
+      bar.setAttribute('role', 'progressbar');
+      bar.setAttribute('aria-label', (current.title || 'Lesson') + ' progress');
+      bar.setAttribute('aria-valuemin', '0');
+      bar.setAttribute('aria-valuemax', String(progress.total || 0));
+      bar.setAttribute('aria-valuenow', String(progress.done || 0));
+      const fill = document.createElement('span');
+      fill.style.width = progress.total ? Math.round((progress.done / progress.total) * 100) + '%' : '0%';
+      bar.appendChild(fill);
+      const saved = document.createElement('span');
+      saved.className = 'hk-small';
+      saved.textContent = progress.done + ' of ' + progress.total + ' topics complete · your work is saved';
+      copy.append(k, h2, next, bar, saved);
+      const resume = document.createElement('button');
+      resume.type = 'button';
+      resume.className = 'hk-button hk-primary';
+      resume.textContent = 'Resume lesson';
+      resume.onclick = function () { openTeachingLesson(current); };
+      panel.append(copy, resume);
+      grid.appendChild(panel);
+    }
+  }
 
-    const btn = document.createElement('button');
-    btn.className = 'lesson-btn';
-    btn.disabled = blocked;
-
-    let badgeClass = 'badge-ok';
-    let badgeText = tries === 0 ? 'Not started' : `${tries}/${maxTries}`;
-    if (tries > 0 && tries < maxTries) badgeClass = 'badge-warn';
-    if (done) { badgeClass = 'badge-blocked'; badgeText = 'Complete'; }
-    if (upcoming) { badgeClass = 'badge-warn'; badgeText = 'Upcoming'; }
-    if (locked && !done) { badgeClass = 'badge-blocked'; badgeText = 'Closed'; }
-    if (unavailable) { badgeClass = 'badge-blocked'; badgeText = 'Unavailable'; }
-
-    const label = t.title || LESSON_NAMES[lid] || lid;
-
-    btn.innerHTML = `
-      <span>${label}</span>
-      ${badgeText ? `<span class="lesson-badge ${badgeClass}">${badgeText}</span>` : ''}
-    `;
-    btn.onclick = () => startLesson(lid, t.testId, phaseOf(t.phase));
-    grid.appendChild(btn);
-  });
+  const cards = document.createElement('div');
+  cards.className = 'hk-cards';
+  lessons.forEach(function (lesson, index) { cards.appendChild(teachingCard(lesson, index)); });
+  const tests = state.testsLoaded
+    ? (state.tests || []).filter(function (test) { return !coveredByLesson(test); })
+    : (!lessons.length ? ALL_LESSONS.map(function (lid) {
+        return {
+          lesson: lid,
+          testId: lid,
+          title: (LESSON_NAMES[lid] || lid).replace(/^Lesson \d+ – /, ''),
+          state: 'open',
+          tries: state.tryCounts[lid] || 0,
+          maxTries: 2,
+          phase: 'SINGLE',
+        };
+      }) : []);
+  tests.forEach(function (test, index) { cards.appendChild(assessmentCard(test, index)); });
+  if (!lessons.length && !tests.length) {
+    const empty = document.createElement('p');
+    empty.textContent = 'No lessons or assessments are assigned in this program.';
+    grid.appendChild(empty);
+    return;
+  }
+  if (section === 'lessons' || section === 'home') {
+    const caption = document.createElement('div');
+    caption.className = 'hk-section-title hk-small hk-muted';
+    caption.textContent = lessons.length + ' teaching lesson' + (lessons.length === 1 ? '' : 's') + ' in this program';
+    grid.appendChild(caption);
+  }
+  grid.appendChild(cards);
 }
 
 // ── Start a lesson ─────────────────────────────────────────────────────────────

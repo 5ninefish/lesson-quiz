@@ -455,6 +455,7 @@ function getTries(username, password, programId) {
   }
   if (ctx.error) return respond({ error: ctx.error, programs: ctx.memberships });
   const tests = buildTestsPayload_(ss, student, ctx.programId);
+  const names = programNames_(ss, ctx.memberships || []);
   return respond({
     ok: true,
     allTries: allTriesFor(student),
@@ -462,6 +463,9 @@ function getTries(username, password, programId) {
     lessons: buildTeachingLessonsPayload_(ss, student, ctx.programId, tests),
     timeLimit: QUIZ_TIME_SECONDS,
     programId: ctx.programId || '',
+    programName: names[ctx.programId] || ctx.programId || '',
+    programs: ctx.memberships || [],
+    programNames: names,
   });
 }
 

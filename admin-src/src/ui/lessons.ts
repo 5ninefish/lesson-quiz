@@ -22,7 +22,7 @@ export function renderLessons(
   onSave: (programId: string, lessons: LessonDraft[]) => void,
   onRegister: () => void,
 ): void {
-  pageHeading(main, "Lessons", "lessons");
+  pageHeading(main, "Lessons & tests", "lessons");
   const program = snap.programs.find((item) => item.programId === programId);
   main.append(el("p", { class: "muted" }, "Lesson enablement is separate from assessment release. Practice and support do not use a PRE or POST attempt."));
   main.append(el("p", {}, program ? `${program.programName} (${program.programId})` : "Choose a program in the top menu."));

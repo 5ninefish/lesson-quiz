@@ -20,7 +20,7 @@ async function copyText(text: string): Promise<void> {
 }
 
 export function renderMissing(main: HTMLElement, snap: DashboardSnapshot, programId: string, programName: string): void {
-  pageHeading(main, "Missing tests", "missing");
+  pageHeading(main, "Missing work", "missing");
   main.append(
     el(
       "p",

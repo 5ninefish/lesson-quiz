@@ -9,6 +9,7 @@ import { el } from "./dom";
 import { openHelp, pageHeading } from "./help";
 import { renderPrograms } from "./programs";
 import { renderLessons, type LessonDraft } from "./lessons";
+import { renderOverview } from "./overview";
 import { emptyWizard, renderWizard, type WizardState } from "./program-wizard";
 import { pageOf, parseRosterPaste, type RosterImportRow } from "../programs/roster-import";
 import { studentTestUrl } from "../programs/urls";
@@ -251,17 +252,22 @@ function mountChrome(): void {
   const app = el("div", { class: "app" });
 
   const header = el("header");
-  header.append(el("div", { class: "brand", id: "brand" }, PROGRAM.title));
-  header.append(el("div", { class: "meta", id: "book-name" }, ""));
-  header.append(el("div", { class: "meta", id: "account" }, "Not signed in"));
-  header.append(el("div", { class: "meta", id: "role" }, "Read only"));
-  header.append(el("div", { class: "meta", id: "stamp" }, ""));
-  const prog = el("label", { class: "meta", id: "program-picker-wrap" }, "Program ");
+  const brandRow = el("div", { class: "brand-row" });
+  const brand = el("div", { class: "brand", id: "brand" });
+  brand.append(document.createTextNode("Hōkūlani"));
+  brand.append(el("small", {}, "LEARN · EXPLORE · CREATE"));
+  brandRow.append(brand);
+  const context = el("div", { class: "context" });
+  const prog = el("label", { id: "program-picker-wrap" }, "Program");
   const sel = el("select", { id: "program-picker" }) as HTMLSelectElement;
   sel.onchange = () => onSelectProgramCb(sel.value);
   prog.append(sel);
-  header.append(prog);
-  header.append(el("div", { class: "spacer" }));
+  const person = el("div", { class: "person" });
+  person.append(el("span", { id: "account" }, "Not signed in"));
+  person.append(el("small", { id: "role" }, "Read only"));
+  context.append(prog, person);
+  brandRow.append(context);
+  const ops = el("div", { class: "ops" });
   const cheat = el("button", { type: "button", id: "btn-cheat-sheet", class: "help-btn" }, "Cheat sheet");
   cheat.onclick = () => openHelp("start");
   const demo = el("button", { type: "button", id: "btn-demo" }, "Load demo workbook");
@@ -274,22 +280,24 @@ function mountChrome(): void {
   signout.onclick = () => onSignOutCb();
   const edit = el("button", { type: "button", id: "btn-enable-editing" }, "Enable editing");
   edit.onclick = () => onEnableEditingCb();
-  header.append(cheat, demo, signin, refresh, edit, signout);
+  ops.append(cheat, demo, signin, refresh, edit, signout);
+  header.append(brandRow, ops);
   app.append(header);
 
   const banner = el("div", { class: "banner", id: "banner" });
   app.append(banner);
 
+  const layout = el("div", { class: "layout" });
   const nav = el("nav", { "aria-label": "Instructor sections", id: "nav" });
   const items: [Screen, string][] = [
     ["programs", "Programs"],
     ["overview", "Overview"],
     ["roster", "Roster"],
+    ["lessons", "Lessons & tests"],
     ["releases", "Releases"],
     ["attempts", "Attempts"],
     ["results", "Results"],
-    ["missing", "Missing tests"],
-    ["lessons", "Lessons"],
+    ["missing", "Missing work"],
     ["health", "Data Health"],
   ];
   for (const [id, label] of items) {
@@ -297,8 +305,7 @@ function mountChrome(): void {
     b.onclick = () => onNavCb(id);
     nav.append(b);
   }
-  app.append(nav);
-
+  const column = el("div", { class: "column" });
   const toolbar = el("div", { class: "toolbar", id: "search-toolbar" });
   const search = el("input", {
     type: "text",
@@ -319,9 +326,14 @@ function mountChrome(): void {
   });
   const exp = el("button", { type: "button", id: "btn-export" }, "Export CSV");
   toolbar.append(search, exp);
-  app.append(toolbar);
-
-  app.append(el("main", { id: "main" }));
+  column.append(toolbar, el("main", { id: "main" }));
+  layout.append(nav, column);
+  app.append(layout);
+  const footer = el("footer", { class: "app-footer" });
+  footer.append(el("span", { id: "book-name" }, ""));
+  footer.append(el("span", {}, "Instructor portal"));
+  footer.append(el("span", { id: "stamp" }, ""));
+  app.append(footer);
   root.append(app);
   chromeReady = true;
 }
@@ -423,24 +435,14 @@ function renderMain(opts: ShellOpts): void {
   }
 
   if (opts.screen === "overview") {
-    pageHeading(main, "Overview", "overview");
-    const cards = el("div", { class: "cards" });
-    const add = (label: string, n: number, screen: Screen) => {
-      const c = el("button", { type: "button", class: "card" });
-      c.append(el("strong", {}, String(n)));
-      c.append(el("span", {}, label));
-      c.onclick = () => onNavCb(screen);
-      cards.append(c);
-    };
-    add("Students", snap.students.length, "roster");
-    add("Assessments", snap.releases.length, "releases");
-    add("Complete results", snap.results.filter((r) => r.complete).length, "results");
-    add("Active attempts", snap.attempts.filter((a) => a.displayStatus === "in_flight").length, "attempts");
-    add("Expired (display)", snap.attempts.filter((a) => a.displayStatus === "expired").length, "attempts");
-    add("Missing rows", snap.missing.length, "missing");
-    add("Parse warnings", opts.snap.issues.length, "health");
-    main.append(cards);
-    main.append(el("p", { class: "muted" }, `Results parse mode: ${snap.resultsHeaderMode}`));
+    renderOverview(
+      main,
+      snap,
+      opts.selectedProgramId || PROGRAM.legacyDefaultProgramId,
+      () => onNavCb("missing"),
+      () => onNavCb("health"),
+      () => onNavCb("overview"),
+    );
   } else if (opts.screen === "roster") {
     renderRoster(main, snap, opts.selectedProgramId || PROGRAM.legacyDefaultProgramId, opts.query, opts.snap.students);
   } else if (opts.screen === "programs") {
