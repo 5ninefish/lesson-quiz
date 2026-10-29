@@ -8,7 +8,9 @@ export type PublishedLesson = {
   topicCount: number;
 };
 
-/** Published teaching packages. Sustainability stays unlinked from SCI-CORAL. */
+/** Published teaching packages. Sustainability stays unlinked from SCI-CORAL.
+ *  Mentoring is a separate domain. Its unbuilt lessons stay in lessons/mentoring/catalog.json.
+ */
 export const PUBLISHED_LESSONS: PublishedLesson[] = [
   { lessonId: "sci-cs@2026-10", title: "Computer Science", version: "2026-10", slug: "sci-cs", assessmentId: "SCI-CS", linked: true, topicCount: 8 },
   { lessonId: "sci-health@2026-10", title: "Health", version: "2026-10", slug: "sci-health", assessmentId: "SCI-HEALTH", linked: true, topicCount: 8 },

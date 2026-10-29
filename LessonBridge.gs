@@ -3,6 +3,8 @@
 // Official PRE and POST stay on auth_and_load / submit.
 // sci-sust@2026-10 is not linked to SCI-CORAL. That bank is 3D printing and coral.
 
+// Mentoring lessons are listed in lessons/mentoring/catalog.json.
+// Add a package_ row only when that lesson can be opened.
 const TEACHING_PACKAGES = [
   package_('sci-cs@2026-10', 'Computer Science', 'PUBLISHED', 'SCI-CS', 'SCI-CS', 'sci-cs', [
     ['start', 'Start'], ['algorithms', 'Algorithms'], ['blocks', 'Building blocks'], ['weave', 'Weave'],

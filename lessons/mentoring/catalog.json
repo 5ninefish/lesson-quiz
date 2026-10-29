@@ -1,0 +1,66 @@
+{
+  "domain": "mentoring",
+  "title": "Mentoring",
+  "lessonPrefix": "ment-",
+  "version": "2026-10",
+  "status": "not-built",
+  "rule": "Mentoring is a domain assigned to a cohort. It is not a cohort, not a program, and not a student login.",
+  "lessons": [
+    {
+      "lessonId": "ment-interviews@2026-10",
+      "slug": "ment-interviews",
+      "title": "Interviews",
+      "assessmentId": "MENT-INT",
+      "linked": true,
+      "source": "Mentoring/Interviews. No Latest folder. Newest export file 2026-01-17."
+    },
+    {
+      "lessonId": "ment-role-models@2026-10",
+      "slug": "ment-role-models",
+      "title": "Role Models",
+      "assessmentId": "MENT-ROLE",
+      "linked": true,
+      "source": "Mentoring/Role Models. No Latest folder. Newest export file 2024-12-20."
+    },
+    {
+      "lessonId": "ment-card-sort@2026-10",
+      "slug": "ment-card-sort",
+      "title": "STEM Interests and Career Card Sort",
+      "assessmentId": "MENT-SORT",
+      "linked": true,
+      "source": "Mentoring/STEM Interests + Career Card Sort. No Latest folder. Newest export file 2026-02-11."
+    },
+    {
+      "lessonId": "ment-music@2026-10",
+      "slug": "ment-music",
+      "title": "STEM in Music",
+      "assessmentId": "",
+      "linked": false,
+      "source": "Mentoring/STEM in Music. Folder is misspelled Latest_2-26_06. Newest export file 2026-06-02. No assessment bank yet."
+    },
+    {
+      "lessonId": "ment-sports@2026-10",
+      "slug": "ment-sports",
+      "title": "STEM in Sports",
+      "assessmentId": "",
+      "linked": false,
+      "source": "Mentoring/STEM in Sports, Latest_2026_06. Newest export file 2026-06-02. No assessment bank yet."
+    },
+    {
+      "lessonId": "ment-around@2026-10",
+      "slug": "ment-around",
+      "title": "STEM Is All Around Us",
+      "assessmentId": "MENT-AROUND",
+      "linked": true,
+      "source": "Mentoring/STEM is All Around Us. No Latest folder. Newest export file 2026-01-27."
+    },
+    {
+      "lessonId": "ment-scientist@2026-10",
+      "slug": "ment-scientist",
+      "title": "What a Scientist Does",
+      "assessmentId": "MENT-SCI",
+      "linked": true,
+      "source": "Mentoring/What a Scientist Does. Dated folders 2025-09 and 2026-01. Newest export file 2026-01-28."
+    }
+  ]
+}

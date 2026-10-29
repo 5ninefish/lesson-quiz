@@ -1263,7 +1263,7 @@ function renderLessonGrid() {
 function sectionIdFor(item, kind) {
   if (kind === 'lesson') {
     const id = String(item.lessonId || '');
-    if (id.indexOf('sci-') === 0) return 'science';
+    if (id.indexOf('ment-') === 0) return 'mentoring';
     return 'science';
   }
   const strand = String(item.strand || '');
