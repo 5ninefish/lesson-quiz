@@ -299,6 +299,7 @@ describe("Apps Script dashboard contract", () => {
       lessonProgressPost_: (body: unknown) => { getContent: () => string };
       judgeTeaching_: (lessonId: string, topicId: string, evidence: unknown) => { status: string };
       getTries: (username: string, password: string, programId: string) => { getContent: () => string };
+      preSubmitted_: (ss: unknown, programId: string, username: string, testId: string) => boolean;
     };
     expect(code.judgeTeaching_("sci-cs@2026-10", "start", { ready: true }).status).toBe("met");
     expect(code.judgeTeaching_("sci-sust@2026-10", "start", { ready: true }).status).toBe("met");
@@ -335,7 +336,29 @@ describe("Apps Script dashboard contract", () => {
       mode: "support",
     }).getContent());
     expect(exhausted.error).toBe("pre_required");
-    results.grid[results.grid.length - 1][23] = "YES";
+    const unattributed = new Array(26).fill("");
+    unattributed[1] = "ada";
+    unattributed[2] = "SCI-CS";
+    unattributed[4] = "6/6";
+    unattributed[23] = "YES";
+    unattributed[24] = "PRE";
+    unattributed[25] = "";
+    results.appendRow(unattributed);
+    expect(code.preSubmitted_(live, "teach-cs", "ada", "SCI-CS")).toBe(false);
+    expect(code.preSubmitted_(live, "hokulani", "ada", "SCI-CS")).toBe(true);
+    const foreignProgram = JSON.parse(code.lessonProgressPost_({
+      action: "lesson_progress",
+      username: "ada",
+      password: "secret",
+      programId: "teach-cs",
+      lessonId: "sci-cs@2026-10",
+      topicId: "start",
+      mode: "support",
+    }).getContent());
+    expect(foreignProgram.error).toBe("pre_required");
+    const teachRow = results.grid.find((row) => row[25] === "teach-cs" && row[24] === "PRE");
+    expect(teachRow).toBeTruthy();
+    teachRow![23] = "YES";
     const opened = JSON.parse(code.lessonProgressPost_({
       action: "lesson_progress",
       username: "ada",

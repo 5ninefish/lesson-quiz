@@ -305,12 +305,8 @@ function preSubmitted_(ss, programId, username, testId) {
   if (!testId) return true;
   // A gated lesson stays locked until a complete PRE sitting exists.
   // An incomplete row, or a row that only used up the attempts, does not count.
-  const index = completeSitIndex_(ss);
-  const user = normalizeUsername_(username);
-  const test = resolveTestId_(testId);
-  const program = normalizeProgramId_(programId);
-  if (index[user + '|' + test + '|' + program + '|PRE'] === true) return true;
-  return program ? index[user + '|' + test + '||PRE'] === true : false;
+  // A blank program id counts only for the historical default program.
+  return completeSitForProgram_(completeSitIndex_(ss), username, testId, programId, 'PRE');
 }
 
 function redactArtifact_(value) {

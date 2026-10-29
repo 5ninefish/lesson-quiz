@@ -772,6 +772,16 @@ function completeSitIndex_(ss) {
   return index;
 }
 
+function completeSitForProgram_(index, username, testId, programId, phase) {
+  const user = normalizeUsername_(username);
+  const test = resolveTestId_(testId);
+  const program = normalizeProgramId_(programId);
+  const phaseKey = normalizePhase_(phase);
+  if (index[user + '|' + test + '|' + program + '|' + phaseKey] === true) return true;
+  // A blank program id is the historical hokulani row, not a match for every program.
+  return program === LEGACY_DEFAULT_PROGRAM_ID && index[user + '|' + test + '||' + phaseKey] === true;
+}
+
 function buildTestsPayload_(ss, student, programId) {
   const now = new Date();
   const submitted = completeSitIndex_(ss);
@@ -815,7 +825,7 @@ function buildTestsPayload_(ss, student, programId) {
       openAt: rel.openAt ? rel.openAt.toISOString() : '',
       closeAt: rel.closeAt ? rel.closeAt.toISOString() : '',
       timeLimit: rel.missing ? QUIZ_TIME_SECONDS : rel.timeLimitSec,
-      submitted: submitted[username + '|' + testId + '|' + (programId || '') + '|' + phase] === true,
+      submitted: completeSitForProgram_(submitted, username, testId, programId || '', phase),
     };
   }).filter(function (t) { return t && t.state !== 'hidden'; });
 }
