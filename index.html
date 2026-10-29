@@ -433,9 +433,7 @@ const ALL_LESSONS = ['L1','L2','L3','L4','L5','L6'];
   <header class="hk-top">
     <div class="hk-brand">Hōkūlani<small>LEARN · EXPLORE · CREATE</small></div>
     <div class="hk-context">
-      <label id="program-label" class="hidden">Program
-        <select id="program-select" aria-label="Program"></select>
-      </label>
+      <div id="program-label" class="hidden">Program <strong id="program-name"></strong></div>
       <div class="hk-person" id="account-name">Student<small>Student</small></div>
     </div>
   </header>
@@ -487,11 +485,12 @@ function readQuizParams() {
     return {
       program: String(p.get('program') || '').trim().toLowerCase(),
       test: String(p.get('test') || '').trim(),
+      lesson: String(p.get('lesson') || '').trim(),
       phase: phaseOf(p.get('phase')),
       phaseSpecified: p.has('phase'),
     };
   } catch (e) {
-    return { program: '', test: '', phase: 'SINGLE', phaseSpecified: false };
+    return { program: '', test: '', lesson: '', phase: 'SINGLE', phaseSpecified: false };
   }
 }
 
@@ -504,10 +503,14 @@ function freshState() {
     currentTestId: null,
     currentPhase: 'SINGLE',
     submissionId: '',
-    programId: params.program,
+    requestedProgram: params.program,
+    programId: '',
     pendingTest: params.test,
+    pendingLesson: params.lesson,
     pendingPhase: params.phase,
     pendingPhaseSpecified: params.phaseSpecified,
+    assignment: '',
+    linkNote: '',
     tryCounts: {},
     tests: [],
     lessons: [],
@@ -571,38 +574,55 @@ async function login() {
   btn.disabled = true;
 
   try {
-    const r = await api({ action: 'get_tries', username: u, password: p });
+    const requested = state.requestedProgram || '';
+    const r = await api({ action: 'get_tries', username: u, password: p, programId: '' });
     if (r.error === 'invalid_credentials') {
       setError('login-error', 'Incorrect username or password.');
       btn.textContent = 'Sign In'; btn.disabled = false;
       return;
     }
-    if (r.error === 'no_program') {
-      setError('login-error', 'You are not assigned to a program. Contact your instructor.');
-      btn.textContent = 'Sign In'; btn.disabled = false;
-      return;
-    }
-    if (r.error === 'not_in_program') {
-      setError('login-error', 'You are not in that program. Open the link your instructor sent.');
-      btn.textContent = 'Sign In'; btn.disabled = false;
-      return;
-    }
     state.username = u;
     state.password = p;
-    state.tryCounts = r.allTries || {};
-    state.tests = r.tests || [];
-    state.lessons = r.lessons || [];
-    state.testsLoaded = Array.isArray(r.tests);
     rememberPrograms(r);
-    if (r.programId) state.programId = r.programId;
-    if (r.needProgram && r.programs && r.programs.length) {
+    const memberships = state.programs.slice();
+    state.section = 'home';
+    if (r.error === 'no_program' || !memberships.length) {
+      state.assignment = 'none';
       state.programId = '';
-      state.section = 'home';
+      state.tests = [];
+      state.lessons = [];
       showLessons();
+      btn.textContent = 'Sign In'; btn.disabled = false;
+      return;
+    }
+    if (memberships.length > 1 || r.needProgram) {
+      state.assignment = 'many';
+      state.programId = '';
+      state.pendingTest = '';
+      state.pendingLesson = '';
+      state.tests = [];
+      state.lessons = [];
+      showLessons();
+      btn.textContent = 'Sign In'; btn.disabled = false;
+      return;
+    }
+    const assigned = memberships[0] || r.programId || '';
+    if (requested && requested !== assigned) {
+      state.linkNote = 'That link is for a different program. It does not change your assignment.';
+      state.pendingTest = '';
+      state.pendingLesson = '';
+    }
+    state.assignment = 'one';
+    if (r.programId === assigned && Array.isArray(r.tests)) {
+      state.programId = assigned;
+      state.tryCounts = r.allTries || {};
+      state.tests = r.tests || [];
+      state.lessons = r.lessons || [];
+      state.testsLoaded = true;
+      showLessons();
+      maybeOpenPending();
     } else {
-      if (!state.programs.length && state.programId) state.programs = [state.programId];
-      showLessons();
-      maybeOpenPendingTest();
+      await chooseProgram(assigned);
     }
   } catch (err) {
     setError('login-error', 'Connection error. Please try again.');
@@ -656,20 +676,43 @@ function sameTest(t, pending) {
   return t.testId === pending || t.lesson === pending || String(t.testId).toUpperCase() === String(pending).toUpperCase();
 }
 
-function maybeOpenPendingTest() {
+function lessonMatches(lesson, pending) {
+  const want = String(pending || '').trim().toLowerCase();
+  if (!want) return false;
+  const id = String(lesson.lessonId || '').toLowerCase();
+  const url = String(lesson.url || '').toLowerCase();
+  return id === want || id.indexOf(want + '@') === 0 || url.indexOf('/' + want + '/') >= 0;
+}
+
+function maybeOpenPending() {
+  const pendingLesson = state.pendingLesson;
   const pending = state.pendingTest;
+  state.pendingLesson = '';
+  state.pendingTest = '';
+  if (pendingLesson && !pending) {
+    const lesson = (state.lessons || []).find(function (item) { return lessonMatches(item, pendingLesson); });
+    if (!lesson) {
+      setError('lesson-select-error', 'That lesson is not in your assigned program.');
+      return;
+    }
+    openTeachingLesson(lesson);
+    return;
+  }
   if (!pending) return;
   const want = phaseOf(state.pendingPhase);
   const specified = state.pendingPhaseSpecified;
-  state.pendingTest = '';
   const matches = (state.tests || []).filter(function (t) { return sameTest(t, pending); });
   let hit = matches.find(function (t) { return phaseOf(t.phase) === want; });
   if (!hit && !specified && matches.length === 1) hit = matches[0];
   if (!hit) {
-    setError('lesson-select-error', 'That test is not available in this program.');
+    setError('lesson-select-error', 'That assessment is not in your assigned program.');
     return;
   }
   startLesson(hit.lesson || hit.testId, hit.testId, phaseOf(hit.phase));
+}
+
+function maybeOpenPendingTest() {
+  maybeOpenPending();
 }
 
 function assessmentLabel(card) {
@@ -720,29 +763,20 @@ function paintChrome() {
   account.replaceChildren(document.createTextNode(state.username || 'Student'), document.createElement('small'));
   account.querySelector('small').textContent = 'Student';
   const label = document.getElementById('program-label');
-  const select = document.getElementById('program-select');
-  const ids = state.programs || [];
-  if (ids.length > 1) {
+  const name = document.getElementById('program-name');
+  if (state.assignment === 'one' && state.programId) {
     label.classList.remove('hidden');
-    const current = select.value;
-    select.replaceChildren();
-    ids.forEach(function (id) {
-      const option = document.createElement('option');
-      option.value = id;
-      option.textContent = programLabel(id);
-      select.appendChild(option);
-    });
-    if (state.programId && ids.indexOf(state.programId) >= 0) select.value = state.programId;
-    else if (current && ids.indexOf(current) >= 0) select.value = current;
-    select.onchange = function () {
-      if (select.value && select.value !== state.programId) chooseProgram(select.value);
-    };
+    name.textContent = programLabel(state.programId);
   } else {
     label.classList.add('hidden');
+    name.textContent = '';
   }
   const nav = document.getElementById('student-nav');
   nav.replaceChildren();
-  [['home', 'Home'], ['lessons', 'My Lessons'], ['help', 'Help'], ['account', 'Account']].forEach(function (item) {
+  const navItems = [['home', 'Home'], ['lessons', 'My Lessons']];
+  assignedSections().forEach(function (item) { navItems.push(item); });
+  navItems.push(['help', 'Help'], ['account', 'Account']);
+  navItems.forEach(function (item) {
     const button = document.createElement('button');
     button.type = 'button';
     button.textContent = item[1];
@@ -757,7 +791,7 @@ function paintChrome() {
     nav.appendChild(button);
   });
   const context = document.getElementById('portal-context');
-  context.textContent = (state.programId ? programLabel(state.programId) : 'Choose a program') + ' · Student portal';
+  context.textContent = (state.programId ? programLabel(state.programId) : 'Student portal');
 }
 
 function lessonStarted(lesson) {
@@ -772,13 +806,23 @@ function lessonStatus(lesson) {
   const finished = progress.total > 0 && progress.done >= progress.total;
   const unlinked = String(lesson.status || '').toUpperCase() === 'UNLINKED'
     || ((lesson.pre && lesson.pre.linked === false) && (lesson.post && lesson.post.linked === false));
-  const post = lesson.post || {};
-  const postOwed = post.linked && post.state !== 'not_assigned' && post.state !== 'unlinked' && post.state !== 'done';
   if (finished && unlinked) return { text: 'Assessment unlinked', warn: true };
-  if (finished && postOwed) return { text: 'POST outstanding', warn: true };
+  if (finished && phaseOwed(lesson.post)) return { text: 'POST outstanding', warn: true };
+  if (finished && phaseOwed(lesson.pre)) return { text: 'PRE outstanding', warn: true };
   if (finished) return { text: 'Finished', warn: false };
   if (lessonStarted(lesson)) return { text: 'In progress', warn: false };
   return { text: 'Not started', warn: false };
+}
+
+function phaseSatisfied(card) {
+  if (!card || card.linked === false || card.state === 'unlinked' || card.state === 'not_assigned') return false;
+  if (card.submitted === true) return true;
+  return card.state === 'done';
+}
+
+function phaseOwed(card) {
+  if (!card || card.linked === false || card.state === 'unlinked' || card.state === 'not_assigned') return false;
+  return !phaseSatisfied(card);
 }
 
 function phaseText(card) {
@@ -798,7 +842,7 @@ function phaseText(card) {
   }
   if (card.state === 'locked') return 'Closed';
   if (card.state === 'unavailable') return 'Unavailable';
-  if (card.state === 'done') return 'Submitted';
+  if (phaseSatisfied(card)) return 'Submitted';
   const tries = Number(card.tries) || 0;
   const max = Number(card.maxTries) || 0;
   if (tries > 0 && max > 0) return tries + ' of ' + max + ' attempts used';
@@ -856,18 +900,29 @@ function appendPhase(parent, label, card) {
   const line = document.createElement('div');
   line.textContent = phaseText(card);
   cell.append(small, line);
+  if (phaseSatisfied(card)) {
+    const used = Number(card.tries) || 0;
+    const max = Number(card.maxTries) || 0;
+    if (used > 0 && max > 0) {
+      const note = document.createElement('div');
+      note.className = 'hk-small hk-muted';
+      const left = Math.max(0, max - used);
+      note.textContent = used + ' of ' + max + ' attempts used' + (left ? ' · ' + left + ' remaining' : '');
+      cell.appendChild(note);
+    }
+  }
   if (phaseActionable(card)) {
     const button = document.createElement('button');
     button.type = 'button';
     button.className = 'hk-button hk-link';
-    button.textContent = 'Start ' + label;
+    button.textContent = (phaseSatisfied(card) ? 'Retake ' : 'Start ') + label;
     button.onclick = function () { startLesson(card.testId, card.testId, phaseOf(card.phase)); };
     cell.appendChild(button);
   }
   parent.appendChild(cell);
 }
 
-function teachingCard(lesson, index) {
+function teachingCard(lesson, index, sectionName) {
   const status = lessonStatus(lesson);
   const progress = lesson.progress || { done: 0, total: 0 };
   const card = document.createElement('article');
@@ -876,7 +931,7 @@ function teachingCard(lesson, index) {
   top.className = 'hk-card-top';
   const idx = document.createElement('span');
   idx.className = 'hk-index';
-  idx.textContent = String(index + 1).padStart(2, '0') + ' / SCIENCE';
+  idx.textContent = String(index + 1).padStart(2, '0') + ' / ' + String(sectionName || 'SCIENCE').toUpperCase();
   top.append(idx, tag(status.text, status.warn));
   const title = document.createElement('h3');
   title.textContent = lesson.title || lesson.lessonId;
@@ -923,7 +978,7 @@ function teachingCard(lesson, index) {
   return card;
 }
 
-function assessmentCard(test, index) {
+function assessmentCard(test, index, sectionName) {
   const card = document.createElement('article');
   card.className = 'hk-card';
   const top = document.createElement('div');
@@ -931,7 +986,9 @@ function assessmentCard(test, index) {
   const idx = document.createElement('span');
   idx.className = 'hk-index';
   const id = String(test.testId || '').toUpperCase();
-  idx.textContent = (id === 'SCI-DM' || String(test.lesson || '').toUpperCase() === 'L6') ? 'LAB' : 'ASSESSMENT';
+  idx.textContent = (id === 'SCI-DM' || String(test.lesson || '').toUpperCase() === 'L6')
+    ? 'LAB'
+    : String(sectionName || 'ASSESSMENT').toUpperCase();
   const phase = phaseOf(test.phase);
   const statusText = phaseText({
     linked: true,
@@ -1008,6 +1065,7 @@ function renderAccount(grid) {
 function renderLessonGrid() {
   const grid = document.getElementById('lesson-grid');
   grid.replaceChildren();
+  if (state.linkNote) setError('lesson-select-error', state.linkNote);
   const section = state.section || 'home';
   if (section === 'help') { renderHelp(grid); return; }
   if (section === 'account') { renderAccount(grid); return; }
@@ -1019,7 +1077,8 @@ function renderLessonGrid() {
   kicker.className = 'hk-kicker';
   kicker.textContent = state.programId ? programLabel(state.programId) : 'Program';
   const h1 = document.createElement('h1');
-  h1.textContent = section === 'home' ? ('Aloha, ' + (state.username || 'student') + '.') : 'My lessons';
+  const sectionTitle = { science: 'Science', mentoring: 'Mentoring', internship: 'Internship', college: 'College Transition', mindset: 'Mindset' }[section];
+  h1.textContent = section === 'home' ? ('Aloha, ' + (state.username || 'student') + '.') : (sectionTitle || 'My lessons');
   const sub = document.createElement('p');
   sub.className = 'hk-muted';
   sub.textContent = state.programId
@@ -1030,22 +1089,11 @@ function renderLessonGrid() {
   grid.appendChild(heading);
 
   if (!state.programId) {
-    const picker = document.createElement('div');
-    picker.className = 'hk-cards';
-    (state.programs || []).forEach(function (id) {
-      const card = document.createElement('article');
-      card.className = 'hk-card';
-      const name = document.createElement('h3');
-      name.textContent = programLabel(id);
-      const button = document.createElement('button');
-      button.type = 'button';
-      button.className = 'hk-button hk-primary';
-      button.textContent = 'Open program';
-      button.onclick = function () { chooseProgram(id); };
-      card.append(name, button);
-      picker.appendChild(card);
-    });
-    grid.appendChild(picker);
+    const note = document.createElement('p');
+    note.textContent = state.assignment === 'many'
+      ? 'More than one program is assigned to this login. Please contact your instructor.'
+      : 'Your program hasn’t been assigned yet. Please contact your instructor.';
+    grid.appendChild(note);
     return;
   }
 
@@ -1088,9 +1136,6 @@ function renderLessonGrid() {
     }
   }
 
-  const cards = document.createElement('div');
-  cards.className = 'hk-cards';
-  lessons.forEach(function (lesson, index) { cards.appendChild(teachingCard(lesson, index)); });
   const tests = state.testsLoaded
     ? (state.tests || []).filter(function (test) { return !coveredByLesson(test); })
     : (!lessons.length ? ALL_LESSONS.map(function (lid) {
@@ -1098,26 +1143,75 @@ function renderLessonGrid() {
           lesson: lid,
           testId: lid,
           title: (LESSON_NAMES[lid] || lid).replace(/^Lesson \d+ – /, ''),
+          strand: 'Science',
           state: 'open',
           tries: state.tryCounts[lid] || 0,
           maxTries: 2,
           phase: 'SINGLE',
         };
       }) : []);
-  tests.forEach(function (test, index) { cards.appendChild(assessmentCard(test, index)); });
-  if (!lessons.length && !tests.length) {
+  const groups = sectionGroups(lessons, tests).filter(function (group) {
+    return section === 'home' || section === 'lessons' || section === group.id;
+  });
+  if (!groups.length) {
     const empty = document.createElement('p');
     empty.textContent = 'No lessons or assessments are assigned in this program.';
     grid.appendChild(empty);
     return;
   }
-  if (section === 'lessons' || section === 'home') {
-    const caption = document.createElement('div');
-    caption.className = 'hk-section-title hk-small hk-muted';
-    caption.textContent = lessons.length + ' teaching lesson' + (lessons.length === 1 ? '' : 's') + ' in this program';
-    grid.appendChild(caption);
+  groups.forEach(function (group) {
+    const caption = document.createElement('h2');
+    caption.className = 'hk-section-title';
+    caption.textContent = group.name;
+    const cards = document.createElement('div');
+    cards.className = 'hk-cards';
+    group.lessons.forEach(function (lesson, index) { cards.appendChild(teachingCard(lesson, index, group.name)); });
+    group.tests.forEach(function (test, index) { cards.appendChild(assessmentCard(test, index, group.name)); });
+    grid.append(caption, cards);
+  });
+}
+
+function sectionIdFor(item, kind) {
+  if (kind === 'lesson') {
+    const id = String(item.lessonId || '');
+    if (id.indexOf('sci-') === 0) return 'science';
+    return 'science';
   }
-  grid.appendChild(cards);
+  const strand = String(item.strand || '');
+  if (strand === 'Mentoring') return 'mentoring';
+  if (strand === 'Internship') return 'internship';
+  if (strand === 'College') return 'college';
+  if (strand === 'Mindset') return 'mindset';
+  const id = String(item.testId || '').toUpperCase();
+  if (id.indexOf('MENT-') === 0) return 'mentoring';
+  if (id.indexOf('INT-') === 0) return 'internship';
+  if (id.indexOf('COL-') === 0) return 'college';
+  if (id.indexOf('TEAMS-') === 0) return 'mindset';
+  return 'science';
+}
+
+function sectionGroups(lessons, tests) {
+  const order = [
+    ['science', 'Science'],
+    ['mentoring', 'Mentoring'],
+    ['internship', 'Internship'],
+    ['college', 'College Transition'],
+    ['mindset', 'Mindset'],
+  ];
+  return order.map(function (pair) {
+    return {
+      id: pair[0],
+      name: pair[1],
+      lessons: lessons.filter(function (lesson) { return sectionIdFor(lesson, 'lesson') === pair[0]; }),
+      tests: tests.filter(function (test) { return sectionIdFor(test, 'test') === pair[0]; }),
+    };
+  }).filter(function (group) { return group.lessons.length || group.tests.length; });
+}
+
+function assignedSections() {
+  const lessons = state.lessons || [];
+  const tests = (state.tests || []).filter(function (test) { return !coveredByLesson(test); });
+  return sectionGroups(lessons, tests).map(function (group) { return [group.id, group.name]; });
 }
 
 // ── Start a lesson ─────────────────────────────────────────────────────────────
@@ -1131,7 +1225,7 @@ function friendlyError(code) {
   if (code === 'bad_question_bank') return 'This test is not available (question bank). Contact your instructor.';
   if (code === 'no_questions_found') return 'No questions found for this test.';
   if (code === 'not_in_program') return 'You are not in that program.';
-  if (code === 'need_program') return 'Choose which program to open.';
+  if (code === 'need_program') return 'More than one program is assigned. Please contact your instructor.';
   if (code === 'test_not_assigned') return 'This test is not assigned in this program.';
   if (code === 'no_program') return 'You are not assigned to a program. Contact your instructor.';
   if (code === 'pre_required') return 'Complete the PRE for this lesson before the activities. That is a setting on this program.';

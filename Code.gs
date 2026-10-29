@@ -719,8 +719,65 @@ function reloadStudent_(ss, username, password) {
   return findStudent(data, username, password);
 }
 
+function resultAnswers_(row, layout) {
+  if (layout.answersJson >= 0) {
+    const raw = String(row[layout.answersJson] || '').trim();
+    if (raw.charAt(0) === '[') {
+      try {
+        const parsed = JSON.parse(raw);
+        if (Array.isArray(parsed)) return parsed.map(function (item) { return String(item || ''); });
+      } catch (e) {}
+    }
+  }
+  const answers = [];
+  const end = layout.answerStart + (layout.answerCap > 0 ? layout.answerCap : 14);
+  for (let c = layout.answerStart; c < end && c < row.length; c++) answers.push(String(row[c] || ''));
+  while (answers.length && answers[answers.length - 1] === '') answers.pop();
+  return answers;
+}
+
+function resultRowComplete_(row, layout) {
+  if (layout.complete >= 0) {
+    const marked = String(row[layout.complete] || '').trim().toUpperCase();
+    if (marked === 'YES') return true;
+    if (marked === 'NO') return false;
+  }
+  const answers = resultAnswers_(row, layout);
+  const scoreRaw = layout.score >= 0 ? String(row[layout.score] || '') : '';
+  const parts = scoreRaw.split('/');
+  const den = Number(parts[1]) || 0;
+  const expected = den > 0 ? den : answers.length;
+  if (expected <= 0 || answers.length < expected) return false;
+  for (let i = 0; i < expected; i++) {
+    if (!String(answers[i] || '').trim()) return false;
+  }
+  return true;
+}
+
+function completeSitIndex_(ss) {
+  const index = {};
+  const sheet = ss.getSheetByName('Results');
+  if (!sheet) return index;
+  const data = sheet.getDataRange().getValues();
+  if (!data.length) return index;
+  const layout = resultsLayout_(data);
+  if (layout.username < 0 || layout.testId < 0) return index;
+  const start = layout.mode === 'header' ? 1 : 0;
+  for (let i = start; i < data.length; i++) {
+    const username = normalizeUsername_(data[i][layout.username]);
+    const testId = resolveTestId_(data[i][layout.testId]);
+    if (!username || !testId || !resultRowComplete_(data[i], layout)) continue;
+    const programId = layout.programId >= 0 ? normalizeProgramId_(data[i][layout.programId]) : '';
+    const phase = layout.phase >= 0 ? normalizePhase_(data[i][layout.phase]) : 'SINGLE';
+    index[username + '|' + testId + '|' + programId + '|' + phase] = true;
+  }
+  return index;
+}
+
 function buildTestsPayload_(ss, student, programId) {
   const now = new Date();
+  const submitted = completeSitIndex_(ss);
+  const username = usernameFromStudent_(student);
   const lessons = programId ? programLessons_(ss, programId) : LESSONS.map(function (lesson) {
     return { lesson: lesson, testId: LESSON_TO_TEST[lesson] };
   });
@@ -760,6 +817,7 @@ function buildTestsPayload_(ss, student, programId) {
       openAt: rel.openAt ? rel.openAt.toISOString() : '',
       closeAt: rel.closeAt ? rel.closeAt.toISOString() : '',
       timeLimit: rel.missing ? QUIZ_TIME_SECONDS : rel.timeLimitSec,
+      submitted: submitted[username + '|' + testId + '|' + (programId || '') + '|' + phase] === true,
     };
   }).filter(function (t) { return t && t.state !== 'hidden'; });
 }
@@ -770,6 +828,7 @@ function programLessons_(ss, programId) {
   const data = sheet.getDataRange().getValues();
   const phaseCol = headerIndex_(data[0] || [], 'Phase');
   const out = [];
+  const seen = {};
   for (let i = 1; i < data.length; i++) {
     if (normalizeProgramId_(data[i][0]) !== programId) continue;
     const enabled = String(data[i][2]).toUpperCase();
@@ -777,10 +836,14 @@ function programLessons_(ss, programId) {
     const testId = resolveTestId_(data[i][1]);
     const lesson = TEST_TO_LESSON[testId];
     if (!lesson) continue;
+    const phase = phaseCol >= 0 ? normalizePhase_(data[i][phaseCol]) : 'SINGLE';
+    const key = testId + '|' + phase;
+    if (seen[key]) continue;
+    seen[key] = true;
     out.push({
       lesson: lesson,
       testId: testId,
-      phase: phaseCol >= 0 ? normalizePhase_(data[i][phaseCol]) : 'SINGLE',
+      phase: phase,
       sort: Number(data[i][3]) || 0,
     });
   }

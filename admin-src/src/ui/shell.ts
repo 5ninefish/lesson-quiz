@@ -143,6 +143,29 @@ function renderRoster(
 ): void {
   pageHeading(main, "Roster", "roster");
   main.append(el("p", { class: "muted" }, "Open the list to see each test. Choosing one opens the student link. It does not change assignments. Add people to the shared bank here, then put them in a program with Edit assignments."));
+  const names = new Map(snap.programs.map((program) => [program.programId, program.programName || program.programId]));
+  const activeByStudent = new Map<string, string[]>();
+  for (const row of snap.programStudents) {
+    if (!row.active || !row.username) continue;
+    const list = activeByStudent.get(row.username) || [];
+    if (!list.includes(row.programId)) list.push(row.programId);
+    activeByStudent.set(row.username, list);
+  }
+  const overlaps = [...activeByStudent.entries()].filter(([, ids]) => ids.length > 1);
+  if (overlaps.length) {
+    const note = el("div", { class: "callout" });
+    note.append(el("strong", {}, "More than one active program"));
+    note.append(
+      el(
+        "p",
+        {},
+        overlaps
+          .map(([username, ids]) => `${username}: ${ids.map((id) => names.get(id) || id).join(", ")}`)
+          .join(" · ") + ". Leave one active assignment for each student. Do not delete the historical rows.",
+      ),
+    );
+    main.append(note);
+  }
   const wrap = el("div", { class: "table-wrap" });
   wrap.setAttribute("data-filterable", "true");
   const t = el("table");

@@ -54,10 +54,29 @@ function phaseScore(
   return "Missing";
 }
 
-function obligationOutstanding(record: LessonRecord): boolean {
+function obligationCount(record: LessonRecord): number {
   const pack = packFor(record.lessonId);
-  if (!pack?.linked) return false;
-  return record.assessment !== "PRE and POST recorded";
+  if (!pack?.linked || !pack.assessmentId) return 0;
+  if (record.assessment === "PRE and POST recorded") return 0;
+  if (record.assessment === "PRE missing" || record.assessment === "POST missing") return 1;
+  return 2;
+}
+
+function attemptsLeft(snap: DashboardSnapshot, programId: string, record: LessonRecord, phase: "PRE" | "POST"): string {
+  const pack = packFor(record.lessonId);
+  const release = linkedTest(snap, programId, record, phase);
+  if (!pack?.linked || !release) return "";
+  const state = snap.programState.find(
+    (row) =>
+      row.programId === programId &&
+      row.username === record.username &&
+      row.testId === pack.assessmentId &&
+      phaseOf(row.phase) === phase,
+  );
+  const used = state?.sitCache || 0;
+  const left = Math.max(0, release.maxTries - used);
+  if (!used && left === release.maxTries) return "";
+  return left === 1 ? "1 attempt remaining" : `${left} attempts remaining`;
 }
 
 function followUp(record: LessonRecord): { text: string; warn: boolean } {
@@ -113,8 +132,9 @@ export function renderOverview(
   const scopePack = scopeId && scopeId !== "__all__" ? packFor(scopeId) : undefined;
   const scopeName = scopePack?.title || (scopeId === "__all__" ? "All enabled lessons" : "This lesson");
   const submitted = scoped.filter((record) => record.progress === "Lesson completed").length;
-  const missingStudents = new Set(scoped.filter(obligationOutstanding).map((record) => record.username)).size;
-  const supportRows = scoped.filter((record) => record.support);
+  const obligations = scoped.reduce((sum, record) => sum + obligationCount(record), 0);
+  const obligationStudents = new Set(scoped.filter((record) => obligationCount(record) > 0).map((record) => record.username)).size;
+  const supportStudents = new Set(scoped.filter((record) => record.support).map((record) => record.username)).size;
   const scores = bestCompleteScores(snap.results, snap.questionCounts);
 
   main.append(el("div", { class: "kicker" }, (program?.programName || programId || "Program").toUpperCase()));
@@ -148,14 +168,24 @@ export function renderOverview(
     cell.append(el("span", {}, label), el("strong", {}, value), el("span", {}, note));
     stats.append(cell);
   };
-  stat("Students in program", String(snap.students.length), "Program roster");
+  stat("Students in program", String(snap.students.length), "Enrolled students");
   stat(
-    scopePack ? `${scopePack.title} lessons submitted` : "Lesson rows submitted",
-    `${submitted} / ${scoped.length}`,
-    scopePack ? "Topics met or supported" : "Across enabled lessons",
+    "Lessons completed",
+    `${submitted} of ${scoped.length}`,
+    "Student lessons with every topic met or supported",
   );
-  stat("Missing assessments", `${missingStudents} ${missingStudents === 1 ? "student" : "students"}`, "PRE or POST outstanding");
-  stat("Open support needs", String(supportRows.length), supportRows.length ? "Continued with help" : "No support flag");
+  stat(
+    "Assessments still owed",
+    String(obligations),
+    obligations
+      ? `${obligations === 1 ? "Complete submission" : "Complete submissions"} still needed · ${obligationStudents} ${obligationStudents === 1 ? "student" : "students"}`
+      : "No complete submission still needed",
+  );
+  stat(
+    "Open support needs",
+    String(supportStudents),
+    supportStudents ? "Students with a support flag" : "No support flag",
+  );
   main.append(stats);
 
   const titleRow = el("div", { class: "section-title" });
@@ -213,7 +243,14 @@ export function renderOverview(
     };
     const action = el("td");
     action.append(view);
-    tr.append(who, topics, el("td", {}, phaseScore(snap, programId, record, "PRE", scores)), el("td", {}, phaseScore(snap, programId, record, "POST", scores)), followCell, action);
+    const scoreCell = (phase: "PRE" | "POST") => {
+      const td = el("td");
+      td.append(document.createTextNode(phaseScore(snap, programId, record, phase, scores)));
+      const left = attemptsLeft(snap, programId, record, phase);
+      if (left) td.append(el("span", { class: "cellnote" }, left));
+      return td;
+    };
+    tr.append(who, topics, scoreCell("PRE"), scoreCell("POST"), followCell, action);
     table.append(tr);
   });
   wrap.append(table);

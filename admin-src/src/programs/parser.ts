@@ -201,7 +201,7 @@ export function parseProgramTests(values: SheetValues, now = new Date()): Progra
         severity: "error",
         tab: "ProgramTests",
         rowNumber,
-        message: `Duplicate program test ${testId} in ${programId} (also row ${prev}).`,
+        message: `Duplicate ${phase} row for ${testId} in ${programId} (also row ${prev}).`,
       });
     } else {
       seen.set(key, rowNumber);

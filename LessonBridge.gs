@@ -243,8 +243,16 @@ function phaseCard_(tests, testId, phase) {
   const hit = (tests || []).filter(function (test) {
     return resolveTestId_(test.testId) === want && normalizePhase_(test.phase) === phase;
   })[0];
-  if (!hit) return { linked: true, testId: want, phase: phase, state: 'not_assigned', tries: 0, maxTries: 0 };
-  return { linked: true, testId: hit.testId, phase: hit.phase, state: hit.state, tries: hit.tries, maxTries: hit.maxTries };
+  if (!hit) return { linked: true, testId: want, phase: phase, state: 'not_assigned', tries: 0, maxTries: 0, submitted: false };
+  return {
+    linked: true,
+    testId: hit.testId,
+    phase: hit.phase,
+    state: hit.state,
+    tries: hit.tries,
+    maxTries: hit.maxTries,
+    submitted: hit.submitted === true,
+  };
 }
 
 function buildTeachingLessonsPayload_(ss, student, programId, tests) {

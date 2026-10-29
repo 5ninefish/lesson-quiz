@@ -1,4 +1,4 @@
-import { formatHst, secondsToMinutes } from "../programs/ids";
+import { formatHst, phaseOf, secondsToMinutes } from "../programs/ids";
 import { releaseMutation } from "../releases/mutations";
 import type { DashboardSnapshot, MutationPreview, ProgramTestView } from "../types";
 import { confirmDialog } from "./dialogs";
@@ -25,12 +25,28 @@ export function renderReleases(
   );
   const tests = snap.programTests
     .filter((t) => t.programId === programId)
-    .sort((a, b) => a.sortOrder - b.sortOrder);
-  if (!tests.length) {
+    .sort((a, b) => a.sortOrder - b.sortOrder || a.rowNumber - b.rowNumber);
+  const seen = new Set<string>();
+  const unique = tests.filter((t) => {
+    const key = `${t.programId}::${t.testId}::${phaseOf(t.phase)}`;
+    if (seen.has(key)) return false;
+    seen.add(key);
+    return true;
+  });
+  if (!unique.length) {
     main.append(el("p", {}, "No ProgramTests for this program. Seed or launch first."));
     return;
   }
-  for (const t of tests) main.append(testCard(t, canWrite, actor, onApply));
+  if (unique.length < tests.length) {
+    main.append(
+      el(
+        "p",
+        { class: "muted" },
+        "A repeated row for the same program, test, and phase is not shown again. Data Health still lists that row. PRE and POST stay separate.",
+      ),
+    );
+  }
+  for (const t of unique) main.append(testCard(t, canWrite, actor, onApply));
 }
 
 function testCard(
@@ -40,8 +56,10 @@ function testCard(
   onApply: (preview: MutationPreview) => void,
 ): HTMLElement {
   const card = el("section", { class: "release-card" });
-  card.append(el("h2", {}, `${t.title}`));
-  card.append(el("p", { class: "muted" }, `${t.testId} · ${t.stateLabel} · Manual ${t.manual}`));
+  const phase = phaseOf(t.phase);
+  const phaseLabel = phase === "SINGLE" ? "Single sitting" : phase;
+  card.append(el("h2", {}, `${t.title} · ${phaseLabel}`));
+  card.append(el("p", { class: "muted" }, `${t.testId} · ${phaseLabel} · ${t.stateLabel} · Manual ${t.manual}`));
   const meta = el("p");
   meta.textContent = `Window ${formatHst(t.openAt)} → ${formatHst(t.closeAt)} · Max ${t.maxTries} · Timer ${secondsToMinutes(t.timeLimitSec)} min (${t.timeLimitSec}s)`;
   card.append(meta);
