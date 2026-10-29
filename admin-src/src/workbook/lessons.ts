@@ -103,5 +103,18 @@ export function parseLessonProgress(rows: SheetValues): LessonProgressView[] {
       updatedAt: cell(row, col("UpdatedAt", 8)),
     });
   }
-  return out;
+  const rank: Record<string, number> = { met: 4, support: 4, needs_rubric: 2, place: 1 };
+  const kept = new Map<string, LessonProgressView>();
+  for (const row of out) {
+    const key = [row.programId, row.username, row.lessonId, row.topicId].join("\t");
+    const current = kept.get(key);
+    if (!current) {
+      kept.set(key, row);
+      continue;
+    }
+    const rowRank = rank[row.status] || 0;
+    const currentRank = rank[current.status] || 0;
+    if (rowRank > currentRank || (rowRank === currentRank && row.updatedAt > current.updatedAt)) kept.set(key, row);
+  }
+  return [...kept.values()];
 }

@@ -256,7 +256,7 @@ function buildTeachingLessonsPayload_(ss, student, programId, tests) {
   return rows.map(function (row) {
     const topics = row.pack.topics.map(function (topic) {
       const hits = progress.filter(function (item) { return item.lessonId === row.pack.lessonId && item.topicId === topic.id; });
-      const latest = hits[0] || null;
+      const latest = bestProgress_(hits);
       return {
         id: topic.id,
         title: topic.title,
@@ -325,29 +325,56 @@ function redactArtifact_(value) {
   return text;
 }
 
+function bestProgress_(hits) {
+  if (!hits || !hits.length) return null;
+  const rank = { met: 4, support: 4, needs_rubric: 2, place: 1 };
+  let best = hits[0];
+  for (let i = 1; i < hits.length; i++) {
+    const item = hits[i];
+    const itemRank = rank[item.status] || 0;
+    const bestRank = rank[best.status] || 0;
+    if (itemRank > bestRank || (itemRank === bestRank && String(item.updatedAt) > String(best.updatedAt))) best = item;
+  }
+  return best;
+}
+
 function upsertLessonProgress_(ss, row) {
-  const sheet = ensureNamedSheet_(ss, 'LessonProgress', progressHeaders_());
-  const data = sheet.getDataRange().getValues();
-  let found = 0;
-  for (let i = 1; i < data.length; i++) {
-    if (normalizeProgramId_(data[i][0]) !== row.programId) continue;
-    if (normalizeUsername_(data[i][1]) !== row.username) continue;
-    if (String(data[i][2] || '') !== row.lessonId) continue;
-    if (String(data[i][4] || '') !== row.topicId) continue;
-    found = i + 1;
-    break;
+  const lock = LockService.getScriptLock();
+  lock.waitLock(20000);
+  try {
+    const sheet = ensureNamedSheet_(ss, 'LessonProgress', progressHeaders_());
+    const data = sheet.getDataRange().getValues();
+    const matches = [];
+    for (let i = 1; i < data.length; i++) {
+      if (normalizeProgramId_(data[i][0]) !== row.programId) continue;
+      if (normalizeUsername_(data[i][1]) !== row.username) continue;
+      if (String(data[i][2] || '') !== row.lessonId) continue;
+      if (String(data[i][4] || '') !== row.topicId) continue;
+      matches.push(i + 1);
+    }
+    let status = row.status;
+    let support = row.support;
+    let artifact = row.artifact;
+    let updatedAt = row.updatedAt;
+    for (let i = 0; i < matches.length; i++) {
+      const previous = String(data[matches[i] - 1][5] || '');
+      if ((previous === 'met' || previous === 'support') && status === 'place') {
+        status = previous;
+        support = String(data[matches[i] - 1][7] || '');
+        artifact = String(data[matches[i] - 1][6] || '');
+        updatedAt = String(data[matches[i] - 1][8] || updatedAt);
+      }
+    }
+    const values = [row.programId, row.username, row.lessonId, row.version, row.topicId, status, artifact, support, updatedAt];
+    if (!matches.length) {
+      sheet.appendRow(values);
+      return;
+    }
+    sheet.getRange(matches[0], 1, 1, values.length).setValues([values]);
+    for (let i = matches.length - 1; i >= 1; i--) sheet.deleteRow(matches[i]);
+  } finally {
+    lock.releaseLock();
   }
-  const values = [row.programId, row.username, row.lessonId, row.version, row.topicId, row.status, row.artifact, row.support, row.updatedAt];
-  if (!found) {
-    sheet.appendRow(values);
-    return;
-  }
-  const previous = String(data[found - 1][5] || '');
-  if ((previous === 'met' || previous === 'support') && row.status === 'place') {
-    values[5] = previous;
-    values[7] = String(data[found - 1][7] || '');
-  }
-  sheet.getRange(found, 1, 1, values.length).setValues([values]);
 }
 
 function lessonProgressPost_(body) {
