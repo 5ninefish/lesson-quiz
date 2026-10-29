@@ -310,17 +310,30 @@ function loadActiveMemberships_(ss, username) {
   return out;
 }
 
+function isCohortProgram_(ss, programId) {
+  const id = normalizeProgramId_(programId);
+  if (!id || id === 'preview') return false;
+  const name = String((programNames_(ss, [id])[id]) || '').trim();
+  if (/^teaching\b/i.test(name)) return false;
+  if (/^preview$/i.test(name)) return false;
+  return true;
+}
+
 function resolveProgramContext_(ss, username, requested) {
   if (!programTablesReady_(ss)) return { mode: 'legacy', programId: '', error: '', memberships: [] };
   const memberships = loadActiveMemberships_(ss, username);
-  // One active assignment. A requested program must not pick among several.
-  if (memberships.length > 1) return { mode: 'conflict', programId: '', error: 'need_program', memberships: memberships };
+  const cohorts = memberships.filter(function (id) { return isCohortProgram_(ss, id); });
+  // One cohort. Preview and Teaching rows are not cohorts and are not domains.
+  if (cohorts.length > 1) return { mode: 'conflict', programId: '', error: 'need_program', memberships: memberships };
   if (!memberships.length) return { mode: 'none', programId: '', error: 'no_program', memberships: [] };
   const req = normalizeProgramId_(requested);
-  if (req && req !== memberships[0]) {
+  if (req && memberships.indexOf(req) < 0) {
     return { mode: 'mismatch', programId: '', error: 'not_in_program', memberships: memberships };
   }
-  return { mode: 'ok', programId: memberships[0], error: '', memberships: memberships };
+  if (req) return { mode: 'ok', programId: req, error: '', memberships: memberships };
+  if (cohorts.length === 1) return { mode: 'ok', programId: cohorts[0], error: '', memberships: memberships };
+  if (memberships.length === 1) return { mode: 'ok', programId: memberships[0], error: '', memberships: memberships };
+  return { mode: 'slices', programId: '', error: 'need_program', memberships: memberships };
 }
 
 function getProgramTestRow_(ss, programId, testId, phase) {

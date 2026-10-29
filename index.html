@@ -433,7 +433,7 @@ const ALL_LESSONS = ['L1','L2','L3','L4','L5','L6'];
   <header class="hk-top">
     <div class="hk-brand">Hōkūlani<small>LEARN · EXPLORE · CREATE</small></div>
     <div class="hk-context">
-      <div id="program-label" class="hidden">Program <strong id="program-name"></strong></div>
+      <div id="program-label" class="hidden">Cohort <strong id="program-name"></strong></div>
       <div class="hk-person" id="account-name">Student<small>Student</small></div>
     </div>
   </header>
@@ -505,6 +505,7 @@ function freshState() {
     submissionId: '',
     requestedProgram: params.program,
     programId: '',
+    workProgramId: '',
     pendingTest: params.test,
     pendingLesson: params.lesson,
     pendingPhase: params.phase,
@@ -548,7 +549,7 @@ function setError(id, msg) {
 
 // ── API call ──────────────────────────────────────────────────────────────────
 async function api(body, retries = 0) {
-  if (state.programId && body.programId == null) body.programId = state.programId;
+  if (body.programId == null) body.programId = state.workProgramId || state.programId || '';
   const res = await fetch(API_URL, {
     method: 'POST',
     body: JSON.stringify(body),
@@ -584,7 +585,8 @@ async function login() {
     state.username = u;
     state.password = p;
     rememberPrograms(r);
-    const memberships = state.programs.slice();
+    let memberships = state.programs.slice();
+    if (!memberships.length && r.programId) memberships = [r.programId];
     state.section = 'home';
     if (r.error === 'no_program' || !memberships.length) {
       state.assignment = 'none';
@@ -595,7 +597,13 @@ async function login() {
       btn.textContent = 'Sign In'; btn.disabled = false;
       return;
     }
-    if (memberships.length > 1 || r.needProgram) {
+    const cohorts = cohortIds(memberships);
+    if (requested && isCohortId(requested) && (cohorts.length !== 1 || requested !== cohorts[0])) {
+      state.linkNote = 'That link is for a different cohort. It does not change your assignment.';
+      state.pendingTest = '';
+      state.pendingLesson = '';
+    }
+    if (cohorts.length > 1) {
       state.assignment = 'many';
       state.programId = '';
       state.pendingTest = '';
@@ -606,23 +614,19 @@ async function login() {
       btn.textContent = 'Sign In'; btn.disabled = false;
       return;
     }
-    const assigned = memberships[0] || r.programId || '';
-    if (requested && requested !== assigned) {
-      state.linkNote = 'That link is for a different program. It does not change your assignment.';
-      state.pendingTest = '';
-      state.pendingLesson = '';
-    }
-    state.assignment = 'one';
-    if (r.programId === assigned && Array.isArray(r.tests)) {
-      state.programId = assigned;
+    if (cohorts.length === 1 && memberships.length === 1 && r.programId === cohorts[0] && Array.isArray(r.tests)) {
+      const pack = stampWork(r, cohorts[0]);
+      state.programId = cohorts[0];
+      state.workProgramId = '';
+      state.assignment = 'one';
       state.tryCounts = r.allTries || {};
-      state.tests = r.tests || [];
-      state.lessons = r.lessons || [];
+      state.tests = pack.tests;
+      state.lessons = pack.lessons;
       state.testsLoaded = true;
       showLessons();
       maybeOpenPending();
     } else {
-      await chooseProgram(assigned);
+      await loadAssignedWork(memberships, true);
     }
   } catch (err) {
     setError('login-error', 'Connection error. Please try again.');
@@ -649,7 +653,69 @@ function rememberPrograms(r) {
 }
 
 function programLabel(id) {
-  return (state.programNames && state.programNames[id]) || id || 'Program';
+  const name = (state.programNames && state.programNames[id]) || id || '';
+  return String(name).replace(/^Teaching\s+/i, '');
+}
+
+function isCohortId(id) {
+  const key = String(id || '').trim().toLowerCase();
+  if (!key || key === 'preview') return false;
+  const name = String((state.programNames && state.programNames[id]) || '').trim();
+  if (/^teaching\b/i.test(name)) return false;
+  if (/^preview$/i.test(name)) return false;
+  return true;
+}
+
+function cohortIds(ids) {
+  return (ids || []).filter(isCohortId);
+}
+
+function stampWork(pack, id) {
+  const lessons = (pack.lessons || []).map(function (lesson) {
+    const copy = Object.assign({}, lesson, { programId: lesson.programId || id });
+    if (copy.pre) copy.pre = Object.assign({}, copy.pre, { programId: copy.programId });
+    if (copy.post) copy.post = Object.assign({}, copy.post, { programId: copy.programId });
+    return copy;
+  });
+  const tests = (pack.tests || []).map(function (test) {
+    return Object.assign({}, test, { programId: test.programId || id });
+  });
+  return { lessons: lessons, tests: tests };
+}
+
+async function loadAssignedWork(ids, openPending) {
+  const cohorts = cohortIds(ids);
+  if (cohorts.length > 1) {
+    state.assignment = 'many';
+    state.programId = '';
+    state.workProgramId = '';
+    state.tests = [];
+    state.lessons = [];
+    showLessons();
+    return;
+  }
+  const order = cohorts.concat((ids || []).filter(function (id) { return cohorts.indexOf(id) < 0; }));
+  const lessons = [];
+  const tests = [];
+  const tries = {};
+  for (let i = 0; i < order.length; i++) {
+    const r = await api({ action: 'get_tries', username: state.username, password: state.password, programId: order[i] });
+    if (!r || r.error || r.needProgram) continue;
+    rememberPrograms(r);
+    const pack = stampWork(r, r.programId || order[i]);
+    pack.lessons.forEach(function (lesson) { lessons.push(lesson); });
+    pack.tests.forEach(function (test) { tests.push(test); });
+    Object.assign(tries, r.allTries || {});
+  }
+  state.lessons = lessons;
+  state.tests = tests;
+  state.tryCounts = tries;
+  state.testsLoaded = true;
+  state.programId = cohorts[0] || '';
+  state.workProgramId = '';
+  state.assignment = (cohorts.length || lessons.length || tests.length) ? 'one' : 'none';
+  showLessons();
+  if (openPending) maybeOpenPending();
 }
 
 function showLessons() {
@@ -702,7 +768,7 @@ function maybeOpenPending() {
   if (pendingLesson && !pending) {
     const lesson = (state.lessons || []).find(function (item) { return lessonMatches(item, pendingLesson); });
     if (!lesson) {
-      setError('lesson-select-error', 'That lesson is not in your assigned program.');
+      setError('lesson-select-error', 'That lesson is not in your assigned cohort.');
       return;
     }
     openTeachingLesson(lesson);
@@ -715,10 +781,10 @@ function maybeOpenPending() {
   let hit = matches.find(function (t) { return phaseOf(t.phase) === want; });
   if (!hit && !specified && matches.length === 1) hit = matches[0];
   if (!hit) {
-    setError('lesson-select-error', 'That assessment is not in your assigned program.');
+    setError('lesson-select-error', 'That assessment is not in your assigned cohort.');
     return;
   }
-  startLesson(hit.lesson || hit.testId, hit.testId, phaseOf(hit.phase));
+  startLesson(hit.lesson || hit.testId, hit.testId, phaseOf(hit.phase), hit.programId);
 }
 
 function maybeOpenPendingTest() {
@@ -741,8 +807,8 @@ function coveredByLesson(test) {
   return (state.lessons || []).some(function (lesson) {
     const pre = lesson.pre || {};
     const post = lesson.post || {};
-    return (pre.linked && pre.state !== 'not_assigned' && pre.testId === test.testId && phaseOf(pre.phase) === phase)
-      || (post.linked && post.state !== 'not_assigned' && post.testId === test.testId && phaseOf(post.phase) === phase);
+    return (pre.linked && pre.state !== 'not_assigned' && pre.testId === test.testId)
+      || (post.linked && post.state !== 'not_assigned' && post.testId === test.testId);
   });
 }
 
@@ -755,7 +821,7 @@ function openTeachingLesson(lesson) {
     sessionStorage.setItem('hokulani-lesson-session', JSON.stringify({
       username: state.username,
       password: state.password,
-      programId: state.programId,
+      programId: lesson.programId || state.programId,
       lessonId: lesson.lessonId,
       api: API_URL,
     }));
@@ -778,7 +844,7 @@ function paintChrome() {
   account.querySelector('small').textContent = 'Student';
   const label = document.getElementById('program-label');
   const name = document.getElementById('program-name');
-  if (state.assignment === 'one' && state.programId) {
+  if (state.assignment === 'one' && isCohortId(state.programId)) {
     label.classList.remove('hidden');
     name.textContent = programLabel(state.programId);
   } else {
@@ -805,7 +871,7 @@ function paintChrome() {
     nav.appendChild(button);
   });
   const context = document.getElementById('portal-context');
-  context.textContent = (state.programId ? programLabel(state.programId) : 'Student portal');
+  context.textContent = (isCohortId(state.programId) ? programLabel(state.programId) : 'Student portal');
 }
 
 function lessonStarted(lesson) {
@@ -937,7 +1003,7 @@ function appendPhase(parent, label, card) {
     button.type = 'button';
     button.className = 'hk-button hk-link';
     button.textContent = (phaseSatisfied(card) ? 'Retake ' : 'Start ') + label;
-    button.onclick = function () { startLesson(card.testId, card.testId, phaseOf(card.phase)); };
+    button.onclick = function () { startLesson(card.testId, card.testId, phaseOf(card.phase), card.programId); };
     cell.appendChild(button);
   }
   parent.appendChild(cell);
@@ -1060,7 +1126,7 @@ function renderHelp(grid) {
   const title = document.createElement('h2');
   title.textContent = 'How this page works';
   const copy = document.createElement('p');
-  copy.textContent = 'Sign in with the username and password your instructor assigned. This page does not show official scores or answer keys. Home lists the teaching lessons enabled for the program you are in. Start and Resume open your saved place. Review opens finished work and does not start a new official attempt. PRE and POST are separate. Practice checks and Continue with support do not use those attempts. A topic continued with support is help, not the same as finishing it on your own. Not connected means that lesson has no official test yet. Digital Media, when it is assigned, opens its own lab and keeps its test on a separate card. Sign out from Account.';
+  copy.textContent = 'Sign in with the username and password your instructor assigned. This page does not show official scores or answer keys. Home lists the lessons in your cohort, grouped by domain. Science includes Computer Science. Start and Resume open your saved place. Review opens finished work and does not start a new official attempt. PRE and POST are separate. Practice checks and Continue with support do not use those attempts. A topic continued with support is help, not the same as finishing it on your own. Not connected means that lesson has no official test yet. Digital Media, when it is assigned, opens its own lab and keeps its test on a separate card. Sign out from Account.';
   box.append(title, copy);
   grid.appendChild(box);
 }
@@ -1073,9 +1139,9 @@ function renderAccount(grid) {
   const who = document.createElement('p');
   who.textContent = 'Signed in as ' + state.username + '.';
   const program = document.createElement('p');
-  program.textContent = state.programId
-    ? 'Program: ' + programLabel(state.programId) + '.'
-    : 'Please contact your instructor about your program assignment.';
+  program.textContent = isCohortId(state.programId)
+    ? 'Cohort: ' + programLabel(state.programId) + '.'
+    : 'Your instructor assigns your cohort. Lessons are grouped by domain.';
   const button = document.createElement('button');
   button.type = 'button';
   button.className = 'hk-button';
@@ -1098,24 +1164,24 @@ function renderLessonGrid() {
   const titles = document.createElement('div');
   const kicker = document.createElement('div');
   kicker.className = 'hk-kicker';
-  kicker.textContent = state.programId ? programLabel(state.programId) : 'Program';
+  kicker.textContent = isCohortId(state.programId) ? programLabel(state.programId) : 'Hōkūlani';
   const h1 = document.createElement('h1');
   const sectionTitle = { science: 'Science', mentoring: 'Mentoring', internship: 'Internship', college: 'College Transition', mindset: 'Mindset' }[section];
   h1.textContent = section === 'home' ? ('Aloha, ' + (state.username || 'student') + '.') : (sectionTitle || 'My lessons');
   const sub = document.createElement('p');
   sub.className = 'hk-muted';
-  sub.textContent = state.programId
-    ? 'Your work for this program, all in one place.'
-    : 'Your instructor assigns your program.';
+  sub.textContent = isCohortId(state.programId)
+    ? 'Your work for this cohort, all in one place.'
+    : 'Your lessons are grouped by domain.';
   titles.append(kicker, h1, sub);
   heading.appendChild(titles);
   grid.appendChild(heading);
 
-  if (!state.programId) {
+  if (state.assignment === 'many' || state.assignment === 'none') {
     const note = document.createElement('p');
     note.textContent = state.assignment === 'many'
-      ? 'More than one program is assigned to this login. Please contact your instructor.'
-      : 'Your program hasn’t been assigned yet. Please contact your instructor.';
+      ? 'More than one cohort is assigned to this login. Please contact your instructor.'
+      : 'Your cohort hasn’t been assigned yet. Please contact your instructor.';
     grid.appendChild(note);
     return;
   }
@@ -1178,7 +1244,7 @@ function renderLessonGrid() {
   });
   if (!groups.length) {
     const empty = document.createElement('p');
-    empty.textContent = 'No lessons or assessments are assigned in this program.';
+    empty.textContent = 'No lessons or assessments are assigned in this cohort.';
     grid.appendChild(empty);
     return;
   }
@@ -1247,16 +1313,16 @@ function friendlyError(code) {
   if (code === 'invalid_credentials') return 'Session expired. Please sign in again.';
   if (code === 'bad_question_bank') return 'This test is not available (question bank). Contact your instructor.';
   if (code === 'no_questions_found') return 'No questions found for this test.';
-  if (code === 'not_in_program') return 'You are not in that program.';
-  if (code === 'need_program') return 'More than one program is assigned. Please contact your instructor.';
-  if (code === 'test_not_assigned') return 'This test is not assigned in this program.';
-  if (code === 'no_program') return 'You are not assigned to a program. Contact your instructor.';
-  if (code === 'pre_required') return 'Complete the PRE for this lesson before the activities. That is a setting on this program.';
-  if (code === 'lesson_not_assigned') return 'This lesson is not assigned in this program.';
+  if (code === 'not_in_program') return 'You are not in that cohort.';
+  if (code === 'need_program') return 'More than one cohort is assigned. Please contact your instructor.';
+  if (code === 'test_not_assigned') return 'This test is not assigned in this cohort.';
+  if (code === 'no_program') return 'You are not assigned to a cohort. Contact your instructor.';
+  if (code === 'pre_required') return 'Complete the PRE for this lesson before the activities. That is a setting on this cohort.';
+  if (code === 'lesson_not_assigned') return 'This lesson is not assigned in this cohort.';
   return code ? ('Could not load: ' + code) : 'Unknown error';
 }
 
-async function startLesson(lesson, testId, phase) {
+async function startLesson(lesson, testId, phase, programId) {
   setError('lesson-select-error', '');
   const chosen = phaseOf(phase);
   document.getElementById('quiz-title').textContent = LESSON_NAMES[lesson] || lesson;
@@ -1268,6 +1334,7 @@ async function startLesson(lesson, testId, phase) {
   show('view-quiz');
 
   try {
+    state.workProgramId = programId || state.programId || '';
     const r = await api({
       action: 'auth_and_load',
       username: state.username,
@@ -1275,6 +1342,7 @@ async function startLesson(lesson, testId, phase) {
       lesson,
       testId: testId || lesson,
       phase: chosen,
+      programId: state.workProgramId,
     });
 
     document.getElementById('quiz-loading').classList.add('hidden');
@@ -1299,7 +1367,7 @@ async function startLesson(lesson, testId, phase) {
     state.questions = r.questions;
     if (r.allTries) state.tryCounts = Object.assign({}, state.tryCounts, r.allTries);
     else state.tryCounts[lesson] = r.tries;
-    if (r.tests) state.tests = r.tests;
+    if (r.tests && state.programs.length < 2) state.tests = r.tests;
     state.timeLimit = r.timeLimit || 0;
     const maxTries = r.maxTries || 2;
 
@@ -1539,15 +1607,10 @@ async function backToLessons() {
   stopTimer();
   state.currentLesson = null;
   state.questions = [];
+  state.workProgramId = '';
   show('view-lessons');
   try {
-    const r = await api({ action: 'get_tries', username: state.username, password: state.password, programId: state.programId });
-    if (!r.error) {
-      state.tests = r.tests || [];
-      state.lessons = r.lessons || [];
-      state.testsLoaded = Array.isArray(r.tests);
-      state.tryCounts = r.allTries || state.tryCounts;
-    }
+    await loadAssignedWork(state.programs.length ? state.programs : (state.programId ? [state.programId] : []), false);
   } catch (e) {}
   renderLessonGrid();
 }

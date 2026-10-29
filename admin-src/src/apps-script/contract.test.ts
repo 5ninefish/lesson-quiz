@@ -390,4 +390,28 @@ describe("Apps Script dashboard contract", () => {
     expect(listed.lessons[0].pre.linked).toBe(true);
     expect(listed.tests).toEqual([]);
   });
+
+  it("does not treat preview or a teaching row as a second cohort", () => {
+    const live = book();
+    live.getSheetByName("Programs")!.appendRow(["preview", "Preview", "ACTIVE", "", "", "", "", "", ""]);
+    live.getSheetByName("Programs")!.appendRow(["teach-cs", "Teaching Computer Science", "ACTIVE", "", "", "", "", "", ""]);
+    live.getSheetByName("Programs")!.appendRow(["spring", "Spring Interns", "ACTIVE", "", "", "", "", "", ""]);
+    live.getSheetByName("ProgramStudents")!.appendRow(["preview", "ada", "TRUE", "", ""]);
+    live.getSheetByName("ProgramStudents")!.appendRow(["teach-cs", "ada", "TRUE", "", ""]);
+    const code = loadCode(live) as unknown as {
+      getTries: (username: string, password: string, programId: string) => { getContent: () => string };
+    };
+    const slices = payload(code as unknown as ReturnType<typeof loadCode>, code.getTries("ada", "secret", ""));
+    expect(slices.needProgram).toBe(true);
+    expect(slices.programs).toEqual(["preview", "teach-cs"]);
+    const science = payload(code as unknown as ReturnType<typeof loadCode>, code.getTries("ada", "secret", "teach-cs"));
+    expect(science.programId).toBe("teach-cs");
+    expect(science.needProgram).toBeUndefined();
+    live.getSheetByName("ProgramStudents")!.appendRow(["spring", "ada", "TRUE", "", ""]);
+    live.getSheetByName("ProgramStudents")!.appendRow(["summer", "ada", "TRUE", "", ""]);
+    live.getSheetByName("Programs")!.appendRow(["summer", "Summer 1", "ACTIVE", "", "", "", "", "", ""]);
+    const twoCohorts = payload(code as unknown as ReturnType<typeof loadCode>, code.getTries("ada", "secret", "spring"));
+    expect(twoCohorts.needProgram).toBe(true);
+    expect(twoCohorts.programId).toBeUndefined();
+  });
 });
