@@ -168,9 +168,11 @@ const HELP: Record<HelpTopic, { title: string; body: string }> = {
       "",
       "Assessment release stays on Releases. A support save on a lesson does not use a test attempt.",
       "",
-      "Sustainability has no official assessment link. The 3D printing and coral test keeps its own name and history.",
+      "Sustainability has no official assessment link. The 3D printing and coral test keeps its own name and history. Its record stays Assessment missing until that source assessment is identified.",
       "",
-      "The table under the form is lesson participation for the program selected at the top.",
+      "Lesson records is one row per enrolled student and enabled lesson: Not started, In progress, or Lesson completed. Assessment missing means no official PRE and POST are on record. Needs support means the student continued with help. View work opens the saved answers.",
+      "",
+      "The topic table under that is the same participation, one row per topic, for the program selected at the top.",
     ].join("\n"),
   },
 };

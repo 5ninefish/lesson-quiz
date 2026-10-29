@@ -1,6 +1,8 @@
 import type { DashboardSnapshot } from "../types";
 import { PUBLISHED_LESSONS } from "../teaching";
+import { lessonRecords, lessonWorkText } from "../reports/lesson-status";
 import { el } from "./dom";
+import { infoDialog } from "./dialogs";
 import { pageHeading } from "./help";
 
 export type LessonDraft = {
@@ -62,6 +64,37 @@ export function renderLessons(
   save.onclick = () => onSave(programId, readLessonDrafts());
   form.append(save);
   main.append(form);
+
+  const records = lessonRecords({
+    programId,
+    students: snap.programStudents,
+    lessons: snap.programLessons,
+    progress: snap.lessonProgress,
+    results: snap.results,
+    packs: PUBLISHED_LESSONS,
+  });
+  main.append(el("h2", {}, "Lesson records"));
+  main.append(el("p", { class: "muted" }, "One row for each enrolled student and enabled lesson. View work opens the saved answers. Support is help, not an official test attempt."));
+  const summaryHead = el("tr");
+  ["Student", "Lesson", "Progress", "Assessment", "Support", "Work"].forEach((label) => summaryHead.append(el("th", {}, label)));
+  const summary = el("table", { id: "lesson-records" });
+  summary.append(summaryHead);
+  if (!records.length) {
+    const empty = el("tr");
+    empty.append(el("td", { colspan: "6" }, "No enabled lessons for the students in this program."));
+    summary.append(empty);
+  }
+  records.forEach((record, index) => {
+    const tr = el("tr");
+    [record.username, record.title, record.progress, record.assessment, record.support].forEach((value) => tr.append(el("td", {}, value)));
+    const work = el("button", { type: "button", id: `lesson-work-${index}` }, "View work");
+    work.onclick = () => infoDialog(`${record.username} · ${record.title}`, lessonWorkText(record));
+    const cell = el("td");
+    cell.append(work);
+    tr.append(cell);
+    summary.append(tr);
+  });
+  main.append(summary);
 
   const progress = snap.lessonProgress.filter((row) => row.programId === programId);
   main.append(el("h2", {}, "Lesson participation"));
