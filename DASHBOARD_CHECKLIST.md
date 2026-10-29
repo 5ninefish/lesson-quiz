@@ -17,7 +17,7 @@ Local checks before publish: `npm test` and `npm run typecheck` on `cb472e2`. Th
 Live service:
 
 - Student page: `https://5ninefish.github.io/lesson-quiz/`
-- Instructor page for the teaching connection: `https://5ninefish.github.io/lesson-quiz/admin-v2/?v=1749108`. That bundle is `admin-v2/assets/index-DuP6YAiC.js`. Lesson records on that page are Not started, In progress, Lesson completed, Assessment missing, and Needs support, with View work for the saved answers. The T8 bundle remains `admin-v2/assets/index-DPtaIifJ.js` at `?v=cb472e2`. `?v=f16a56d2` is the earlier teaching connection before those records.
+- Instructor page for the teaching connection: `https://5ninefish.github.io/lesson-quiz/admin-v2/?v=93b54b3`. The instructor bundle is `admin-v2/assets/index-DuP6YAiC.js`. Lesson records on that page are Not started, In progress, Lesson completed, Assessment missing, and Needs support, with View work for the saved answers. Inside a program with more than one lesson, `lessons/runner.js` reads the open lesson's saved topics. The T8 bundle remains `admin-v2/assets/index-DPtaIifJ.js` at `?v=cb472e2`. `?v=f16a56d2` is the earlier teaching connection before those records.
 - Web App: `https://script.google.com/macros/s/AKfycbz3Acc6aICeaolVb1KaFiVG4HSMH83NkRWv-2YIcvrHdVAT8-E39uShWuJ25dqB37V9/exec`
 - Deployment ID: `AKfycbz3Acc6aICeaolVb1KaFiVG4HSMH83NkRWv-2YIcvrHdVAT8-E39uShWuJ25dqB37V9`
 - Workbook: Post Test Master `1wFjzB6PgjhZjHWBcgLLVOa1TtBvaEDqoV8PGFYoX3EI`
