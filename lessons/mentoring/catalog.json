@@ -3,7 +3,7 @@
   "title": "Mentoring",
   "lessonPrefix": "ment-",
   "version": "2026-10",
-  "status": "not-built",
+  "status": "partial",
   "rule": "Mentoring is a domain assigned to a cohort. It is not a cohort, not a program, and not a student login.",
   "lessons": [
     {
@@ -12,7 +12,8 @@
       "title": "Interviews",
       "assessmentId": "MENT-INT",
       "linked": true,
-      "source": "Mentoring/Interviews. No Latest folder. Newest export file 2026-01-17."
+      "built": true,
+      "source": "Mentoring/Interviews folder 13l7K84T4fQ3_NJJ0sQoC_Au2z9iqCNuV. Instructor plan NEW CLD_HI_Mentoring_Interviews_Instructor_Final, 12 Aug 2025. Student summary 11 Feb 2025. No Latest folder."
     },
     {
       "lessonId": "ment-role-models@2026-10",

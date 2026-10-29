@@ -9,7 +9,7 @@ export type PublishedLesson = {
 };
 
 /** Published teaching packages. Sustainability stays unlinked from SCI-CORAL.
- *  Mentoring is a separate domain. Its unbuilt lessons stay in lessons/mentoring/catalog.json.
+ *  Mentoring is a domain. Only Interviews is built. The other six stay in lessons/mentoring/catalog.json.
  */
 export const PUBLISHED_LESSONS: PublishedLesson[] = [
   { lessonId: "sci-cs@2026-10", title: "Computer Science", version: "2026-10", slug: "sci-cs", assessmentId: "SCI-CS", linked: true, topicCount: 8 },
@@ -17,4 +17,5 @@ export const PUBLISHED_LESSONS: PublishedLesson[] = [
   { lessonId: "sci-astro@2026-10", title: "Astronomy", version: "2026-10", slug: "sci-astro", assessmentId: "SCI-ASTRO", linked: true, topicCount: 8 },
   { lessonId: "sci-soil@2026-10", title: "Soil", version: "2026-10", slug: "sci-soil", assessmentId: "SCI-SOIL", linked: true, topicCount: 8 },
   { lessonId: "sci-sust@2026-10", title: "Sustainability", version: "2026-10", slug: "sci-sust", assessmentId: "", linked: false, topicCount: 8 },
+  { lessonId: "ment-interviews@2026-10", title: "Interviews", version: "2026-10", slug: "ment-interviews", assessmentId: "MENT-INT", linked: true, topicCount: 8 },
 ];

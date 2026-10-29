@@ -1,3 +1,4 @@
+import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 import { loadCode } from "./codegs-harness";
 import { makeBook } from "./mock-workbook";
@@ -303,6 +304,27 @@ describe("Apps Script dashboard contract", () => {
     };
     expect(code.judgeTeaching_("sci-cs@2026-10", "start", { ready: true }).status).toBe("met");
     expect(code.judgeTeaching_("sci-sust@2026-10", "start", { ready: true }).status).toBe("met");
+    expect(code.judgeTeaching_("ment-interviews@2026-10", "start", { ready: true }).status).toBe("met");
+    expect(code.judgeTeaching_("ment-interviews@2026-10", "impression", {
+      sort: { contact: "do", complete: "do", clarify: "do", health: "skip", example: "do" },
+      clothes: "For a lab internship I would wear a collared shirt and closed shoes.",
+    }).status).toBe("met");
+    expect(code.judgeTeaching_("ment-interviews@2026-10", "star", {
+      situation: "In English class we worked in small groups.",
+      task: "Each person had an assigned role.",
+      action: "I suggested we each do what we were best at.",
+      result: "The group worked together better than before.",
+    }).status).toBe("invalid");
+    expect(code.judgeTeaching_("ment-interviews@2026-10", "star", {
+      situation: "Our science poster was due and nobody had started the chart.",
+      task: "I was supposed to finish the chart before lunch.",
+      action: "I split the chart into three parts and asked each person to finish one.",
+      result: "We turned the poster in on time.",
+    }).status).toBe("met");
+    const interviewPage = readFileSync("lessons/ment-interviews/content.json", "utf8");
+    expect(interviewPage).not.toContain("college classes");
+    expect(interviewPage).not.toContain("All of the above");
+    expect(interviewPage).not.toContain("unprofessional");
     const before = live.getSheetByName("Attempts")!.getLastRow();
     const blocked = JSON.parse(code.lessonProgressPost_({
       action: "lesson_progress",

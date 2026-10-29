@@ -1,0 +1,103 @@
+{
+  "lessonId": "ment-interviews@2026-10",
+  "title": "Interviews",
+  "topics": [
+    {
+      "id": "start",
+      "title": "Start",
+      "teach": "This lesson is Interviews for internships, scholarships, and work. You will draft answers from your own experience and check one answer the way the interview rubric does. A partner, a printed packet, and a Google account are not required. The pre-check asks what you think before the teaching. The official questions stay on the assessment, not on this page. The lesson practices hoʻokūpono.",
+      "fields": [{ "type": "ready", "label": "I am ready for the pre-check" }]
+    },
+    {
+      "id": "impression",
+      "title": "First impression",
+      "teach": "Landing an interview is the first step. How you answer can decide a scholarship, a college offer, or a job. During an interview, keep eye contact, answer the whole question, use an example that fits the question, ask for clarification when you need it, and speak clearly and slowly enough for the interviewer to follow. Wear clothing that fits the workplace you are interviewing for. An employer cannot ask about your health, or whether you have a disability, unless the job states a health requirement. You decide whether to disclose a disability.",
+      "fields": [
+        {
+          "type": "choices",
+          "name": "sort",
+          "items": [
+            { "key": "contact", "label": "Keep eye contact", "options": ["do", "skip"] },
+            { "key": "complete", "label": "Answer the whole question", "options": ["do", "skip"] },
+            { "key": "clarify", "label": "Ask if you need the question repeated", "options": ["do", "skip"] },
+            { "key": "health", "label": "Employer asks about a disability when the job lists no health requirement", "options": ["do", "skip"] },
+            { "key": "example", "label": "Use an example that fits the question", "options": ["do", "skip"] }
+          ]
+        },
+        { "type": "text", "name": "clothes", "label": "Name a role, then one thing you would wear for that workplace", "long": true }
+      ]
+    },
+    {
+      "id": "questions",
+      "title": "Questions",
+      "teach": "Common interview questions are not worded the same way every time, but the intention is the same. Prepare several of them. The list includes: tell me about yourself; how you heard about the position; who else you are interviewing with; how other people would describe you; a professional or academic achievement; what you know about the organization; why you want the position; why they should accept you; your strengths; your weaknesses; a challenge and how you dealt with it; where you see yourself in five years; your dream job; what you want in a position; the work environment you prefer; a time you led; a time you disagreed; how you handle pressure; what you do outside of work; an animal you would be; and whether you have questions for them. A useful way to predict questions is to read the qualifications and the duties of the role.",
+      "fields": [
+        {
+          "type": "select",
+          "name": "pick",
+          "label": "One question you will prepare",
+          "options": [
+            "Tell me a little about yourself.",
+            "What are your greatest strengths?",
+            "What do you consider to be your weaknesses?",
+            "Tell me about a challenge you faced and how you dealt with it.",
+            "Where do you see yourself in five years?",
+            "Why do you want this position?"
+          ]
+        },
+        { "type": "text", "name": "role", "label": "A role you might interview for" },
+        { "type": "text", "name": "duty", "label": "One qualification or duty you would look up for that role", "long": true }
+      ]
+    },
+    {
+      "id": "star",
+      "title": "STAR",
+      "teach": "For a challenge question, use STAR. Situation is the context. Task is what you were supposed to do. Action is what you did. Result is what changed. Worked example: Situation, in English class the group worked in small groups. Task, each person had an assigned role. Action, nobody liked the roles, so one student suggested they each do what they were best at. Result, the group worked together better than before. Write a different challenge from your own school, work, or family life. Do not copy that example.",
+      "fields": [
+        { "type": "text", "name": "situation", "label": "Situation", "long": true },
+        { "type": "text", "name": "task", "label": "Task", "long": true },
+        { "type": "text", "name": "action", "label": "Action", "long": true },
+        { "type": "text", "name": "result", "label": "Result", "long": true }
+      ]
+    },
+    {
+      "id": "draft",
+      "title": "Draft",
+      "teach": "Use the resume from the college application lesson if you have it. If you do not, use a skill you have actually practiced. About yourself: give two or three facts, then two or three accomplishments, and say why you fit. A strength should be specific and related to the role. Excellent communication is more specific than people person. A weakness should include what you are already doing to get better. Disclosing a disability here is your choice.",
+      "fields": [
+        { "type": "text", "name": "yourself", "label": "About yourself, with a fact and an accomplishment", "long": true },
+        { "type": "text", "name": "strength", "label": "One specific strength that fits a role you want", "long": true },
+        { "type": "text", "name": "weakness", "label": "One weakness and what you are doing to improve it", "long": true }
+      ]
+    },
+    {
+      "id": "practice",
+      "title": "Practice",
+      "teach": "In class, partners ask six questions and score each other. Here you answer one question in the words you would say out loud: Why should we accept you? Cover three ideas if you can: you can do the work, you fit the team, and you bring something another candidate might not. The rubric scores pace, clarity, and relevant examples. 1 means rushed or mumbled, ideas that do not make sense, and examples that do not fit. 5 means a steady pace, clear speech, well-formed ideas, and relevant examples. Score yourself honestly.",
+      "fields": [
+        { "type": "text", "name": "spoken", "label": "The words you would say", "long": true },
+        { "type": "select", "name": "score", "label": "Your rubric score", "options": ["1", "2", "3", "4", "5"] },
+        { "type": "text", "name": "note", "label": "One note on your pace, clarity, or example", "long": true }
+      ]
+    },
+    {
+      "id": "feedback",
+      "title": "Feedback",
+      "teach": "After a practice interview, compare what went well with what you would change. You can also ask a real interviewer for one suggestion to use next time. That shows you want to learn. Write the improvement you would make, and one question you would ask them about the role. Do not share someone else's personal story.",
+      "fields": [
+        { "type": "text", "name": "improve", "label": "One thing you will do differently next time", "long": true },
+        { "type": "text", "name": "ask", "label": "One question you would ask the interviewer", "long": true }
+      ]
+    },
+    {
+      "id": "wrap",
+      "title": "Wrap",
+      "teach": "Interview practice raises the chance of being hired, admitted, or awarded a scholarship. You can teach the same questions at home so other people can practice. Your own background can be useful when the organization serves your community. Reading the organization's goals helps you name a skill they need.",
+      "fields": [
+        { "type": "text", "name": "why", "label": "Why interview practice matters for work or school", "long": true },
+        { "type": "text", "name": "share", "label": "One way you could practice this with family or community", "long": true },
+        { "type": "text", "name": "culture", "label": "How your background, or what you learn about the organization, could help", "long": true }
+      ]
+    }
+  ]
+}

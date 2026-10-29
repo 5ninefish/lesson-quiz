@@ -26,6 +26,10 @@ const TEACHING_PACKAGES = [
     ['start', 'Start'], ['coral', 'Coral'], ['species', 'Species'], ['harm', 'Harm'],
     ['record', 'Record'], ['shape', 'Shape'], ['change', 'Change'], ['wrap', 'Wrap'],
   ]),
+  package_('ment-interviews@2026-10', 'Interviews', 'PUBLISHED', 'MENT-INT', 'MENT-INT', 'ment-interviews', [
+    ['start', 'Start'], ['impression', 'First impression'], ['questions', 'Questions'], ['star', 'STAR'],
+    ['draft', 'Draft'], ['practice', 'Practice'], ['feedback', 'Feedback'], ['wrap', 'Wrap'],
+  ]),
 ];
 
 function package_(lessonId, title, status, preTestId, postTestId, slug, topics) {
@@ -464,6 +468,7 @@ function judgeTeaching_(lessonId, topicId, evidence) {
   if (lessonId === 'sci-astro@2026-10') return judgeAstro_(topicId, clean);
   if (lessonId === 'sci-soil@2026-10') return judgeSoil_(topicId, clean);
   if (lessonId === 'sci-sust@2026-10') return judgeSust_(topicId, clean);
+  if (lessonId === 'ment-interviews@2026-10') return judgeInterviews_(topicId, clean);
   return { status: 'invalid', reason: 'unknown_lesson' };
 }
 
@@ -729,6 +734,61 @@ function judgeApp_(evidence) {
   if (current !== 1) return { status: 'invalid', reason: 'no_return' };
   if (!sentence_(evidence.explanation)) return { status: 'invalid', reason: 'explanation' };
   return { status: 'met', reason: '' };
+}
+
+function judgeInterviews_(topicId, evidence) {
+  if (topicId === 'start') return readyOnly_(evidence);
+  if (topicId === 'impression') {
+    if (!sameMap_(evidence.sort, { contact: 'do', complete: 'do', clarify: 'do', health: 'skip', example: 'do' })) return { status: 'invalid', reason: 'sort' };
+    if (!sentence_(evidence.clothes) || !hasAny_(evidence.clothes, ['wear', 'shirt', 'dress', 'shoe', 'pants', 'skirt', 'blouse', 'collar', 'uniform', 'polo', 'slack', 'outfit', 'clothes', 'clothing', 'jacket'])) return { status: 'invalid', reason: 'clothes' };
+    return { status: 'met', reason: '' };
+  }
+  if (topicId === 'questions') {
+    const picks = [
+      'Tell me a little about yourself.',
+      'What are your greatest strengths?',
+      'What do you consider to be your weaknesses?',
+      'Tell me about a challenge you faced and how you dealt with it.',
+      'Where do you see yourself in five years?',
+      'Why do you want this position?',
+    ];
+    if (picks.indexOf(evidence.pick) < 0) return { status: 'invalid', reason: 'pick' };
+    if (!sentence_(evidence.role)) return { status: 'invalid', reason: 'role' };
+    if (!sentence_(evidence.duty)) return { status: 'invalid', reason: 'duty' };
+    return { status: 'met', reason: '' };
+  }
+  if (topicId === 'star') {
+    if (!sentence_(evidence.situation) || !sentence_(evidence.task) || !sentence_(evidence.action) || !sentence_(evidence.result)) return { status: 'invalid', reason: 'star' };
+    const blob = [evidence.situation, evidence.task, evidence.action, evidence.result].join(' ').toLowerCase();
+    if (blob.indexOf('english') >= 0 && blob.indexOf('small group') >= 0) return { status: 'invalid', reason: 'example' };
+    return { status: 'met', reason: '' };
+  }
+  if (topicId === 'draft') {
+    if (!sentence_(evidence.yourself)) return { status: 'invalid', reason: 'yourself' };
+    const strength = String(evidence.strength || '').trim().toLowerCase();
+    if (!sentence_(evidence.strength) || strength === 'people person' || strength === 'i am a people person' || strength === 'hardworking') return { status: 'invalid', reason: 'strength' };
+    if (!sentence_(evidence.weakness) || !hasAny_(evidence.weakness, ['improv', 'learn', 'practic', 'coach', 'working on', 'getting better'])) return { status: 'invalid', reason: 'weakness' };
+    return { status: 'met', reason: '' };
+  }
+  if (topicId === 'practice') {
+    if (['1', '2', '3', '4', '5'].indexOf(String(evidence.score)) < 0) return { status: 'invalid', reason: 'score' };
+    if (!sentence_(evidence.spoken) || !hasAny_(evidence.spoken, ['because', 'when', 'example', 'learned', 'helped', 'built', 'measured', 'taught'])) return { status: 'invalid', reason: 'spoken' };
+    if (!sentence_(evidence.note) || !hasAny_(evidence.note, ['pace', 'clear', 'example', 'rush', 'slow', 'mumble'])) return { status: 'invalid', reason: 'note' };
+    return { status: 'met', reason: '' };
+  }
+  if (topicId === 'feedback') {
+    if (!sentence_(evidence.improve)) return { status: 'invalid', reason: 'improve' };
+    const ask = sentence_(evidence.ask);
+    if (!ask || (ask.indexOf('?') < 0 && !hasAny_(ask, ['what', 'how', 'who', 'when', 'where', 'why']))) return { status: 'invalid', reason: 'ask' };
+    return { status: 'met', reason: '' };
+  }
+  if (topicId === 'wrap') {
+    if (!sentence_(evidence.why) || !hasAny_(evidence.why, ['job', 'hire', 'scholarship', 'college', 'intern', 'school', 'work'])) return { status: 'invalid', reason: 'why' };
+    if (!sentence_(evidence.share)) return { status: 'invalid', reason: 'share' };
+    if (!sentence_(evidence.culture) || !hasAny_(evidence.culture, ['community', 'culture', 'background', 'organization', 'family', 'experience'])) return { status: 'invalid', reason: 'culture' };
+    return { status: 'met', reason: '' };
+  }
+  return { status: 'invalid', reason: 'unknown_topic' };
 }
 
 function judgeHealth_(topicId, evidence) {
