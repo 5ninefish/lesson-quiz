@@ -303,26 +303,14 @@ function buildTeachingLessonsPayload_(ss, student, programId, tests) {
 
 function preSubmitted_(ss, programId, username, testId) {
   if (!testId) return true;
-  const sheet = ss.getSheetByName('Results');
-  if (!sheet) return false;
-  const data = sheet.getDataRange().getValues();
-  const layout = resultsLayout_(data);
-  if (layout.username < 0 || layout.testId < 0) return false;
-  const start = layout.mode === 'header' ? 1 : 0;
-  const wantUser = normalizeUsername_(username);
-  const wantTest = resolveTestId_(testId);
-  for (let i = start; i < data.length; i++) {
-    if (normalizeUsername_(data[i][layout.username]) !== wantUser) continue;
-    if (resolveTestId_(data[i][layout.testId]) !== wantTest) continue;
-    if (layout.phase >= 0 && normalizePhase_(data[i][layout.phase]) !== 'PRE') continue;
-    if (layout.phase < 0) continue;
-    if (layout.programId >= 0) {
-      const prog = normalizeProgramId_(data[i][layout.programId]);
-      if (prog && prog !== programId) continue;
-    }
-    return true;
-  }
-  return false;
+  // A gated lesson stays locked until a complete PRE sitting exists.
+  // An incomplete row, or a row that only used up the attempts, does not count.
+  const index = completeSitIndex_(ss);
+  const user = normalizeUsername_(username);
+  const test = resolveTestId_(testId);
+  const program = normalizeProgramId_(programId);
+  if (index[user + '|' + test + '|' + program + '|PRE'] === true) return true;
+  return program ? index[user + '|' + test + '||PRE'] === true : false;
 }
 
 function redactArtifact_(value) {

@@ -662,7 +662,17 @@ async function chooseProgram(id) {
   state.programId = id;
   state.section = 'home';
   const r = await api({ action: 'get_tries', username: state.username, password: state.password, programId: id });
-  if (r.error) { setError('lesson-select-error', friendlyError(r.error)); return; }
+  if (r.needProgram || r.error === 'need_program') {
+    state.assignment = 'many';
+    state.programId = '';
+    state.tests = [];
+    state.lessons = [];
+    state.pendingTest = '';
+    state.pendingLesson = '';
+    showLessons();
+    return;
+  }
+  if (r.error) { setError('lesson-select-error', friendlyError(r.error)); state.programId = ''; return; }
   state.tests = r.tests || [];
   state.lessons = r.lessons || [];
   state.testsLoaded = Array.isArray(r.tests);
@@ -718,7 +728,7 @@ function maybeOpenPendingTest() {
 function assessmentLabel(card) {
   if (!card || !card.linked) return 'Not linked';
   if (card.state === 'not_assigned') return 'Not assigned';
-  if (card.state === 'done') return 'Complete';
+  if (phaseSatisfied(card)) return 'Complete';
   if (card.state === 'upcoming') return 'Upcoming';
   if (card.state === 'locked') return 'Closed';
   if (card.state === 'unavailable') return 'Unavailable';
@@ -737,6 +747,10 @@ function coveredByLesson(test) {
 }
 
 function openTeachingLesson(lesson) {
+  if (preGateClosed(lesson)) {
+    setError('lesson-select-error', 'Complete the PRE for this lesson before the activities.');
+    return;
+  }
   try {
     sessionStorage.setItem('hokulani-lesson-session', JSON.stringify({
       username: state.username,
@@ -816,8 +830,7 @@ function lessonStatus(lesson) {
 
 function phaseSatisfied(card) {
   if (!card || card.linked === false || card.state === 'unlinked' || card.state === 'not_assigned') return false;
-  if (card.submitted === true) return true;
-  return card.state === 'done';
+  return card.submitted === true;
 }
 
 function phaseOwed(card) {
@@ -825,9 +838,17 @@ function phaseOwed(card) {
   return !phaseSatisfied(card);
 }
 
+function preGateClosed(lesson) {
+  if (!lesson || lesson.requirePre !== true) return false;
+  const pre = lesson.pre;
+  if (!pre || pre.linked === false || pre.state === 'unlinked' || pre.state === 'not_assigned') return false;
+  return pre.submitted === false;
+}
+
 function phaseText(card) {
   if (!card || card.linked === false || card.state === 'unlinked') return 'Not connected';
   if (card.state === 'not_assigned') return 'Not assigned';
+  if (phaseSatisfied(card)) return 'Submitted';
   if (card.state === 'upcoming') {
     const match = (state.tests || []).find(function (test) {
       return test.testId === card.testId && phaseOf(test.phase) === phaseOf(card.phase);
@@ -842,7 +863,6 @@ function phaseText(card) {
   }
   if (card.state === 'locked') return 'Closed';
   if (card.state === 'unavailable') return 'Unavailable';
-  if (phaseSatisfied(card)) return 'Submitted';
   const tries = Number(card.tries) || 0;
   const max = Number(card.maxTries) || 0;
   if (tries > 0 && max > 0) return tries + ' of ' + max + ' attempts used';
@@ -886,6 +906,7 @@ function tag(text, warn) {
 function lessonAction(lesson, status) {
   if (lesson.availability === 'upcoming') return { label: 'Not open yet', disabled: true };
   if (lesson.availability === 'locked') return { label: 'Closed', disabled: true };
+  if (preGateClosed(lesson)) return { label: 'Complete PRE first', disabled: true };
   if (!lesson.url) return { label: 'No lesson link', disabled: true };
   if (status.text === 'Finished' || status.text === 'POST outstanding' || status.text === 'Assessment unlinked') {
     if ((lesson.progress || {}).done > 0) return { label: 'Review lesson', disabled: false };
@@ -995,6 +1016,7 @@ function assessmentCard(test, index, sectionName) {
     state: test.state,
     tries: test.tries,
     maxTries: test.maxTries,
+    submitted: test.submitted === true,
     testId: test.testId,
     phase: phase,
   });
@@ -1015,6 +1037,7 @@ function assessmentCard(test, index, sectionName) {
     state: test.state,
     tries: test.tries,
     maxTries: test.maxTries,
+    submitted: test.submitted === true,
     testId: test.testId,
     phase: phase,
   });
@@ -1052,7 +1075,7 @@ function renderAccount(grid) {
   const program = document.createElement('p');
   program.textContent = state.programId
     ? 'Program: ' + programLabel(state.programId) + '.'
-    : 'Choose a program to see your assignments.';
+    : 'Please contact your instructor about your program assignment.';
   const button = document.createElement('button');
   button.type = 'button';
   button.className = 'hk-button';
@@ -1083,7 +1106,7 @@ function renderLessonGrid() {
   sub.className = 'hk-muted';
   sub.textContent = state.programId
     ? 'Your work for this program, all in one place.'
-    : 'Choose the program your instructor assigned.';
+    : 'Your instructor assigns your program.';
   titles.append(kicker, h1, sub);
   heading.appendChild(titles);
   grid.appendChild(heading);

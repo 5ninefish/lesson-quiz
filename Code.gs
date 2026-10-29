@@ -290,13 +290,11 @@ function loadActiveMemberships_(ss, username) {
   const sheet = ss.getSheetByName('ProgramStudents');
   const programs = ss.getSheetByName('Programs');
   if (!sheet || !programs) return [];
-  const archived = {};
+  const activePrograms = {};
   const pdata = programs.getDataRange().getValues();
   for (let i = 1; i < pdata.length; i++) {
     const programStatus = String(pdata[i][2] || '').trim().toUpperCase();
-    if (programStatus === 'ARCHIVED' || programStatus === 'DRAFT') {
-      archived[normalizeProgramId_(pdata[i][0])] = true;
-    }
+    if (programStatus === 'ACTIVE') activePrograms[normalizeProgramId_(pdata[i][0])] = true;
   }
   const want = normalizeUsername_(username);
   const data = sheet.getDataRange().getValues();
@@ -306,7 +304,7 @@ function loadActiveMemberships_(ss, username) {
     const active = String(data[i][2]).toUpperCase();
     if (active === 'FALSE' || active === '0' || active === 'NO') continue;
     const id = normalizeProgramId_(data[i][0]);
-    if (!id || archived[id]) continue;
+    if (!id || !activePrograms[id]) continue;
     if (out.indexOf(id) < 0) out.push(id);
   }
   return out;
@@ -315,14 +313,14 @@ function loadActiveMemberships_(ss, username) {
 function resolveProgramContext_(ss, username, requested) {
   if (!programTablesReady_(ss)) return { mode: 'legacy', programId: '', error: '', memberships: [] };
   const memberships = loadActiveMemberships_(ss, username);
+  // One active assignment. A requested program must not pick among several.
+  if (memberships.length > 1) return { mode: 'conflict', programId: '', error: 'need_program', memberships: memberships };
+  if (!memberships.length) return { mode: 'none', programId: '', error: 'no_program', memberships: [] };
   const req = normalizeProgramId_(requested);
-  if (req) {
-    if (memberships.indexOf(req) >= 0) return { mode: 'ok', programId: req, error: '', memberships: memberships };
+  if (req && req !== memberships[0]) {
     return { mode: 'mismatch', programId: '', error: 'not_in_program', memberships: memberships };
   }
-  if (memberships.length === 1) return { mode: 'ok', programId: memberships[0], error: '', memberships: memberships };
-  if (memberships.length > 1) return { mode: 'picker', programId: '', error: 'need_program', memberships: memberships };
-  return { mode: 'none', programId: '', error: 'no_program', memberships: [] };
+  return { mode: 'ok', programId: memberships[0], error: '', memberships: memberships };
 }
 
 function getProgramTestRow_(ss, programId, testId, phase) {
@@ -491,7 +489,6 @@ function authAndLoad(username, password, testId, programId, phase) {
   phase = normalizePhase_(phase);
 
   const ss = ss_();
-  ensureRuntimeSchema_(ss);
 
   const studentsData = ss.getSheetByName('Students').getDataRange().getValues();
   const student = findStudent(studentsData, username, password);
@@ -500,6 +497,7 @@ function authAndLoad(username, password, testId, programId, phase) {
   const ctx = resolveProgramContext_(ss, username, programId);
   if (ctx.error) return respond({ error: ctx.error, programs: ctx.memberships });
   const resolvedProgramId = ctx.programId || '';
+  ensureRuntimeSchema_(ss);
 
   const loaded = loadQuestions(ss, testId);
   if (loaded.error) return respond({ error: loaded.error });
@@ -562,7 +560,6 @@ function submit(username, password, testId, answers, clientSubmissionId, program
   phase = normalizePhase_(phase);
   if (!testId) return respond({ error: 'invalid_lesson' });
   const ss = ss_();
-  ensureRuntimeSchema_(ss);
   const now = new Date();
 
   const lockResult = withScriptLock_(SUBMIT_LOCK_MS, function () {
@@ -574,6 +571,7 @@ function submit(username, password, testId, answers, clientSubmissionId, program
     const ctx = resolveProgramContext_(ss, username, programId);
     if (ctx.error) return { error: ctx.error };
     const resolvedProgramId = ctx.programId || '';
+    ensureRuntimeSchema_(ss);
 
     const attemptsSheet = ss.getSheetByName('Attempts');
     const attemptById = clientSubmissionId ? findAttemptBySubmissionId_(attemptsSheet, clientSubmissionId) : null;
