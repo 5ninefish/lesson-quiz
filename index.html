@@ -623,6 +623,7 @@ async function login() {
       state.tests = pack.tests;
       state.lessons = pack.lessons;
       state.testsLoaded = true;
+      await addBuiltDomainLessons();
       showLessons();
       maybeOpenPending();
     } else {
@@ -714,8 +715,61 @@ async function loadAssignedWork(ids, openPending) {
   state.programId = cohorts[0] || '';
   state.workProgramId = '';
   state.assignment = (cohorts.length || lessons.length || tests.length) ? 'one' : 'none';
+  await addBuiltDomainLessons();
   showLessons();
   if (openPending) maybeOpenPending();
+}
+
+async function addBuiltDomainLessons() {
+  if (state.assignment !== 'one') return;
+  let catalog = null;
+  try {
+    const res = await fetch('lessons/mentoring/catalog.json', { cache: 'no-store' });
+    if (res.ok) catalog = await res.json();
+  } catch (e) {}
+  if (!catalog || !catalog.lessons) return;
+  const have = {};
+  (state.lessons || []).forEach(function (lesson) { have[lesson.lessonId] = true; });
+  for (let i = 0; i < catalog.lessons.length; i++) {
+    const item = catalog.lessons[i];
+    if (!item.built || have[item.lessonId]) continue;
+    state.lessons.push(await localDomainLesson(item));
+    have[item.lessonId] = true;
+  }
+}
+
+async function localDomainLesson(item) {
+  let topics = [];
+  try {
+    const res = await fetch('lessons/' + item.slug + '/content.json', { cache: 'no-store' });
+    if (res.ok) {
+      const content = await res.json();
+      topics = (content.topics || []).map(function (topic) {
+        return { id: topic.id, title: topic.title, status: '', support: false };
+      });
+    }
+  } catch (e) {}
+  const unlinked = { linked: false, testId: '', phase: '', state: 'unlinked', tries: 0, maxTries: 0, submitted: false };
+  const phase = function (name) {
+    if (!item.linked || !item.assessmentId) return unlinked;
+    return { linked: true, testId: item.assessmentId, phase: name, state: 'not_assigned', tries: 0, maxTries: 0, submitted: false };
+  };
+  return {
+    lessonId: item.lessonId,
+    title: item.title,
+    version: '2026-10',
+    url: 'lessons/' + item.slug + '/',
+    status: item.linked ? 'PUBLISHED' : 'UNLINKED',
+    sort: 100,
+    availability: 'open',
+    requirePre: false,
+    programId: state.programId || '',
+    local: true,
+    pre: phase('PRE'),
+    post: phase('POST'),
+    progress: { done: 0, total: topics.length, resumeTopic: topics[0] ? topics[0].id : 'start' },
+    topics: topics,
+  };
 }
 
 function showLessons() {
@@ -835,6 +889,7 @@ const LESSON_BLURB = {
   'sci-astro@2026-10': 'Sky, time, and light',
   'sci-soil@2026-10': 'Texture, water, and land',
   'sci-sust@2026-10': 'Coral, species, and change',
+  'ment-interviews@2026-10': 'First impression, STAR, and practice',
 };
 const MEDIA_LAB = 'https://5ninefish.github.io/hokulani-media-lab/';
 
@@ -1026,6 +1081,12 @@ function teachingCard(lesson, index, sectionName) {
   blurb.className = 'hk-small hk-muted';
   blurb.textContent = LESSON_BLURB[lesson.lessonId] || lesson.title || '';
   card.append(top, title, blurb);
+  if (lesson.local) {
+    const pending = document.createElement('p');
+    pending.className = 'hk-small hk-muted';
+    pending.textContent = 'You can open this lesson. Saved checks start after it is assigned to your cohort.';
+    card.appendChild(pending);
+  }
   if (progress.total) {
     const bar = document.createElement('div');
     bar.className = 'hk-bar';
