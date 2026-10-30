@@ -643,6 +643,7 @@ function logout() {
   try {
     sessionStorage.removeItem('quizSubmissionId');
     sessionStorage.removeItem('hokulani-dashboard-session');
+    sessionStorage.removeItem('hokulani-dashboard-view');
     sessionStorage.removeItem('hokulani-lesson-session');
   } catch (e) {}
   state = freshState();
@@ -783,6 +784,42 @@ function showLessons() {
   setError('lesson-select-error', '');
   renderLessonGrid();
   show('view-lessons');
+  saveDashboardView();
+}
+
+function saveDashboardView() {
+  if (!state.username) return;
+  try {
+    sessionStorage.setItem('hokulani-dashboard-view', JSON.stringify({
+      username: state.username,
+      programId: state.programId,
+      assignment: state.assignment,
+      programs: state.programs,
+      programNames: state.programNames,
+      lessons: state.lessons,
+      tests: state.tests,
+      section: state.section || 'home',
+      linkNote: state.linkNote || '',
+    }));
+  } catch (e) {}
+}
+
+function restoreDashboardView() {
+  let view = null;
+  try { view = JSON.parse(sessionStorage.getItem('hokulani-dashboard-view') || 'null'); }
+  catch (e) { view = null; }
+  if (!view || view.username !== state.username) return false;
+  state.programId = view.programId || '';
+  state.assignment = view.assignment || 'one';
+  state.programs = view.programs || [];
+  state.programNames = view.programNames || {};
+  state.lessons = view.lessons || [];
+  state.tests = view.tests || [];
+  state.testsLoaded = true;
+  state.section = view.section || 'home';
+  state.linkNote = view.linkNote || '';
+  showLessons();
+  return true;
 }
 
 async function chooseProgram(id) {
@@ -1731,6 +1768,16 @@ document.getElementById('username').addEventListener('keydown', e => {
   if (!user || !pass) return;
   user.value = saved.username;
   pass.value = saved.password;
+  state.username = saved.username;
+  state.password = saved.password;
+  document.body.classList.remove('signed-out');
+  document.getElementById('view-login').classList.add('hidden');
+  document.getElementById('portal').classList.remove('hidden');
+  if (!restoreDashboardView()) {
+    state.assignment = 'one';
+    state.section = 'home';
+    showLessons();
+  }
   login();
 })();
 </script>
