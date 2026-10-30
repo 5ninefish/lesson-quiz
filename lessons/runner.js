@@ -15,17 +15,17 @@
     root.appendChild(p);
   }
 
-  if (!session || session.lessonId !== lessonId || !session.api) {
-    say("Open this lesson from your program page after you sign in.");
-    return;
-  }
-
   const back = document.createElement("p");
   const home = document.createElement("a");
-  home.href = "/lesson-quiz/?program=" + encodeURIComponent(session.programId);
+  home.href = "/lesson-quiz/";
   home.textContent = "Back to my lessons";
   back.appendChild(home);
   root.appendChild(back);
+  if (!session || !session.api) {
+    const note = document.createElement("p");
+    note.textContent = "Sign in on the dashboard to save your work. You can still read this lesson.";
+    root.appendChild(note);
+  }
   const title = document.createElement("h1");
   title.textContent = "Lesson";
   root.appendChild(title);
@@ -39,6 +39,7 @@
   let remote = null;
 
   function post(body) {
+    if (!session || !session.api) return Promise.resolve({ ok: false, error: "signed_out" });
     return fetch(session.api, {
       method: "POST",
       body: JSON.stringify(Object.assign({
@@ -354,18 +355,31 @@
     });
   }
 
-  fetch("./content.json").then(function (res) { return res.json(); }).then(function (json) {
+  const contentUrl = new URL("content.json", window.location.href);
+  fetch(contentUrl.toString()).then(function (res) {
+    if (!res.ok) throw new Error("content");
+    return res.json();
+  }).then(function (json) {
     content = json;
     title.textContent = json.title || "Lesson";
+    const opening = (content.topics || [])[0];
+    if (!opening) throw new Error("topics");
+    paintNav(opening.id);
+    showTopic(opening);
+    if (!session || !session.api) return null;
     return post({ action: "lesson_state" });
   }).then(function (body) {
-    remote = body && body.ok ? body : { lessons: [] };
+    if (!body || !body.ok) return;
+    remote = body;
     const lesson = currentLesson();
     const resume = lesson && lesson.progress && lesson.progress.resumeTopic;
-    const first = (content.topics || []).filter(function (topic) { return topic.id === resume; })[0] || content.topics[0];
-    paintNav(first.id);
-    showTopic(first);
+    const next = (content.topics || []).filter(function (topic) { return topic.id === resume; })[0] || content.topics[0];
+    if (!next) return;
+    paintNav(next.id);
+    showTopic(next);
   }).catch(function () {
-    say("This lesson could not load. Open it again from your program page.");
+    const note = document.createElement("p");
+    note.textContent = "This lesson could not load. Use Back to my lessons, then open it again.";
+    root.appendChild(note);
   });
 })();
