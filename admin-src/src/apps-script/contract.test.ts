@@ -322,9 +322,25 @@ describe("Apps Script dashboard contract", () => {
       result: "We turned the poster in on time.",
     }).status).toBe("met");
     const interviewPage = readFileSync("lessons/ment-interviews/content.json", "utf8");
-    expect(interviewPage).not.toContain("college classes");
-    expect(interviewPage).not.toContain("All of the above");
-    expect(interviewPage).not.toContain("unprofessional");
+    const interviewReading = readFileSync("lessons/ment-interviews/reading.html", "utf8");
+    expect(interviewPage + interviewReading).not.toContain("college classes");
+    expect(interviewPage + interviewReading).not.toContain("All of the above");
+    expect(interviewPage + interviewReading).not.toContain("unprofessional");
+    expect(interviewReading).toContain("empty chair");
+    expect(code.judgeTeaching_("ment-interviews@2026-10", "practice", {
+      mode: "I am practicing alone",
+      spoken: "Accept me because I learned to keep a garden log when the watering got skipped.",
+      score: "4",
+      note: "My pace was steady and the example was specific.",
+      redo: "I slowed the first sentence and kept the garden example.",
+      mark: "4",
+    }).status).toBe("met");
+    expect(code.judgeTeaching_("ment-interviews@2026-10", "practice", {
+      mode: "I have a partner",
+      partner_question: "Why should we accept you for this internship?",
+      partner_notice: "Your pace was steady and the example fit the lab role.",
+      mark: "4",
+    }).status).toBe("met");
     expect(code.judgeTeaching_("ment-card-sort@2026-10", "start", { ready: true }).status).toBe("met");
     expect(code.judgeTeaching_("ment-card-sort@2026-10", "titles", {
       sort: {

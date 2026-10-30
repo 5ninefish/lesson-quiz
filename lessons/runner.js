@@ -148,6 +148,8 @@
       });
     });
     (topic.fields || []).forEach(function (field) { form.appendChild(renderField(field)); });
+    applyWhen(form);
+    form.addEventListener("change", function () { applyWhen(form); });
     const submit = document.createElement("button");
     submit.type = "submit";
     submit.textContent = "Check";
@@ -202,8 +204,22 @@
     parent.appendChild(label);
   }
 
+  function applyWhen(form) {
+    form.querySelectorAll("[data-when-name]").forEach(function (box) {
+      const control = form.elements[box.dataset.whenName];
+      const value = control ? String(control.value || "") : "";
+      box.hidden = value !== box.dataset.whenIs;
+    });
+  }
+
   function renderField(field) {
     const box = document.createElement("div");
+    box.className = "field";
+    if (field.when && field.when.name && field.when.is) {
+      box.dataset.whenName = field.when.name;
+      box.dataset.whenIs = field.when.is;
+      box.hidden = true;
+    }
     if (field.type === "ready") {
       const label = document.createElement("label");
       const input = document.createElement("input");
@@ -373,6 +389,7 @@
 
   const contentUrl = new URL("content.json", window.location.href);
   const readingUrl = new URL("reading.html", window.location.href);
+  if (window.HOKU_READING_V) readingUrl.searchParams.set("v", window.HOKU_READING_V);
   fetch(readingUrl.toString()).then(function (res) {
     if (!res.ok) return "";
     return res.text();

@@ -73,11 +73,15 @@
     {
       "id": "practice",
       "title": "Practice",
-      "teach": "In class, partners ask six questions and score each other. Here you answer one question in the words you would say out loud: Why should we accept you? Cover three ideas if you can: you can do the work, you fit the team, and you bring something another candidate might not. The rubric scores pace, clarity, and relevant examples. 1 means rushed or mumbled, ideas that do not make sense, and examples that do not fit. 5 means a steady pace, clear speech, well-formed ideas, and relevant examples. Score yourself honestly.",
+      "teach": "If someone is with you, they ask one question and score your pace, clarity, and example. If you are alone, use the empty chair: say the answer out loud, score yourself, then say it once more and fix the weak part.",
       "fields": [
-        { "type": "text", "name": "spoken", "label": "The words you would say", "long": true },
-        { "type": "select", "name": "score", "label": "Your rubric score", "options": ["1", "2", "3", "4", "5"] },
-        { "type": "text", "name": "note", "label": "One note on your pace, clarity, or example", "long": true }
+        { "type": "select", "name": "mode", "label": "How are you practicing?", "options": ["I have a partner", "I am practicing alone"] },
+        { "type": "text", "name": "partner_question", "label": "The question your partner asked", "long": true, "when": { "name": "mode", "is": "I have a partner" } },
+        { "type": "text", "name": "partner_notice", "label": "What they noticed about your pace, clarity, or example", "long": true, "when": { "name": "mode", "is": "I have a partner" } },
+        { "type": "select", "name": "mark", "label": "Rubric mark, from 1 to 5", "options": ["1", "2", "3", "4", "5"] },
+        { "type": "text", "name": "spoken", "label": "The words you said to the empty chair", "long": true, "when": { "name": "mode", "is": "I am practicing alone" } },
+        { "type": "text", "name": "note", "label": "Your note on pace, clarity, or the example", "long": true, "when": { "name": "mode", "is": "I am practicing alone" } },
+        { "type": "text", "name": "redo", "label": "Say it once more. What did you change?", "long": true, "when": { "name": "mode", "is": "I am practicing alone" } }
       ]
     },
     {

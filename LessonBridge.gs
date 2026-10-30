@@ -781,9 +781,18 @@ function judgeInterviews_(topicId, evidence) {
     return { status: 'met', reason: '' };
   }
   if (topicId === 'practice') {
-    if (['1', '2', '3', '4', '5'].indexOf(String(evidence.score)) < 0) return { status: 'invalid', reason: 'score' };
+    const scoreOk = ['1', '2', '3', '4', '5'].indexOf(String(evidence.mark)) >= 0;
+    if (evidence.mode === 'I have a partner') {
+      if (!sentence_(evidence.partner_question)) return { status: 'invalid', reason: 'partner_question' };
+      if (!sentence_(evidence.partner_notice) || !hasAny_(evidence.partner_notice, ['pace', 'clear', 'example', 'eye', 'rush', 'slow', 'mumble'])) return { status: 'invalid', reason: 'partner_notice' };
+      if (!scoreOk) return { status: 'invalid', reason: 'score' };
+      return { status: 'met', reason: '' };
+    }
+    if (evidence.mode !== 'I am practicing alone') return { status: 'invalid', reason: 'mode' };
+    if (!scoreOk) return { status: 'invalid', reason: 'score' };
     if (!sentence_(evidence.spoken) || !hasAny_(evidence.spoken, ['because', 'when', 'example', 'learned', 'helped', 'built', 'measured', 'taught'])) return { status: 'invalid', reason: 'spoken' };
     if (!sentence_(evidence.note) || !hasAny_(evidence.note, ['pace', 'clear', 'example', 'rush', 'slow', 'mumble'])) return { status: 'invalid', reason: 'note' };
+    if (!sentence_(evidence.redo)) return { status: 'invalid', reason: 'redo' };
     return { status: 'met', reason: '' };
   }
   if (topicId === 'feedback') {
