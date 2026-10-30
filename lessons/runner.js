@@ -44,6 +44,7 @@
 
   let content = null;
   let remote = null;
+  let readings = {};
 
   function post(body) {
     if (!session || !session.api) return Promise.resolve({ ok: false, error: "signed_out" });
@@ -86,12 +87,14 @@
       done.textContent = state.status === "support" ? "Saved with support. This did not use a test attempt." : "Saved.";
       panel.appendChild(done);
     }
-    if (topic.teach) {
+    const reading = readings[topic.id];
+    if (reading) panel.appendChild(reading.cloneNode(true));
+    if (!reading && topic.teach) {
       const p = document.createElement("p");
       p.textContent = topic.teach;
       panel.appendChild(p);
     }
-    if (topic.video) {
+    if (topic.video && !(reading && reading.querySelector("video"))) {
       const video = document.createElement("video");
       video.controls = true;
       video.src = topic.video;
@@ -112,7 +115,7 @@
         panel.appendChild(link);
       }
     }
-    (topic.photos || []).forEach(function (src) {
+    if (!reading) (topic.photos || []).forEach(function (src) {
       const img = document.createElement("img");
       img.src = src;
       img.alt = "";
@@ -121,6 +124,12 @@
       wrap.appendChild(img);
       panel.appendChild(wrap);
     });
+    if (reading) {
+      const check = document.createElement("h3");
+      check.className = "check-title";
+      check.textContent = "Your check";
+      panel.appendChild(check);
+    }
     const form = document.createElement("form");
     form.addEventListener("submit", function (event) {
       event.preventDefault();
@@ -363,7 +372,20 @@
   }
 
   const contentUrl = new URL("content.json", window.location.href);
-  fetch(contentUrl.toString()).then(function (res) {
+  const readingUrl = new URL("reading.html", window.location.href);
+  fetch(readingUrl.toString()).then(function (res) {
+    if (!res.ok) return "";
+    return res.text();
+  }).catch(function () { return ""; }).then(function (html) {
+    if (!html) return;
+    const holder = document.createElement("div");
+    holder.innerHTML = html;
+    holder.querySelectorAll("[data-topic]").forEach(function (node) {
+      readings[node.getAttribute("data-topic")] = node;
+    });
+  }).then(function () {
+    return fetch(contentUrl.toString());
+  }).then(function (res) {
     if (!res.ok) throw new Error("content");
     return res.json();
   }).then(function (json) {

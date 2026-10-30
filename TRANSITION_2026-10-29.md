@@ -36,7 +36,9 @@ Sign-in heading is "Student dashboard". After a successful sign-in the page stor
 
 Built catalog lessons the deployed script omits are added from `lessons/mentoring/catalog.json` when `built` is true. Those cards can be opened. Their note says saved checks start after the lesson is assigned to the cohort. `requirePre` is false on those local cards.
 
-`lessons/runner.js` paints the first topic as soon as `content.json` loads. A failed `lesson_state` leaves the page and the back link in place. **Back to my lessons** uses browser history when the lesson was opened from the dashboard, so the already-open dashboard returns. A full reload hides the sign-in form before paint when `hokulani-dashboard-session` exists, restores `hokulani-dashboard-view`, and does not call `login()` when that snapshot is there. Lesson pages load `runner.js?v=stay-dash`.
+Science lessons load `reading.html` beside `content.json`. Each topic shows that chapter's reading and figures, then the existing check. Computer Science keeps its videos. Astronomy, Soil, Sustainability, and Health use the chapter pages that were already written for the student lesson. Mentoring lessons have no `reading.html`, so they still show the short practice text and the check. The classroom slide decks are not on the page. Post-tests stay off the page.
+
+`lessons/runner.js` paints the first topic as soon as `content.json` loads. A failed `lesson_state` leaves the page and the back link in place. **Back to my lessons** uses browser history when the lesson was opened from the dashboard, so the already-open dashboard returns. A full reload hides the sign-in form before paint when `hokulani-dashboard-session` exists, restores `hokulani-dashboard-view`, and does not call `login()` when that snapshot is there. Lesson pages load `runner.js?v=reading`.
 
 Dalen had not confirmed this return yet when the pickup was written. If he says the sign-in form still appears, hard-refresh `?v=5427aeb`, sign in once on that page, open a lesson from that dashboard, then use Back to my lessons. Check the live `index.html` for `resume-dash` and `history.back` before changing the runner again.
 

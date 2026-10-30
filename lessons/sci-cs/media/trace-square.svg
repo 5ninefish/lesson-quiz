@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 220" width="320" height="220">
+  <rect width="320" height="220" fill="#fffdf8"/>
+  <polyline points="70,170 230,170 230,50 70,50 70,170" fill="none" stroke="#1c1915" stroke-width="3"/>
+  <circle cx="70" cy="170" r="7" fill="#9a3412"/>
+  <text x="78" y="188" fill="#5c564c" font-family="Palatino, serif" font-size="13">start</text>
+</svg>

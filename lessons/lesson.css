@@ -13,3 +13,16 @@ textarea, input[type="text"], input[type="number"], select { width: 100%; box-si
 .cards { display: flex; flex-wrap: wrap; gap: .4rem; }
 .cards img { width: 5.5rem; height: 5.5rem; object-fit: cover; background: #efe8da; }
 video { width: 100%; max-height: 22rem; background: black; }
+.reading h3 { font-size: 1.15rem; margin: 1.15rem 0 .35rem; }
+.reading p, .reading li { line-height: 1.45; }
+.reading figure, .reading .card, .reading .diagram { margin: .8rem 0; }
+.reading img, .reading svg, .reading video { max-width: 100%; height: auto; }
+.reading figcaption, .reading .muted { color: #52606d; }
+.reading .card, .reading .diagram { background: #fffdf8; border: 1px solid #e4dccb; border-radius: 8px; padding: .7rem .8rem; }
+.reading .bars { display: flex; align-items: end; gap: 18px; height: 120px; }
+.reading .bars div { background: #8a5a12; width: 54px; display: flex; align-items: end; justify-content: center; color: #fffdf8; font-size: 13px; }
+.reading ol, .reading ul { padding-left: 1.2rem; }
+.reading .photos { display: flex; flex-wrap: wrap; gap: .8rem; }
+.reading .photos figure { flex: 1 1 12rem; margin: 0; }
+.reading .photos img { width: 100%; height: auto; object-fit: contain; background: #efe8da; }
+.check-title { font-size: 1.05rem; margin: 1.2rem 0 .2rem; }
