@@ -19,6 +19,13 @@
   const home = document.createElement("a");
   home.href = "/lesson-quiz/";
   home.textContent = "Back to my lessons";
+  home.addEventListener("click", function (event) {
+    var ref = document.referrer || "";
+    var fromDash = ref.indexOf("/lesson-quiz/") !== -1 && ref.indexOf("/lessons/") === -1;
+    if (!fromDash || history.length < 2) return;
+    event.preventDefault();
+    history.back();
+  });
   back.appendChild(home);
   root.appendChild(back);
   if (!session || !session.api) {

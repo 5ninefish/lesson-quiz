@@ -4,6 +4,13 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Hōkūlani</title>
+<script>
+try {
+  if (sessionStorage.getItem('hokulani-dashboard-session')) {
+    document.documentElement.classList.add('resume-dash');
+  }
+} catch (e) {}
+</script>
 <style>
   /* ── Reset & base ─────────────────────────────────────────────────── */
   *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
@@ -33,6 +40,12 @@
     justify-content: center;
     padding: 1rem;
   }
+  html.resume-dash body.signed-out {
+    display: block;
+    padding: 0;
+  }
+  html.resume-dash #view-login { display: none !important; }
+  html.resume-dash #portal { display: block !important; }
 
   .card {
     background: var(--card);
@@ -568,7 +581,12 @@ async function login() {
   setError('login-error', '');
   const u = document.getElementById('username').value.trim();
   const p = document.getElementById('password').value;
-  if (!u || !p) { setError('login-error', 'Please enter your username and password.'); return; }
+  if (!u || !p) {
+    document.documentElement.classList.remove('resume-dash');
+    show('view-login');
+    setError('login-error', 'Please enter your username and password.');
+    return;
+  }
 
   const btn = document.querySelector('#view-login .btn-primary');
   btn.textContent = 'Signing in…';
@@ -578,6 +596,8 @@ async function login() {
     const requested = state.requestedProgram || '';
     const r = await api({ action: 'get_tries', username: u, password: p, programId: '' });
     if (r.error === 'invalid_credentials') {
+      document.documentElement.classList.remove('resume-dash');
+      show('view-login');
       setError('login-error', 'Incorrect username or password.');
       btn.textContent = 'Sign In'; btn.disabled = false;
       return;
@@ -640,6 +660,7 @@ async function login() {
 
 function logout() {
   stopTimer();
+  document.documentElement.classList.remove('resume-dash');
   try {
     sessionStorage.removeItem('quizSubmissionId');
     sessionStorage.removeItem('hokulani-dashboard-session');
@@ -1773,11 +1794,10 @@ document.getElementById('username').addEventListener('keydown', e => {
   document.body.classList.remove('signed-out');
   document.getElementById('view-login').classList.add('hidden');
   document.getElementById('portal').classList.remove('hidden');
-  if (!restoreDashboardView()) {
-    state.assignment = 'one';
-    state.section = 'home';
-    showLessons();
-  }
+  if (restoreDashboardView()) return;
+  state.assignment = 'one';
+  state.section = 'home';
+  showLessons();
   login();
 })();
 </script>
