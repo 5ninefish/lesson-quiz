@@ -30,6 +30,10 @@ const TEACHING_PACKAGES = [
     ['start', 'Start'], ['impression', 'First impression'], ['questions', 'Questions'], ['star', 'STAR'],
     ['draft', 'Draft'], ['practice', 'Practice'], ['feedback', 'Feedback'], ['wrap', 'Wrap'],
   ]),
+  package_('ment-card-sort@2026-10', 'STEM Interests and Career Card Sort', 'PUBLISHED', 'MENT-SORT', 'MENT-SORT', 'ment-card-sort', [
+    ['start', 'Start'], ['intro', 'Introduction'], ['modern', 'Modern careers'], ['titles', 'Job titles'],
+    ['compare', 'Compare'], ['research', 'Research'], ['hawaii', 'Hawaiʻi'], ['wrap', 'Wrap'],
+  ]),
 ];
 
 function package_(lessonId, title, status, preTestId, postTestId, slug, topics) {
@@ -469,6 +473,7 @@ function judgeTeaching_(lessonId, topicId, evidence) {
   if (lessonId === 'sci-soil@2026-10') return judgeSoil_(topicId, clean);
   if (lessonId === 'sci-sust@2026-10') return judgeSust_(topicId, clean);
   if (lessonId === 'ment-interviews@2026-10') return judgeInterviews_(topicId, clean);
+  if (lessonId === 'ment-card-sort@2026-10') return judgeCardSort_(topicId, clean);
   return { status: 'invalid', reason: 'unknown_lesson' };
 }
 
@@ -786,6 +791,69 @@ function judgeInterviews_(topicId, evidence) {
     if (!sentence_(evidence.why) || !hasAny_(evidence.why, ['job', 'hire', 'scholarship', 'college', 'intern', 'school', 'work'])) return { status: 'invalid', reason: 'why' };
     if (!sentence_(evidence.share)) return { status: 'invalid', reason: 'share' };
     if (!sentence_(evidence.culture) || !hasAny_(evidence.culture, ['community', 'culture', 'background', 'organization', 'family', 'experience'])) return { status: 'invalid', reason: 'culture' };
+    return { status: 'met', reason: '' };
+  }
+  return { status: 'invalid', reason: 'unknown_topic' };
+}
+
+function judgeCardSort_(topicId, evidence) {
+  function plain_(value) {
+    return String(value || '').toLowerCase()
+      .replace(/ā/g, 'a').replace(/ē/g, 'e').replace(/ī/g, 'i').replace(/ō/g, 'o').replace(/ū/g, 'u')
+      .replace(/ʻ/g, '').replace(/’/g, '').replace(/'/g, '');
+  }
+  function trained_(text) {
+    return hasAny_(plain_(text), ['degree', 'diploma', 'school', 'train', 'college', 'apprentice', 'certificate', 'university', 'course', 'doctorate', 'bachelor', 'associate', 'master', 'license', 'class']);
+  }
+  if (topicId === 'start') return readyOnly_(evidence);
+  if (topicId === 'intro') {
+    const expert = plain_(evidence.expert);
+    if (!sentence_(evidence.expert) || !hasAny_(expert, ['kahuna', 'expert', 'kilo', 'kupuna', 'navigator', 'wayfinder', 'healer'])) return { status: 'invalid', reason: 'expert' };
+    if (!sentence_(evidence.specialize)) return { status: 'invalid', reason: 'specialize' };
+    return { status: 'met', reason: '' };
+  }
+  if (topicId === 'modern') {
+    if (!sentence_(evidence.career)) return { status: 'invalid', reason: 'career' };
+    if (!sentence_(evidence.prepare) || !trained_(evidence.prepare) || !hasAny_(plain_(evidence.prepare), ['collect', 'data', 'design', 'build', 'observ', 'measure', 'repair', 'teach', 'analyz', 'maintain', 'research', 'patient', 'sample', 'monitor', 'install', 'assist', 'manag', 'operat', 'record', 'map', 'code', 'program', 'care', 'diagnos', 'duty', 'responsib', 'task', 'work', 'job'])) return { status: 'invalid', reason: 'prepare' };
+    return { status: 'met', reason: '' };
+  }
+  if (topicId === 'titles') {
+    if (!sameMap_(evidence.sort, {
+      assistant: 'high school diploma',
+      technician: "associate or bachelor's degree",
+      manager: "bachelor's or master's degree",
+      professor: 'doctorate',
+    })) return { status: 'invalid', reason: 'sort' };
+    if (!sentence_(evidence.role) || plain_(evidence.role).indexOf('konohiki') < 0) return { status: 'invalid', reason: 'role' };
+    return { status: 'met', reason: '' };
+  }
+  if (topicId === 'compare') {
+    const fields = ['Astronomy', 'Biology', 'Botany', 'Climatology', 'Engineering', 'Environmental Science', 'Geology', 'Hydrology', 'Marine Science', 'Medicine', 'Technology', 'Another field I can name'];
+    if (fields.indexOf(evidence.field) < 0) return { status: 'invalid', reason: 'field' };
+    if (!sentence_(evidence.modern) || !sentence_(evidence.traditional) || !sentence_(evidence.change)) return { status: 'invalid', reason: 'pair' };
+    if (!hasAny_(plain_(evidence.change), ['same', 'similar', 'change', 'changed', 'still', 'differ', 'different', 'now', 'past', 'today'])) return { status: 'invalid', reason: 'change' };
+    const blob = plain_([evidence.modern, evidence.traditional, evidence.change].join(' '));
+    if (blob.indexOf('astronomer') >= 0 && (blob.indexOf('kilohoku') >= 0 || blob.indexOf('kilo hoku') >= 0)) return { status: 'invalid', reason: 'example' };
+    return { status: 'met', reason: '' };
+  }
+  if (topicId === 'research') {
+    const title = String(evidence.title || '').trim();
+    const folded = title.toLowerCase();
+    if (title.length < 3 || ['idk', 'n/a', 'na', 'asdf', 'yes', 'no', 'ok', 'hello', 'test', 'job', 'career'].indexOf(folded) >= 0) return { status: 'invalid', reason: 'title' };
+    if (!sentence_(evidence.education) || !trained_(evidence.education)) return { status: 'invalid', reason: 'education' };
+    if (!/[0-9]/.test(String(evidence.pay || ''))) return { status: 'invalid', reason: 'pay' };
+    if (!sentence_(evidence.skills)) return { status: 'invalid', reason: 'skills' };
+    return { status: 'met', reason: '' };
+  }
+  if (topicId === 'hawaii') {
+    if (!sentence_(evidence.employer)) return { status: 'invalid', reason: 'employer' };
+    if (!sentence_(evidence.step) || !hasAny_(plain_(evidence.step), ['train', 'degree', 'course', 'intern', 'volunteer', 'shadow', 'license', 'certif', 'class', 'apprentice', 'practice', 'school', 'college', 'apply'])) return { status: 'invalid', reason: 'step' };
+    return { status: 'met', reason: '' };
+  }
+  if (topicId === 'wrap') {
+    if (!sentence_(evidence.career)) return { status: 'invalid', reason: 'career' };
+    if (!sentence_(evidence.consider) || !hasAny_(plain_(evidence.consider), ['because', 'since', 'interest', 'would'])) return { status: 'invalid', reason: 'consider' };
+    if (!sentence_(evidence.same) || !hasAny_(plain_(evidence.same), ['knowledge', 'observ', 'measur', 'skill', 'science', 'data', 'tool', 'water', 'star', 'plant', 'weather', 'heal', 'navigat', 'build'])) return { status: 'invalid', reason: 'same' };
     return { status: 'met', reason: '' };
   }
   return { status: 'invalid', reason: 'unknown_topic' };

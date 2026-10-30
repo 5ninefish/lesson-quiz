@@ -1,0 +1,94 @@
+{
+  "lessonId": "ment-card-sort@2026-10",
+  "title": "STEM Interests and Career Card Sort",
+  "topics": [
+    {
+      "id": "start",
+      "title": "Start",
+      "teach": "This lesson is STEM Interests and Career Card Sort. You will connect modern STEM careers with traditional Hawaiian STEM practices, match common job titles to the training they use, and research one career on your own. A partner, a stack of cards, career videos, and a Google account are not required. The pre-check asks what you think before the teaching. The official questions stay on the assessment, not on this page.",
+      "fields": [{ "type": "ready", "label": "I am ready for the pre-check" }]
+    },
+    {
+      "id": "intro",
+      "title": "Introduction",
+      "teach": "Today's work looks at STEM careers and how they connect to traditional Hawaiian STEM practices. Keiki who showed a natural inclination were often selected to study under a master. That path could lead toward becoming a kāhuna, a master or expert. Reaching kāhuna status took training in a special discipline for more than 20 years. The training included long oli, mele, moʻolelo, ʻōlelo noʻeau, and protocol. A common oli used to open class and ask for access to knowledge is E Hō Mai, written and composed by kumu hula Edith K. Kānakaʻole. A person with specialized training also knows many related things about that specialty. ʻIke kūpuna means knowledge of the ancestors. Kilo means to observe. Kuleana means responsibility. ʻOihana means jobs.",
+      "fields": [
+        { "type": "text", "name": "expert", "label": "A Native Hawaiian expert or specialty, and the subject or ʻike kūpuna they are known for", "long": true },
+        { "type": "text", "name": "specialize", "label": "The subject you would want to study for years, and why", "long": true }
+      ]
+    },
+    {
+      "id": "modern",
+      "title": "Modern careers",
+      "teach": "In class, a group may watch short videos that give a glimpse of modern STEM careers. You can finish this page without those videos. Pick one modern STEM career. Say how a person prepares for it: the education or training, and one duty of the job.",
+      "fields": [
+        { "type": "text", "name": "career", "label": "One modern STEM career", "long": true },
+        { "type": "text", "name": "prepare", "label": "The education or training, and one duty of that job", "long": true }
+      ]
+    },
+    {
+      "id": "titles",
+      "title": "Job titles",
+      "teach": "Match each modern title to the training this lesson describes. Assistant: a high school diploma. The work assists a technician or a manager, such as maintaining a place, sorting materials, or sharing information. Technician: an associate or bachelor's degree. The work supports a manager and can include collecting and analyzing data or using field equipment. Manager: a bachelor's or master's degree, often after years of related experience. The work keeps a program running, assigns tasks, and lines the work up with the organization's goals. University professor: a doctorate. The work centers on research or teaching, course materials, and research projects. Hawaiian titles sit on a related ladder. Kōkua or kakoʻo assists a hoaʻāina or a luna hoʻohana, usually through experience and on-the-job training. Hoaʻāina or kiaʻi does skill-based work with specific tools under a luna hoʻohana. Luna hoʻohana keeps a program or place maintained, assigns tasks, and trains others. Konohiki manages land and water in an ahupuaʻa and oversees the people who manage land, fish, and food. That role takes years of experience and training.",
+      "fields": [
+        {
+          "type": "choices",
+          "name": "sort",
+          "items": [
+            { "key": "assistant", "label": "Assistant", "options": ["high school diploma", "associate or bachelor's degree", "bachelor's or master's degree", "doctorate"] },
+            { "key": "technician", "label": "Technician", "options": ["high school diploma", "associate or bachelor's degree", "bachelor's or master's degree", "doctorate"] },
+            { "key": "manager", "label": "Manager", "options": ["high school diploma", "associate or bachelor's degree", "bachelor's or master's degree", "doctorate"] },
+            { "key": "professor", "label": "University professor", "options": ["high school diploma", "associate or bachelor's degree", "bachelor's or master's degree", "doctorate"] }
+          ]
+        },
+        { "type": "text", "name": "role", "label": "Name the Hawaiian role that manages land and water in an ahupuaʻa", "long": true }
+      ]
+    },
+    {
+      "id": "compare",
+      "title": "Compare",
+      "teach": "Choose one STEM field. Name one modern career and one traditional Hawaiian role that belong to that same field. Fields you can use include Astronomy, Biology, Botany, Climatology, Engineering, Environmental Science, Geology, Hydrology, Marine Science, Medicine, and Technology, or another field you can name. Then say what stayed the same or what changed. Worked example: Astronomy. A modern job is astronomer. A traditional role is kilo hōkū. Both watch the sky. Write a different pair. Do not copy that example.",
+      "fields": [
+        {
+          "type": "select",
+          "name": "field",
+          "label": "STEM field",
+          "options": ["Astronomy", "Biology", "Botany", "Climatology", "Engineering", "Environmental Science", "Geology", "Hydrology", "Marine Science", "Medicine", "Technology", "Another field I can name"]
+        },
+        { "type": "text", "name": "modern", "label": "One modern career in that field", "long": true },
+        { "type": "text", "name": "traditional", "label": "One traditional Hawaiian role in that same field", "long": true },
+        { "type": "text", "name": "change", "label": "What stayed the same, or what changed", "long": true }
+      ]
+    },
+    {
+      "id": "research",
+      "title": "Research",
+      "teach": "Research one STEM career you might actually want. This page takes the place of the classroom worksheet, so you can finish it alone. Record the career or job title, the education or degrees, a salary range with a number, and the skills. Do not copy a sample from a class slide.",
+      "fields": [
+        { "type": "text", "name": "title", "label": "Career or job title" },
+        { "type": "text", "name": "education", "label": "Education or degrees for that career", "long": true },
+        { "type": "text", "name": "pay", "label": "A salary range that includes a number" },
+        { "type": "text", "name": "skills", "label": "Skills the work uses", "long": true }
+      ]
+    },
+    {
+      "id": "hawaii",
+      "title": "Hawaiʻi",
+      "teach": "Name one employer or organization in Hawaiʻi for the career you researched. A company from a class slide is not required. Then name one step you would take to prepare for that job, such as a class, training, a license, or time with someone who does the work.",
+      "fields": [
+        { "type": "text", "name": "employer", "label": "An employer or organization in Hawaiʻi, and where it is", "long": true },
+        { "type": "text", "name": "step", "label": "One step you would take to prepare", "long": true }
+      ]
+    },
+    {
+      "id": "wrap",
+      "title": "Wrap",
+      "teach": "Name the field or career you studied. Say whether you would consider a STEM career you were not interested in before, and why. Then name one way a traditional Hawaiian practice and a modern job use the same kind of STEM knowledge. The closing questions stay on the assessment, not on this page.",
+      "fields": [
+        { "type": "text", "name": "career", "label": "The field or career you studied", "long": true },
+        { "type": "text", "name": "consider", "label": "Would you consider a career you were not interested in before, and why", "long": true },
+        { "type": "text", "name": "same", "label": "One way a traditional practice and a modern job use the same kind of STEM knowledge", "long": true }
+      ]
+    }
+  ]
+}

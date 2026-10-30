@@ -4,9 +4,9 @@ Mentoring is a domain a cohort can include. It is not a cohort and not a program
 
 Do not create a program called Mentoring, Teaching Mentoring, or Preview. Do not show the word Teaching on the student dashboard.
 
-The seven lessons are listed in `catalog.json`. Interviews is built at `lessons/ment-interviews/`. The other six are not built. Do not add those six to `TEACHING_PACKAGES` or `PUBLISHED_LESSONS`, and do not enable a lesson on a cohort, until that lesson can be opened.
+The seven lessons are listed in `catalog.json`. Interviews is built at `lessons/ment-interviews/`. STEM Interests and Career Card Sort is built at `lessons/ment-card-sort/`. The other five are not built. Do not add those five to `TEACHING_PACKAGES` or `PUBLISHED_LESSONS`, and do not enable a lesson on a cohort, until that lesson can be opened.
 
-Interviews is registered in source. Do not enable it on a cohort until Dalen publishes this package in the same Apps Script deployment. Version 18 does not include the judge. Do not click Deploy. Do not load a question bank for `MENT-INT` in this pass. The four official items stay off the page.
+Interviews and the card sort are registered in source. Do not enable either lesson on a cohort until Dalen publishes this package in the same Apps Script deployment. Version 18 does not include these judges. Do not click Deploy. Do not load a question bank for `MENT-INT` or `MENT-SORT`. The official items stay off the page.
 
 ## How to add one lesson
 

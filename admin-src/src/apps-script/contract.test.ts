@@ -325,6 +325,41 @@ describe("Apps Script dashboard contract", () => {
     expect(interviewPage).not.toContain("college classes");
     expect(interviewPage).not.toContain("All of the above");
     expect(interviewPage).not.toContain("unprofessional");
+    expect(code.judgeTeaching_("ment-card-sort@2026-10", "start", { ready: true }).status).toBe("met");
+    expect(code.judgeTeaching_("ment-card-sort@2026-10", "titles", {
+      sort: {
+        assistant: "high school diploma",
+        technician: "associate or bachelor's degree",
+        manager: "bachelor's or master's degree",
+        professor: "doctorate",
+      },
+      role: "The konohiki manages land and water in an ahupuaa.",
+    }).status).toBe("met");
+    expect(code.judgeTeaching_("ment-card-sort@2026-10", "compare", {
+      field: "Astronomy",
+      modern: "A modern job is astronomer.",
+      traditional: "A traditional role is kilo hoku.",
+      change: "Both still watch the sky in the same way.",
+    }).status).toBe("invalid");
+    expect(code.judgeTeaching_("ment-card-sort@2026-10", "compare", {
+      field: "Marine Science",
+      modern: "A modern job is a marine biologist who studies reef fish.",
+      traditional: "A traditional role is a kiaʻi who watches the same shoreline.",
+      change: "The tools changed, but both still observe ocean life.",
+    }).status).toBe("met");
+    expect(code.judgeTeaching_("ment-card-sort@2026-10", "research", {
+      title: "Marine biologist",
+      education: "This job usually needs a bachelor's degree in marine science.",
+      pay: "$55,000 to $80,000",
+      skills: "You need careful observation and clear notes from the field.",
+    }).status).toBe("met");
+    const sortPage = readFileSync("lessons/ment-card-sort/content.json", "utf8");
+    expect(sortPage).not.toContain("All of the above");
+    expect(sortPage).not.toContain("typically requires a PhD");
+    expect(sortPage).not.toContain("Which type of job typically requires");
+    expect(sortPage).not.toContain("Lapa");
+    expect(sortPage).not.toContain("wide variety of knowledge");
+    expect(sortPage).not.toContain("PhD");
     const before = live.getSheetByName("Attempts")!.getLastRow();
     const blocked = JSON.parse(code.lessonProgressPost_({
       action: "lesson_progress",
