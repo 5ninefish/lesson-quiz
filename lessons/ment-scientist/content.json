@@ -1,0 +1,77 @@
+{
+  "lessonId": "ment-scientist@2026-10",
+  "title": "What a Scientist Does",
+  "topics": [
+    {
+      "id": "start",
+      "title": "Start",
+      "teach": "This lesson is What a Scientist Does. You will name what scientists do, connect that work to kilo and to everyday life, choose one scientist you admire, and set two goals. A class discussion, a video, a slide copy, and a partner are not required. The pre-check asks what you think before the teaching. The official questions stay on the assessment, not on this page.",
+      "fields": [{ "type": "ready", "label": "I am ready for the pre-check" }]
+    },
+    {
+      "id": "ancestral",
+      "title": "Ancestral",
+      "teach": "In class the group may watch Ancestral, a short film by Dr. Cliff Kapono. You can finish this page without the film. Dr. Kapono is from Hilo. He is a competitive surfer and a chemist with a PhD. He tells stories on video. The moʻolelo in that film comes from the Kumulipo, the Hawaiian creation chant. That part of the chant describes life coming out of darkness, and the coral polyp as the first life on Earth. After you read that, say what comes to mind, and name one element of STEM in that story.",
+      "fields": [
+        { "type": "text", "name": "notice", "label": "What comes to mind", "long": true },
+        { "type": "text", "name": "stem", "label": "One element of STEM in that story", "long": true }
+      ]
+    },
+    {
+      "id": "work",
+      "title": "The work",
+      "teach": "A class brainstorm has two columns: kinds of STEM, and what scientists and other STEM professionals do. Specific tasks belong in a broader list. That list includes observe, collect data, solve problems, conduct experiments, tinker, build things, and share what they learn. Name one kind of STEM or science. Then name one thing scientists do, using that broader kind of work.",
+      "fields": [
+        { "type": "text", "name": "kind", "label": "One kind of STEM or science" },
+        { "type": "text", "name": "does", "label": "One thing scientists do as part of the job", "long": true }
+      ]
+    },
+    {
+      "id": "kilo",
+      "title": "Kilo",
+      "teach": "Everyday life for Native Hawaiians used many parts of STEM. Communities relied on kilo, careful observation, to finish everyday tasks. In kilo, people watch patterns, understand how something works, and share that information so the community can survive. ʻIke kūpuna, knowledge of the ancestors, starts there. Careful observation is also how scientists elsewhere form a hypothesis and gather information. Stephen Hawking and Brian May are two scientists outside Hawaiʻi who are known for that kind of careful study. Brian May is the guitarist from Queen and also an astrophysicist. Name one STEM practice in a traditional Native Hawaiian practice. Then name one scientific practice you see in culture or everyday life, such as gardening, cooking, or construction, or another you can describe.",
+      "fields": [
+        { "type": "text", "name": "practice", "label": "One STEM practice in a traditional Native Hawaiian practice", "long": true },
+        { "type": "text", "name": "everyday", "label": "One scientific practice in culture or everyday life", "long": true }
+      ]
+    },
+    {
+      "id": "admire",
+      "title": "A scientist I admire",
+      "teach": "Choose one scientist from Hawaiʻi or beyond. In class, students may watch Tomorrow Ancestor about James Akau, How Did You Get to Where You Are, a short film about Dr. Jedidah Isler, or Hero about Dr. Jane Goodall. You can choose one of them or someone else. You do not need the videos or a slide deck. Dr. Jedidah Isler is an astrophysicist who studies supermassive black holes. She is known as the first Black woman to earn a PhD in astrophysics. Dr. Jane Goodall is an ethologist, conservationist, and humanitarian. In the 1960s, without formal academic training, she went to the forests of Gombe to observe chimpanzees. Record the person, their area of STEM, and one fact about them or their work. Worked example: Dr. Jane Goodall observed chimpanzees at Gombe. If you choose her, write a different fact. If you choose someone else, write your own fact.",
+      "fields": [
+        { "type": "text", "name": "who", "label": "Scientist you admire" },
+        { "type": "select", "name": "where", "label": "Where their work is based", "options": ["Hawaiʻi", "Beyond Hawaiʻi"] },
+        { "type": "text", "name": "area", "label": "Their area of STEM" },
+        { "type": "text", "name": "fact", "label": "One fact about them or their work", "long": true }
+      ]
+    },
+    {
+      "id": "traits",
+      "title": "Traits",
+      "teach": "Scientists and other STEM professionals share traits as well as job tasks. A class slide is a brainstorm: each person adds a trait. Then each person names a trait they have in common with a scientist. Name two traits scientists share. Then name one trait or interest you share with the scientist you chose.",
+      "fields": [
+        { "type": "text", "name": "shared", "label": "Two traits scientists share", "long": true },
+        { "type": "text", "name": "mine", "label": "One trait or interest you share with your scientist", "long": true }
+      ]
+    },
+    {
+      "id": "goals",
+      "title": "Goals",
+      "teach": "Set two personal goals that build your own scientific traits or skills. One is short-term and can be finished by the end of the school year. One is long-term. Say which trait each goal strengthens.",
+      "fields": [
+        { "type": "text", "name": "short", "label": "A short-term goal you can finish by the end of the school year", "long": true },
+        { "type": "text", "name": "long", "label": "A long-term goal", "long": true }
+      ]
+    },
+    {
+      "id": "wrap",
+      "title": "Wrap",
+      "teach": "Name one characteristic you have in common with a scientist from this lesson. Then record one thought from the lesson. The closing questions stay on the assessment, not on this page.",
+      "fields": [
+        { "type": "text", "name": "common", "label": "One characteristic you share with a scientist", "long": true },
+        { "type": "text", "name": "thought", "label": "One thought from this lesson", "long": true }
+      ]
+    }
+  ]
+}

@@ -354,6 +354,35 @@ describe("Apps Script dashboard contract", () => {
       skills: "You need careful observation and clear notes from the field.",
     }).status).toBe("met");
     const sortPage = readFileSync("lessons/ment-card-sort/content.json", "utf8");
+    expect(code.judgeTeaching_("ment-scientist@2026-10", "start", { ready: true }).status).toBe("met");
+    expect(code.judgeTeaching_("ment-scientist@2026-10", "work", {
+      kind: "Chemistry",
+      does: "They watch the lab.",
+    }).status).toBe("invalid");
+    expect(code.judgeTeaching_("ment-scientist@2026-10", "work", {
+      kind: "Chemistry",
+      does: "Scientists observe a pattern and collect data before they share it.",
+    }).status).toBe("met");
+    expect(code.judgeTeaching_("ment-scientist@2026-10", "admire", {
+      who: "Dr. Jane Goodall",
+      where: "Beyond Hawaiʻi",
+      area: "Ethology",
+      fact: "Dr. Jane Goodall observed chimpanzees at Gombe.",
+    }).status).toBe("invalid");
+    expect(code.judgeTeaching_("ment-scientist@2026-10", "admire", {
+      who: "Dr. Cliff Kapono",
+      where: "Hawaiʻi",
+      area: "Chemistry",
+      fact: "He is a chemist from Hilo who also tells stories through film.",
+    }).status).toBe("met");
+    expect(code.judgeTeaching_("ment-scientist@2026-10", "goals", {
+      short: "By the end of the school year I will keep a weekly observation notebook.",
+      long: "In college I want a degree that uses careful field observation.",
+    }).status).toBe("met");
+    const scientistPage = readFileSync("lessons/ment-scientist/content.json", "utf8");
+    expect(scientistPage).not.toContain("All of the above");
+    expect(scientistPage).not.toContain("Which of the following");
+    expect(scientistPage).not.toContain("answer key");
     expect(sortPage).not.toContain("All of the above");
     expect(sortPage).not.toContain("typically requires a PhD");
     expect(sortPage).not.toContain("Which type of job typically requires");

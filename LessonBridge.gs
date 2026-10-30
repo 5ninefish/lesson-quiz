@@ -34,6 +34,10 @@ const TEACHING_PACKAGES = [
     ['start', 'Start'], ['intro', 'Introduction'], ['modern', 'Modern careers'], ['titles', 'Job titles'],
     ['compare', 'Compare'], ['research', 'Research'], ['hawaii', 'Hawaiʻi'], ['wrap', 'Wrap'],
   ]),
+  package_('ment-scientist@2026-10', 'What a Scientist Does', 'PUBLISHED', 'MENT-SCI', 'MENT-SCI', 'ment-scientist', [
+    ['start', 'Start'], ['ancestral', 'Ancestral'], ['work', 'The work'], ['kilo', 'Kilo'],
+    ['admire', 'A scientist I admire'], ['traits', 'Traits'], ['goals', 'Goals'], ['wrap', 'Wrap'],
+  ]),
 ];
 
 function package_(lessonId, title, status, preTestId, postTestId, slug, topics) {
@@ -474,6 +478,7 @@ function judgeTeaching_(lessonId, topicId, evidence) {
   if (lessonId === 'sci-sust@2026-10') return judgeSust_(topicId, clean);
   if (lessonId === 'ment-interviews@2026-10') return judgeInterviews_(topicId, clean);
   if (lessonId === 'ment-card-sort@2026-10') return judgeCardSort_(topicId, clean);
+  if (lessonId === 'ment-scientist@2026-10') return judgeScientist_(topicId, clean);
   return { status: 'invalid', reason: 'unknown_lesson' };
 }
 
@@ -854,6 +859,64 @@ function judgeCardSort_(topicId, evidence) {
     if (!sentence_(evidence.career)) return { status: 'invalid', reason: 'career' };
     if (!sentence_(evidence.consider) || !hasAny_(plain_(evidence.consider), ['because', 'since', 'interest', 'would'])) return { status: 'invalid', reason: 'consider' };
     if (!sentence_(evidence.same) || !hasAny_(plain_(evidence.same), ['knowledge', 'observ', 'measur', 'skill', 'science', 'data', 'tool', 'water', 'star', 'plant', 'weather', 'heal', 'navigat', 'build'])) return { status: 'invalid', reason: 'same' };
+    return { status: 'met', reason: '' };
+  }
+  return { status: 'invalid', reason: 'unknown_topic' };
+}
+
+function judgeScientist_(topicId, evidence) {
+  function plain_(value) {
+    return String(value || '').toLowerCase()
+      .replace(/ā/g, 'a').replace(/ē/g, 'e').replace(/ī/g, 'i').replace(/ō/g, 'o').replace(/ū/g, 'u')
+      .replace(/ʻ/g, '').replace(/’/g, '').replace(/'/g, '');
+  }
+  function named_(value) {
+    const text = String(value || '').trim();
+    const folded = text.toLowerCase();
+    if (text.length < 3) return '';
+    if (['idk', 'n/a', 'na', 'asdf', 'yes', 'no', 'ok', 'hello', 'test', 'job', 'career', 'science', 'stem', 'scientist', 'a scientist'].indexOf(folded) >= 0) return '';
+    return text;
+  }
+  if (topicId === 'start') return readyOnly_(evidence);
+  if (topicId === 'ancestral') {
+    if (!sentence_(evidence.notice)) return { status: 'invalid', reason: 'notice' };
+    if (!sentence_(evidence.stem) || !hasAny_(plain_(evidence.stem), ['science', 'technology', 'engineer', 'math', 'observ', 'ocean', 'water', 'film', 'chemist', 'chemistry', 'coral', 'life', 'data', 'surf', 'chant', 'kilo', 'video'])) return { status: 'invalid', reason: 'stem' };
+    return { status: 'met', reason: '' };
+  }
+  if (topicId === 'work') {
+    if (!named_(evidence.kind)) return { status: 'invalid', reason: 'kind' };
+    if (!sentence_(evidence.does) || !hasAny_(plain_(evidence.does), ['observ', 'data', 'problem', 'experiment', 'tinker', 'build', 'share', 'research', 'measur', 'hypothes'])) return { status: 'invalid', reason: 'does' };
+    return { status: 'met', reason: '' };
+  }
+  if (topicId === 'kilo') {
+    if (!sentence_(evidence.practice) || !hasAny_(plain_(evidence.practice), ['kilo', 'observ', 'fish', 'farm', 'navigat', 'star', 'plant', 'water', 'voyag', 'ahupua', 'loi', 'taro', 'canoe', 'weather', 'pattern'])) return { status: 'invalid', reason: 'practice' };
+    if (!sentence_(evidence.everyday) || !hasAny_(plain_(evidence.everyday), ['garden', 'cook', 'construct', 'build', 'family', 'culture', 'home', 'kitchen', 'observ', 'measur', 'pattern', 'repair'])) return { status: 'invalid', reason: 'everyday' };
+    return { status: 'met', reason: '' };
+  }
+  if (topicId === 'admire') {
+    if (!named_(evidence.who)) return { status: 'invalid', reason: 'who' };
+    if (['Hawaiʻi', 'Beyond Hawaiʻi'].indexOf(evidence.where) < 0) return { status: 'invalid', reason: 'where' };
+    if (!named_(evidence.area)) return { status: 'invalid', reason: 'area' };
+    const fact = plain_(evidence.fact);
+    if (!sentence_(evidence.fact)) return { status: 'invalid', reason: 'fact' };
+    if (fact.indexOf('chimpanzee') >= 0 && fact.indexOf('gombe') >= 0) return { status: 'invalid', reason: 'example' };
+    return { status: 'met', reason: '' };
+  }
+  if (topicId === 'traits') {
+    const shared = sentence_(evidence.shared);
+    if (!shared || (shared.indexOf(',') < 0 && shared.toLowerCase().indexOf(' and ') < 0)) return { status: 'invalid', reason: 'shared' };
+    if (!sentence_(evidence.mine)) return { status: 'invalid', reason: 'mine' };
+    return { status: 'met', reason: '' };
+  }
+  if (topicId === 'goals') {
+    if (!sentence_(evidence.short) || !hasAny_(plain_(evidence.short), ['year', 'semester', 'month', 'week', 'class', 'soon', 'school'])) return { status: 'invalid', reason: 'short' };
+    if (!sentence_(evidence.long) || !hasAny_(plain_(evidence.long), ['college', 'career', 'degree', 'university', 'years', 'future', 'job'])) return { status: 'invalid', reason: 'long' };
+    if (plain_(evidence.short) === plain_(evidence.long)) return { status: 'invalid', reason: 'same' };
+    return { status: 'met', reason: '' };
+  }
+  if (topicId === 'wrap') {
+    if (!sentence_(evidence.common)) return { status: 'invalid', reason: 'common' };
+    if (!sentence_(evidence.thought) || !hasAny_(plain_(evidence.thought), ['scientist', 'trait', 'kilo', 'observ', 'goal', 'learn', 'lesson'])) return { status: 'invalid', reason: 'thought' };
     return { status: 'met', reason: '' };
   }
   return { status: 'invalid', reason: 'unknown_topic' };
