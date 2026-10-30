@@ -14,7 +14,7 @@ Codex is the planner and reviewer. Grok is the builder. Do not restart a general
 - Script ID: `1Pdbx3MsjPp08-5ARNN-Q8n9GueijIhDqu3pNKmHep96M_muCZ4shxxAC`
 - Workbook: Post Test Master `1wFjzB6PgjhZjHWBcgLLVOa1TtBvaEDqoV8PGFYoX3EI`
 - Apps Script published version **18**, 2026-10-28 9:45 AM HST, description "keep lesson artifacts". GET returns `contract: dashboard-t9` and `teaching: v1`. Same deployment. `Dashboard.html` was not replaced.
-- GitHub `main` at this pickup is `5427aeb`. Pages HTML cache is about 10 minutes. `?v=` only busts cache. It does not select a git commit.
+- Dashboard and lesson code is `5427aeb`. This pickup file is the later commit on `main`. Pages HTML cache is about 10 minutes. `?v=` only busts cache. It does not select a git commit.
 
 Recovery: Manage deployments, edit this same deployment, choose version 16 or version 15. Do not choose version 17. A resume on version 17 can replace a finished topic's artifact. Version 13 is the pre-bridge service rollback and does not delete workbook rows. Do not create or archive a deployment. Do not paste commit `f16a56d` over the Apps Script project. Do not click Deploy. UH 2FA blocks that click. Dalen publishes the same deployment when he is ready.
 
@@ -106,7 +106,7 @@ Paste this into a fresh Grok session:
 ```
 Pick up Hōkūlani lesson-quiz. Read /Users/dalen/Public/clients/lesson-quiz/TRANSITION_2026-10-29.md first and follow it. Repo is /Users/dalen/Public/clients/lesson-quiz on GitHub 5ninefish/lesson-quiz. cd there before every command. Dbrain cwd sticks.
 
-GitHub main at the pickup is 5427aeb. Student page: https://5ninefish.github.io/lesson-quiz/?v=5427aeb. Apps Script version 18 is still the published deployment. Do not click Deploy, run setup(), print a password, delete ProgramStudents rows, or commit .claude/ or .env.
+Dashboard code is 5427aeb. Read TRANSITION_2026-10-29.md on current main. Student page: https://5ninefish.github.io/lesson-quiz/?v=5427aeb. Apps Script version 18 is still the published deployment. Do not click Deploy, run setup(), print a password, delete ProgramStudents rows, or commit .claude/ or .env.
 
 A student has one cohort. Program means cohort. Domains are Science, Mentoring, College Transition, Internship, and Mindset. Science includes Computer Science. preview, Teaching Computer Science, and Teaching Field Lessons are not cohorts. The student dashboard must not say Teaching.
 
