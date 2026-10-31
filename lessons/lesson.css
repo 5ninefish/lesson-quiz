@@ -45,8 +45,11 @@ main:has(.vivid) .check-title { color: #0e6b6b; }
 .topic:has(.vivid) input[type="text"] { border: 1px solid #d5e4e2; border-radius: 10px; padding: .55rem .7rem; background: white; }
 .topic:has(.vivid) textarea { min-height: 5.5rem; }
 .topic:has(.vivid) input[type="checkbox"] { margin-right: .45rem; }
-.reading.vivid { font-family: "Avenir Next", "Segoe UI", sans-serif; color: #1b2430; line-height: 1.45; }
-.reading.vivid h3 { font-size: 1.35rem; margin: 1rem 0 .35rem; }
+.reading.vivid { font-family: "Avenir Next", "Segoe UI", sans-serif; color: #1b2430; line-height: 1.6; font-size: 1.05rem; }
+.reading.vivid p { margin: .75rem 0; }
+.reading.vivid h3 { font-size: 1.35rem; margin: 1.35rem 0 .35rem; }
+.reading.vivid ul, .reading.vivid ol { margin: .35rem 0 1rem; padding-left: 1.25rem; }
+.reading.vivid li { margin: .45rem 0; }
 .reading.vivid .goal { background: #14343a; color: #f7f1e6; border-radius: 14px; padding: .75rem .9rem; margin: .2rem 0 .8rem; }
 .reading.vivid .hero { margin: 0 0 .8rem; }
 .reading.vivid .hero img { width: 100%; border-radius: 18px; display: block; background: #d7ebe7; }
@@ -57,8 +60,8 @@ main:has(.vivid) .check-title { color: #0e6b6b; }
 .reading.vivid .split article:last-child { background: #fff1e4; }
 .reading.vivid .example { background: #fffaf3; border-left: 6px solid #e07a3d; border-radius: 12px; padding: .7rem .9rem; margin: .8rem 0; }
 .reading.vivid .turn { background: #0e6b6b; color: white; border-radius: 12px; padding: .7rem .9rem; }
-.reading.vivid .scale { display: grid; grid-template-columns: repeat(5, 1fr); gap: .35rem; list-style: none; padding: 0; margin: .8rem 0; }
-.reading.vivid .scale li { border-radius: 12px; padding: .55rem; color: #14343a; font-size: .82rem; min-height: 6.5rem; }
+.reading.vivid .scale { display: grid; grid-template-columns: 1fr; gap: .35rem; list-style: none; padding: 0; margin: .8rem 0; }
+.reading.vivid .scale li { border-radius: 12px; padding: .7rem .85rem; color: #14343a; font-size: 1rem; min-height: 0; }
 .reading.vivid .scale li:nth-child(1) { background: #f3d2c4; }
 .reading.vivid .scale li:nth-child(2) { background: #f6dfc4; }
 .reading.vivid .scale li:nth-child(3) { background: #f6ecc4; }
