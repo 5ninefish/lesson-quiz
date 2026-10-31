@@ -73,14 +73,14 @@
     {
       "id": "practice",
       "title": "Practice",
-      "teach": "If someone is with you, they ask one question and score your pace, clarity, and example. If you are alone, use the empty chair: say the answer out loud, score yourself, then say it once more and fix the weak part.",
+      "teach": "If someone is with you, they ask one question and score your pace, clarity, and example. They also notice body language, including whether you sit up or look uninterested. If you are alone, use the empty chair: say the answer out loud, score yourself on the same speaking scale, note your posture, then say it once more and fix the weak part.",
       "fields": [
         { "type": "select", "name": "mode", "label": "How are you practicing?", "options": ["I have a partner", "I am practicing alone"] },
         { "type": "text", "name": "partner_question", "label": "The question your partner asked", "long": true, "when": { "name": "mode", "is": "I have a partner" } },
-        { "type": "text", "name": "partner_notice", "label": "What they noticed about your pace, clarity, or example", "long": true, "when": { "name": "mode", "is": "I have a partner" } },
+        { "type": "text", "name": "partner_notice", "label": "What they noticed about pace, clarity, the example, and body language", "long": true, "when": { "name": "mode", "is": "I have a partner" } },
         { "type": "select", "name": "mark", "label": "Rubric mark, from 1 to 5", "options": ["1", "2", "3", "4", "5"] },
         { "type": "text", "name": "spoken", "label": "The words you said to the empty chair", "long": true, "when": { "name": "mode", "is": "I am practicing alone" } },
-        { "type": "text", "name": "note", "label": "Your note on pace, clarity, or the example", "long": true, "when": { "name": "mode", "is": "I am practicing alone" } },
+        { "type": "text", "name": "note", "label": "Your note on pace, clarity, the example, and body language", "long": true, "when": { "name": "mode", "is": "I am practicing alone" } },
         { "type": "text", "name": "redo", "label": "Say it once more. What did you change?", "long": true, "when": { "name": "mode", "is": "I am practicing alone" } }
       ]
     },
@@ -96,11 +96,12 @@
     {
       "id": "wrap",
       "title": "Wrap",
-      "teach": "Interview practice raises the chance of being hired, admitted, or awarded a scholarship. You can teach the same questions at home so other people can practice. Your own background can be useful when the organization serves your community. Reading the organization's goals helps you name a skill they need.",
+      "teach": "Interview practice raises the chance of being hired, admitted, or awarded a scholarship. You can teach the same questions at home so other people can practice. Your own background can be useful when the organization serves your community. Reading the organization's goals helps you name a skill they need. It is okay to apply for a role you are not fully qualified for. The interview is still practice, and you can show the skills you do have and how you would learn the rest.",
       "fields": [
         { "type": "text", "name": "why", "label": "Why interview practice matters for work or school", "long": true },
         { "type": "text", "name": "share", "label": "One way you could practice this with family or community", "long": true },
-        { "type": "text", "name": "culture", "label": "How your background, or what you learn about the organization, could help", "long": true }
+        { "type": "text", "name": "culture", "label": "How your background, or what you learn about the organization, could help", "long": true },
+        { "type": "text", "name": "apply", "label": "Would you apply for a role you are not fully qualified for, and what would you say?", "long": true }
       ]
     }
   ]

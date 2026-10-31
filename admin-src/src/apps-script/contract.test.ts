@@ -327,6 +327,22 @@ describe("Apps Script dashboard contract", () => {
     expect(interviewPage + interviewReading).not.toContain("All of the above");
     expect(interviewPage + interviewReading).not.toContain("unprofessional");
     expect(interviewReading).toContain("empty chair");
+    expect(interviewReading).toContain("https://www.eeoc.gov/pre-employment-inquiries-and-medical-questions-examinations");
+    expect(interviewReading).toContain("https://www.careeronestop.org/JobSearch/Interview/interview-tips.aspx");
+    expect(interviewReading).toContain("https://elevate.iit.edu/star-method/");
+    expect(interviewReading).toContain("not fully qualified");
+    expect(interviewReading).toContain("body language");
+    expect(code.judgeTeaching_("ment-interviews@2026-10", "wrap", {
+      why: "Interview practice can lead to a job or an internship.",
+      share: "I would ask my cousin one question and let them try it.",
+      culture: "I would read the organization goals and connect a family garden log.",
+    }).status).toBe("invalid");
+    expect(code.judgeTeaching_("ment-interviews@2026-10", "wrap", {
+      why: "Interview practice can lead to a job or an internship.",
+      share: "I would ask my cousin one question and let them try it.",
+      culture: "I would read the organization goals and connect a family garden log.",
+      apply: "I would apply even if I am not fully qualified, and I would say which skill I can learn.",
+    }).status).toBe("met");
     expect(code.judgeTeaching_("ment-interviews@2026-10", "practice", {
       mode: "I am practicing alone",
       spoken: "Accept me because I learned to keep a garden log when the watering got skipped.",

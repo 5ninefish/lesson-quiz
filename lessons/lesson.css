@@ -46,6 +46,7 @@ main:has(.vivid) .check-title { color: #0e6b6b; }
 .topic:has(.vivid) textarea { min-height: 5.5rem; }
 .topic:has(.vivid) input[type="checkbox"] { margin-right: .45rem; }
 .reading.vivid { font-family: "Avenir Next", "Segoe UI", sans-serif; color: #1b2430; line-height: 1.6; font-size: 1.05rem; }
+.reading.vivid a { color: #0b4f4f; text-decoration: underline; text-underline-offset: .15em; }
 .reading.vivid p { margin: .75rem 0; }
 .reading.vivid h3 { font-size: 1.35rem; margin: 1.35rem 0 .35rem; }
 .reading.vivid ul, .reading.vivid ol { margin: .35rem 0 1rem; padding-left: 1.25rem; }

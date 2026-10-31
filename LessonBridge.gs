@@ -805,6 +805,7 @@ function judgeInterviews_(topicId, evidence) {
     if (!sentence_(evidence.why) || !hasAny_(evidence.why, ['job', 'hire', 'scholarship', 'college', 'intern', 'school', 'work'])) return { status: 'invalid', reason: 'why' };
     if (!sentence_(evidence.share)) return { status: 'invalid', reason: 'share' };
     if (!sentence_(evidence.culture) || !hasAny_(evidence.culture, ['community', 'culture', 'background', 'organization', 'family', 'experience'])) return { status: 'invalid', reason: 'culture' };
+    if (!sentence_(evidence.apply) || !hasAny_(evidence.apply, ['qualif', 'apply', 'learn'])) return { status: 'invalid', reason: 'apply' };
     return { status: 'met', reason: '' };
   }
   return { status: 'invalid', reason: 'unknown_topic' };
