@@ -332,6 +332,13 @@ describe("Apps Script dashboard contract", () => {
     expect(interviewReading).toContain("https://elevate.iit.edu/star-method/");
     expect(interviewReading).toContain("not fully qualified");
     expect(interviewReading).toContain("body language");
+    expect(interviewReading).toContain("behave uprightly");
+    expect(interviewReading).toContain("impression.jpg");
+    expect(interviewReading).toContain("questions.jpg");
+    expect(interviewReading).toContain("draft.jpg");
+    expect(interviewReading).toContain("feedback.jpg");
+    expect(interviewReading).toContain("wrap.jpg");
+    expect(interviewPage).toContain('"type": "piles"');
     expect(code.judgeTeaching_("ment-interviews@2026-10", "wrap", {
       why: "Interview practice can lead to a job or an internship.",
       share: "I would ask my cousin one question and let them try it.",

@@ -75,6 +75,187 @@
     return { status: "" };
   }
 
+
+  function sentenceLocal_(value) {
+    const text = String(value || "").trim();
+    const folded = text.toLowerCase().replace(/\s+/g, " ");
+    if (!text || folded.length < 12) return "";
+    if (["idk", "n/a", "na", "asdf", "yes", "no", "ok", "hello", "test"].indexOf(folded) >= 0) return "";
+    return text;
+  }
+
+  function hasAnyLocal_(text, words) {
+    const folded = String(text || "").toLowerCase();
+    for (let i = 0; i < words.length; i++) if (folded.indexOf(words[i]) >= 0) return true;
+    return false;
+  }
+
+  function sameMapLocal_(got, want) {
+    if (!got || typeof got !== "object") return false;
+    const keys = Object.keys(want);
+    for (let i = 0; i < keys.length; i++) {
+      if (String(got[keys[i]] == null ? "" : got[keys[i]]) !== String(want[keys[i]])) return false;
+    }
+    return keys.length > 0;
+  }
+
+  function judgeInterviewLocal_(topicId, evidence) {
+    const clothesWords = ["wear", "shirt", "dress", "shoe", "pants", "skirt", "blouse", "collar", "uniform", "polo", "slack", "outfit", "clothes", "clothing", "jacket"];
+    if (topicId === "start") return evidence && evidence.ready === true ? { status: "met", reason: "" } : { status: "invalid", reason: "ready" };
+    if (topicId === "impression") {
+      if (!sameMapLocal_(evidence.sort, { contact: "do", complete: "do", clarify: "do", health: "skip", example: "do" })) return { status: "invalid", reason: "sort" };
+      if (!sentenceLocal_(evidence.clothes) || !hasAnyLocal_(evidence.clothes, clothesWords)) return { status: "invalid", reason: "clothes" };
+      return { status: "met", reason: "" };
+    }
+    if (topicId === "questions") {
+      const recalls = [evidence.recall_1, evidence.recall_2, evidence.recall_3].map(sentenceLocal_);
+      if (!recalls[0] || !recalls[1] || !recalls[2]) return { status: "invalid", reason: "recall" };
+      const folded = recalls.map(function (item) { return item.toLowerCase(); });
+      if (folded[0] === folded[1] || folded[0] === folded[2] || folded[1] === folded[2]) return { status: "invalid", reason: "recall_same" };
+      const picks = [
+        "Tell me a little about yourself.",
+        "What are your greatest strengths?",
+        "What do you consider to be your weaknesses?",
+        "Tell me about a challenge you faced and how you dealt with it.",
+        "Where do you see yourself in five years?",
+        "Why do you want this position?",
+      ];
+      if (picks.indexOf(evidence.pick) < 0) return { status: "invalid", reason: "pick" };
+      if (!sentenceLocal_(evidence.role)) return { status: "invalid", reason: "role" };
+      if (!sentenceLocal_(evidence.duty)) return { status: "invalid", reason: "duty" };
+      return { status: "met", reason: "" };
+    }
+    if (topicId === "star") {
+      if (!sentenceLocal_(evidence.situation) || !sentenceLocal_(evidence.task) || !sentenceLocal_(evidence.action) || !sentenceLocal_(evidence.result)) return { status: "invalid", reason: "star" };
+      const blob = [evidence.situation, evidence.task, evidence.action, evidence.result].join(" ").toLowerCase();
+      if (blob.indexOf("english") >= 0 && blob.indexOf("small group") >= 0) return { status: "invalid", reason: "example" };
+      return { status: "met", reason: "" };
+    }
+    if (topicId === "draft") {
+      if (!sentenceLocal_(evidence.yourself)) return { status: "invalid", reason: "yourself" };
+      const strength = String(evidence.strength || "").trim().toLowerCase();
+      if (!sentenceLocal_(evidence.strength) || strength === "people person" || strength === "i am a people person" || strength === "hardworking") return { status: "invalid", reason: "strength" };
+      if (!sentenceLocal_(evidence.weakness) || !hasAnyLocal_(evidence.weakness, ["improv", "learn", "practic", "coach", "working on", "getting better"])) return { status: "invalid", reason: "weakness" };
+      return { status: "met", reason: "" };
+    }
+    if (topicId === "practice") {
+      const scoreOk = ["1", "2", "3", "4", "5"].indexOf(String(evidence.mark)) >= 0;
+      if (evidence.mode === "I have a partner") {
+        if (!sentenceLocal_(evidence.partner_question)) return { status: "invalid", reason: "partner_question" };
+        if (!sentenceLocal_(evidence.partner_notice) || !hasAnyLocal_(evidence.partner_notice, ["pace", "clear", "example", "eye", "rush", "slow", "mumble"])) return { status: "invalid", reason: "partner_notice" };
+        if (!scoreOk) return { status: "invalid", reason: "score" };
+        return { status: "met", reason: "" };
+      }
+      if (evidence.mode !== "I am practicing alone") return { status: "invalid", reason: "mode" };
+      if (!scoreOk) return { status: "invalid", reason: "score" };
+      if (!sentenceLocal_(evidence.spoken) || !hasAnyLocal_(evidence.spoken, ["because", "when", "example", "learned", "helped", "built", "measured", "taught"])) return { status: "invalid", reason: "spoken" };
+      if (!sentenceLocal_(evidence.note) || !hasAnyLocal_(evidence.note, ["pace", "clear", "example", "rush", "slow", "mumble"])) return { status: "invalid", reason: "note" };
+      if (!sentenceLocal_(evidence.redo)) return { status: "invalid", reason: "redo" };
+      return { status: "met", reason: "" };
+    }
+    if (topicId === "feedback") {
+      if (!sentenceLocal_(evidence.improve)) return { status: "invalid", reason: "improve" };
+      const ask = sentenceLocal_(evidence.ask);
+      if (!ask || (ask.indexOf("?") < 0 && !hasAnyLocal_(ask, ["what", "how", "who", "when", "where", "why"]))) return { status: "invalid", reason: "ask" };
+      return { status: "met", reason: "" };
+    }
+    if (topicId === "wrap") {
+      if (!sentenceLocal_(evidence.why) || !hasAnyLocal_(evidence.why, ["job", "hire", "scholarship", "college", "intern", "school", "work"])) return { status: "invalid", reason: "why" };
+      if (!sentenceLocal_(evidence.share)) return { status: "invalid", reason: "share" };
+      if (!sentenceLocal_(evidence.culture) || !hasAnyLocal_(evidence.culture, ["community", "culture", "background", "organization", "family", "experience"])) return { status: "invalid", reason: "culture" };
+      if (!sentenceLocal_(evidence.apply) || !hasAnyLocal_(evidence.apply, ["qualif", "apply", "learn"])) return { status: "invalid", reason: "apply" };
+      return { status: "met", reason: "" };
+    }
+    return { status: "invalid", reason: "unknown_topic" };
+  }
+
+  function interviewMet_(topicId) {
+    const lines = {
+      start: "The ready box is checked. Next, sort a first impression into Do and Skip.",
+      impression: "Eye contact, a complete answer, a repeated question, and a fitting example are in Do. The disability question is in Skip, and the clothes line names something you would wear. Next is Questions.",
+      questions: "Three different questions are written, and one question is prepared for a role and a duty. Next is STAR.",
+      star: "The four beats are a challenge from your own life. Next is Draft.",
+      draft: "About you, the strength, and the weakness are specific enough to say. Next is Practice.",
+      practice: "The spoken answer, the mark, and the note are in. Next is Feedback.",
+      feedback: "The change for next time and the question for the interviewer are in. Next is Wrap.",
+      wrap: "The four closing answers are in, including what you would say if you applied before you met every qualification.",
+    };
+    return lines[topicId] || "This topic meets the rule on the page.";
+  }
+
+  function interviewMiss_(topicId, reason, evidence) {
+    const sortLabels = {
+      contact: "Keep eye contact",
+      complete: "Answer the whole question",
+      clarify: "Ask if you need the question repeated",
+      health: "Employer asks about a disability when the job lists no health requirement",
+      example: "Use an example that fits the question",
+    };
+    const sortWant = { contact: "do", complete: "do", clarify: "do", health: "skip", example: "do" };
+    if (reason === "sort") {
+      const sort = evidence.sort || {};
+      const keys = Object.keys(sortWant);
+      for (let i = 0; i < keys.length; i++) {
+        const got = String(sort[keys[i]] == null ? "" : sort[keys[i]]);
+        if (!got) return "\u201c" + sortLabels[keys[i]] + "\u201d is still in the card bank. The rule is that every card sits in Do or Skip. Move that card, then save this order.";
+      }
+      for (let i = 0; i < keys.length; i++) {
+        const got = String(sort[keys[i]]);
+        if (got !== sortWant[keys[i]]) {
+          const pile = got === "do" ? "Do" : "Skip";
+          const want = sortWant[keys[i]] === "do" ? "Do" : "Skip";
+          return "You put \u201c" + sortLabels[keys[i]] + "\u201d in " + pile + ". The rule is that this card belongs in " + want + ". Move it, then save this order.";
+        }
+      }
+    }
+    const clothes = String(evidence.clothes || "").trim();
+    const lines = {
+      ready: "The ready box is still empty. The rule is to check it after you have read the opening and you are ready for the pre-check. Check \u201cI am ready for the pre-check,\u201d then press I'm ready.",
+      clothes: clothes.length >= 12
+        ? "The clothes box does not name something you would wear. The rule is to name the role and one thing you would wear there, such as a shirt or shoes. Add that, then save this order."
+        : "The clothes box is still too short to count. The rule is a full sentence that names the role and one thing you would wear. Write that, then save this order.",
+      recall: "At least one recall box is still too short to count. The rule is three questions you remember while the list stays closed. Finish the short box, then save this question.",
+      recall_same: "Two recall boxes say the same thing. The rule is three different questions. Change the repeated one, then save this question.",
+      pick: "The question menu is still on Choose, or it is not one of the six questions. The rule is to prepare one question from that menu. Choose one, then save this question.",
+      role: "The role box is still too short to count. The rule is to name a role you might interview for. Write that role, then save this question.",
+      duty: "The duty box is still too short to count. The rule is one qualification or duty you would look up for that role. Write that duty, then save this question.",
+      star: "One of the four beats is still too short to count. The rule is a situation, a task, an action, and a result from your own life. Finish the short beat, then save the four beats.",
+      example: "This story still uses the English-class small groups. The rule is that example is already used. Write a different challenge from your own life, then save the four beats.",
+      yourself: "The about-you box is still too short to count. The rule is a fact and an accomplishment a stranger could follow. Add those, then save these three answers.",
+      strength: "The strength is a slogan, or it is too short to count. The rule is a specific skill for a role, not \u201cpeople person\u201d or \u201chardworking.\u201d Name what you do, then save these three answers.",
+      weakness: "The weakness does not say what you are already doing to get better, or it is too short to count. The rule is a real limit plus the practice you have started. Add that practice, then save these three answers.",
+      mode: "The practice menu is still on Choose. The rule is to pick a partner or the empty chair before the other boxes open. Choose one, then say the answer out loud.",
+      partner_question: "The partner-question box is still too short to count. The rule is to write the question your partner asked. Write that question, then press I said it out loud.",
+      partner_notice: "The partner note misses pace, clarity, the example, or how you looked, or it is too short to count. The rule is a note about the speaking and the body language. Add what they noticed, then press I said it out loud.",
+      score: "The mark is still on Choose. The rule is a number from 1 to 5 for pace, clarity, and the example. Choose that mark, then press I said it out loud.",
+      spoken: "The words you said are too short, or they do not include a reason or an example. The rule is an answer you said out loud, with because, when, or something you learned, helped, built, measured, or taught. Write that answer, then press I said it out loud.",
+      note: "Your note misses pace, clarity, or the example, or it is too short to count. The rule is a note on the speaking. Name one of those, then press I said it out loud.",
+      redo: "The second try is still too short to count. The rule is to say what you changed when you said it again. Write that change, then press I said it out loud.",
+      improve: "The change box is still too short to count. The rule is one specific thing you will do differently next time. Write that change, then save it.",
+      ask: "The question for the interviewer is not a question yet, or it is too short to count. The rule is one question about their role. Add a question mark or a question word, then save this change.",
+      why: "The first wrap answer does not connect the practice to work or school, or it is too short to count. The rule is why this practice matters for a job, school, a scholarship, or an internship. Add that, then save these four answers.",
+      share: "The family or community box is still too short to count. The rule is one way you could practice this with someone else. Write that way, then save these four answers.",
+      culture: "The background box does not name your community, family, experience, or the organization, or it is too short to count. The rule is a true link between their work and something you know. Add that link, then save these four answers.",
+      apply: "The last wrap answer does not say you would apply or what you would learn, or it is too short to count. The rule is that you may apply before you meet every qualification, and you name how you would learn the gap. Add that, then save these four answers.",
+    };
+    return lines[reason] || "This answer does not meet the rule for this topic yet. Change the part the boxes are asking for, then press the button again.";
+  }
+
+  function interviewAttemptReply(topicId, evidence, body) {
+    if (body && body.error === "pre_required") return "Complete the PRE on your lesson page first. Practice does not start the test.";
+    const local = judgeInterviewLocal_(topicId, evidence);
+    let met = local.status === "met";
+    let reason = local.reason;
+    if (body && body.ok && body.status === "invalid" && body.reason) {
+      met = false;
+      reason = body.reason;
+    }
+    if (body && body.ok && (body.status === "met" || body.status === "support") && local.status !== "met") met = false;
+    let text = met ? interviewMet_(topicId) : interviewMiss_(topicId, reason, evidence);
+    if (!body || !body.ok) text += " This reply is from the lesson. It is not stored on a cohort until the lesson is assigned.";
+    return text;
+  }
+
   function showTopic(topic) {
     panel.textContent = "";
     const h = document.createElement("h2");
@@ -135,8 +316,11 @@
       event.preventDefault();
       const evidence = collect(form, topic);
       post({ action: "lesson_progress", topicId: topic.id, mode: "attempt", evidence: evidence }).then(function (body) {
+        form.querySelectorAll(".reply").forEach(function (old) { old.remove(); });
         const note = document.createElement("p");
-        if (body.ok && (body.status === "met" || body.status === "support")) note.textContent = "That counts.";
+        note.className = "reply";
+        if (lessonId === "ment-interviews@2026-10") note.textContent = interviewAttemptReply(topic.id, evidence, body);
+        else if (body.ok && (body.status === "met" || body.status === "support")) note.textContent = "That counts.";
         else if (body.ok) note.textContent = "Saved. You can continue with support if you want a person to review it.";
         else if (body.error === "pre_required") note.textContent = "Complete the PRE on your lesson page first. Practice does not start the test.";
         else note.textContent = "Look again at this topic, then try once more.";
@@ -152,15 +336,23 @@
     form.addEventListener("change", function () { applyWhen(form); });
     const submit = document.createElement("button");
     submit.type = "submit";
-    submit.textContent = "Check";
+    submit.textContent = topic.action || "Check";
     const support = document.createElement("button");
     support.type = "button";
     support.className = "secondary";
-    support.textContent = "Continue with support";
+    support.textContent = lessonId === "ment-interviews@2026-10" ? "Ask for help" : "Continue with support";
     support.addEventListener("click", function () {
       post({ action: "lesson_progress", topicId: topic.id, mode: "support", evidence: {} }).then(function (body) {
+        form.querySelectorAll(".reply").forEach(function (old) { old.remove(); });
         const note = document.createElement("p");
-        note.textContent = body.ok ? "Recorded with support. This did not use a PRE or POST attempt." : "The lesson page could not save that.";
+        note.className = "reply";
+        if (lessonId === "ment-interviews@2026-10") {
+          note.textContent = body.ok
+            ? "This is help. It does not mark the topic done, and it does not use a test attempt."
+            : "This is help. It does not mark the topic done, and it does not use a test attempt. The lesson could not store it until a cohort is assigned.";
+        } else {
+          note.textContent = body.ok ? "Recorded with support. This did not use a PRE or POST attempt." : "The lesson page could not save that.";
+        }
         form.appendChild(note);
         if (body.lesson) {
           remote.lessons = [body.lesson];
@@ -248,6 +440,81 @@
       for (let i = 0; i < (field.count || 3); i++) addText(box, field.name + "-" + i, (field.label || "Step") + " " + (i + 1), false);
       return box;
     }
+    if (field.type === "piles") {
+      const piles = document.createElement("div");
+      piles.className = "piles";
+      const bank = document.createElement("div");
+      bank.className = "pile bank";
+      bank.dataset.pile = "";
+      const doPile = document.createElement("div");
+      doPile.className = "pile do";
+      doPile.dataset.pile = "do";
+      const skipPile = document.createElement("div");
+      skipPile.className = "pile skip";
+      skipPile.dataset.pile = "skip";
+      function pileTitle(parent, text) {
+        const title = document.createElement("h4");
+        title.textContent = text;
+        parent.appendChild(title);
+      }
+      pileTitle(bank, "Cards");
+      pileTitle(doPile, "Do");
+      pileTitle(skipPile, "Skip");
+      function place(card, pile, value) {
+        pile.appendChild(card);
+        card.querySelector("input").value = value;
+        card.querySelector("[data-move='do']").hidden = value === "do";
+        card.querySelector("[data-move='skip']").hidden = value === "skip";
+        card.querySelector("[data-move='back']").hidden = value === "";
+      }
+      (field.items || []).forEach(function (item) {
+        const card = document.createElement("article");
+        card.className = "move-card";
+        card.draggable = true;
+        card.dataset.key = item.key;
+        const text = document.createElement("p");
+        text.textContent = item.label || item.key;
+        card.appendChild(text);
+        const hidden = document.createElement("input");
+        hidden.type = "hidden";
+        hidden.name = field.name + "-" + item.key;
+        hidden.value = "";
+        card.appendChild(hidden);
+        [["do", "Move to Do"], ["skip", "Move to Skip"], ["back", "Move back"]].forEach(function (pair) {
+          const button = document.createElement("button");
+          button.type = "button";
+          button.dataset.move = pair[0];
+          button.textContent = pair[1];
+          if (pair[0] === "back") button.hidden = true;
+          button.addEventListener("click", function () {
+            const target = pair[0] === "do" ? doPile : pair[0] === "skip" ? skipPile : bank;
+            const value = pair[0] === "back" ? "" : pair[0];
+            place(card, target, value);
+          });
+          card.appendChild(button);
+        });
+        card.addEventListener("dragstart", function (event) {
+          event.dataTransfer.setData("text/plain", item.key);
+          piles.dataset.drag = item.key;
+        });
+        bank.appendChild(card);
+      });
+      [bank, doPile, skipPile].forEach(function (pile) {
+        pile.addEventListener("dragover", function (event) { event.preventDefault(); });
+        pile.addEventListener("drop", function (event) {
+          event.preventDefault();
+          const key = event.dataTransfer.getData("text/plain") || piles.dataset.drag;
+          const card = piles.querySelector('.move-card[data-key="' + key + '"]');
+          if (!card) return;
+          place(card, pile, pile.dataset.pile || "");
+        });
+      });
+      piles.appendChild(bank);
+      piles.appendChild(doPile);
+      piles.appendChild(skipPile);
+      box.appendChild(piles);
+      return box;
+    }
     if (field.type === "choices") {
       (field.items || []).forEach(function (item) {
         addSelect(box, field.name + "-" + item.key, item.options, item.label || item.key);
@@ -313,7 +580,7 @@
         const steps = [];
         for (let i = 0; i < (field.count || 3); i++) steps.push(valueOf(form, field.name + "-" + i));
         evidence[field.name] = steps;
-      } else if (field.type === "choices") {
+      } else if (field.type === "choices" || field.type === "piles") {
         const map = {};
         (field.items || []).forEach(function (item) { map[item.key] = valueOf(form, field.name + "-" + item.key); });
         evidence[field.name] = map;
