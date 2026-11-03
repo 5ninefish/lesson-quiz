@@ -252,11 +252,312 @@
     }
     if (body && body.ok && (body.status === "met" || body.status === "support") && local.status !== "met") met = false;
     let text = met ? interviewMet_(topicId) : interviewMiss_(topicId, reason, evidence);
+    if (topicId === "star" && met) {
+      text += " Saved. AI feedback is pending.";
+      try { sessionStorage.setItem("hokulani-star-ai-pending", "1"); } catch (e) {}
+    }
     if (!body || !body.ok) text += " This reply is from the lesson. It is not stored on a cohort until the lesson is assigned.";
     return text;
   }
 
+  let shellReady = false;
+  let mapWrap = null;
+  let stage = null;
+  let coachBox = null;
+  let coachLog = null;
+  let coachStatus = null;
+  let liveTopic = "";
+  let liveNode = null;
+  let liveCheck = null;
+  const stepAt = {};
+  const fullOpen = {};
+  const coachTurns = {};
+
+  function hasSteps(topic) {
+    const reading = readings[topic.id];
+    return !!(reading && reading.querySelector(":scope > .step"));
+  }
+
+  function useShell() {
+    const ids = Object.keys(readings);
+    for (let i = 0; i < ids.length; i++) {
+      if (readings[ids[i]].querySelector(":scope > .step")) return true;
+    }
+    return false;
+  }
+
+  function mountShell() {
+    if (shellReady) return;
+    shellReady = true;
+    document.body.classList.add("stepped");
+    const shell = document.createElement("div");
+    shell.className = "lesson-shell";
+    mapWrap = document.createElement("details");
+    mapWrap.className = "map-wrap";
+    const summary = document.createElement("summary");
+    summary.textContent = "Topics";
+    mapWrap.appendChild(summary);
+    nav.className = "map";
+    mapWrap.appendChild(nav);
+    if (window.matchMedia("(min-width: 701px)").matches) mapWrap.open = true;
+    stage = panel;
+    stage.className = "topic stage";
+    coachBox = document.createElement("aside");
+    coachBox.className = "coach";
+    const heading = document.createElement("h2");
+    heading.textContent = "Coach";
+    const where = document.createElement("p");
+    where.className = "coach-where";
+    coachLog = document.createElement("div");
+    coachLog.className = "coach-log";
+    coachStatus = document.createElement("p");
+    coachStatus.className = "coach-status";
+    const form = document.createElement("form");
+    const area = document.createElement("textarea");
+    area.rows = 3;
+    area.setAttribute("aria-label", "Your reply to the coach");
+    const send = document.createElement("button");
+    send.type = "submit";
+    send.textContent = "Answer the coach";
+    form.appendChild(area);
+    form.appendChild(send);
+    form.addEventListener("submit", sendCoach);
+    coachBox.appendChild(heading);
+    coachBox.appendChild(where);
+    coachBox.appendChild(coachLog);
+    coachBox.appendChild(form);
+    coachBox.appendChild(coachStatus);
+    shell.appendChild(mapWrap);
+    shell.appendChild(stage);
+    shell.appendChild(coachBox);
+    root.appendChild(shell);
+  }
+
+  function currentStep(topic) {
+    if (!liveNode) return null;
+    const nodes = liveNode.querySelectorAll(":scope > .step");
+    return nodes[stepAt[topic.id] || 0] || nodes[nodes.length - 1] || null;
+  }
+
+  function stepKey(topic, step) {
+    return topic.id + ":" + (step ? step.getAttribute("data-step") : "");
+  }
+
+  function renderCoach(topic, step) {
+    if (!coachBox) return;
+    const key = stepKey(topic, step);
+    const label = step ? (step.getAttribute("data-label") || "this step") : topic.title;
+    coachBox.querySelector(".coach-where").textContent = "This stays on " + topic.title + ", " + label + ". One question at a time.";
+    coachLog.textContent = "";
+    (coachTurns[key] || []).forEach(function (turn) {
+      const line = document.createElement("p");
+      line.className = turn.who === "you" ? "you" : "coach-line";
+      line.textContent = (turn.who === "you" ? "You: " : "Coach: ") + turn.text;
+      coachLog.appendChild(line);
+    });
+    let pending = false;
+    try { pending = sessionStorage.getItem("hokulani-star-ai-pending") === "1"; } catch (e) {}
+    if (topic.id === "star" && step && step.getAttribute("data-task") === "yes" && pending) {
+      coachStatus.textContent = "Saved. AI feedback is pending. Come back to Your story when a model is connected. The four beats are the revision an instructor can see once this lesson is assigned.";
+    } else {
+      coachStatus.textContent = "No model is connected on this page, so there is no scored comment yet. Ask for help asks one question about this step and does not give a sample answer.";
+    }
+  }
+
+  function firstQuestion(topic, step) {
+    const id = step ? step.getAttribute("data-step") : "";
+    if (topic.id === "star" && id === "story") return "Tell me about a challenge you faced and how you dealt with it. Use your own life. The English-class story on this page is already used.";
+    if (topic.id === "impression" && id === "sort") return "Which card are you unsure about, and which pile are you choosing for it?";
+    if (topic.id === "practice" && id === "aloud") return "Are you using a partner or the empty chair, and what will you listen for?";
+    return "What is one part of this step you want to get right before you move on?";
+  }
+
+  function askCoach(topic) {
+    const step = currentStep(topic);
+    const key = stepKey(topic, step);
+    const turns = coachTurns[key] || (coachTurns[key] = []);
+    if (!turns.some(function (turn) { return turn.who === "coach"; })) {
+      turns.push({ who: "coach", text: firstQuestion(topic, step) });
+    }
+    renderCoach(topic, step);
+    const area = coachBox.querySelector("textarea");
+    if (area) area.focus();
+    coachBox.scrollIntoView({ block: "nearest" });
+  }
+
+  function sendCoach(event) {
+    event.preventDefault();
+    const topic = (content.topics || []).filter(function (item) { return item.id === liveTopic; })[0];
+    if (!topic) return;
+    const step = currentStep(topic);
+    const key = stepKey(topic, step);
+    const turns = coachTurns[key] || (coachTurns[key] = []);
+    const area = coachBox.querySelector("textarea");
+    const said = String(area.value || "").trim();
+    if (!said) return;
+    area.value = "";
+    turns.push({ who: "you", text: said });
+    const asked = turns.filter(function (turn) { return turn.who === "coach"; }).length;
+    const folded = said.toLowerCase();
+    const wantsSample = (folded.indexOf("give") >= 0 || folded.indexOf("sample") >= 0 || folded.indexOf("what is the") >= 0) && folded.indexOf("answer") >= 0;
+    let reply;
+    if (wantsSample) reply = "The worked example stays on the page, and it is not yours to copy. What happened in your own life?";
+    else if (asked >= 3) reply = "Put that into the boxes on this step, then use the button under the boxes.";
+    else if (topic.id === "star" && step && step.getAttribute("data-step") === "story") reply = "You wrote \"" + said.replace(/\s+/g, " ").slice(0, 90) + "\". Which of the four beats is that, and what would you change before you save?";
+    else reply = "You wrote \"" + said.replace(/\s+/g, " ").slice(0, 90) + "\". What is the one next piece this step asks you to use?";
+    turns.push({ who: "coach", text: reply });
+    renderCoach(topic, step);
+  }
+
+  function refreshSaveLine(topic) {
+    const line = stage && stage.querySelector(".save-state");
+    if (!line) return;
+    const state = topicState(topic.id);
+    if (state.status === "met") line.textContent = "Saved.";
+    else if (state.status === "support") line.textContent = "Saved with support. This did not mark the topic done, and it did not use a test attempt.";
+    else line.textContent = "";
+  }
+
+  function buildCheck(topic) {
+    const block = document.createElement("div");
+    block.className = "check-block";
+    const check = document.createElement("h3");
+    check.className = "check-title";
+    check.textContent = "Your check";
+    block.appendChild(check);
+    const form = document.createElement("form");
+    form.addEventListener("submit", function (event) {
+      event.preventDefault();
+      const evidence = collect(form, topic);
+      post({ action: "lesson_progress", topicId: topic.id, mode: "attempt", evidence: evidence }).then(function (body) {
+        form.querySelectorAll(".reply").forEach(function (old) { old.remove(); });
+        const note = document.createElement("p");
+        note.className = "reply";
+        if (lessonId === "ment-interviews@2026-10") note.textContent = interviewAttemptReply(topic.id, evidence, body);
+        else if (body.ok && (body.status === "met" || body.status === "support")) note.textContent = "That counts.";
+        else if (body.ok) note.textContent = "Saved. You can continue with support if you want a person to review it.";
+        else if (body.error === "pre_required") note.textContent = "Complete the PRE on your lesson page first. Practice does not start the test.";
+        else note.textContent = "Look again at this topic, then try once more.";
+        form.appendChild(note);
+        if (body.lesson) {
+          remote.lessons = [body.lesson];
+          paintNav(topic.id);
+          refreshSaveLine(topic);
+        }
+        if (liveNode) renderCoach(topic, currentStep(topic));
+      });
+    });
+    (topic.fields || []).forEach(function (field) { form.appendChild(renderField(field)); });
+    applyWhen(form);
+    form.addEventListener("change", function () { applyWhen(form); });
+    const submit = document.createElement("button");
+    submit.type = "submit";
+    submit.textContent = topic.action || "Check";
+    const support = document.createElement("button");
+    support.type = "button";
+    support.className = "secondary";
+    support.textContent = "Continue with support";
+    support.addEventListener("click", function () {
+      post({ action: "lesson_progress", topicId: topic.id, mode: "support", evidence: {} }).then(function (body) {
+        form.querySelectorAll(".reply").forEach(function (old) { old.remove(); });
+        const note = document.createElement("p");
+        note.className = "reply";
+        if (lessonId === "ment-interviews@2026-10") {
+          note.textContent = body.ok
+            ? "This is help. It does not mark the topic done, and it does not use a test attempt."
+            : "This is help. It does not mark the topic done, and it does not use a test attempt. The lesson could not store it until a cohort is assigned.";
+        } else {
+          note.textContent = body.ok ? "Recorded with support. This did not use a PRE or POST attempt." : "The lesson page could not save that.";
+        }
+        form.appendChild(note);
+        if (body.lesson) {
+          remote.lessons = [body.lesson];
+          paintNav(topic.id);
+          refreshSaveLine(topic);
+        }
+      });
+    });
+    form.appendChild(submit);
+    form.appendChild(document.createTextNode(" "));
+    form.appendChild(support);
+    block.appendChild(form);
+    return block;
+  }
+
+  function showStepped(topic) {
+    mountShell();
+    if (liveTopic !== topic.id) {
+      stage.textContent = "";
+      const h = document.createElement("h2");
+      h.textContent = topic.title;
+      stage.appendChild(h);
+      const saved = document.createElement("p");
+      saved.className = "note save-state";
+      stage.appendChild(saved);
+      const tools = document.createElement("p");
+      tools.className = "step-tools";
+      [["Previous step", function () {
+        stepAt[topic.id] = Math.max(0, (stepAt[topic.id] || 0) - 1);
+        fullOpen[topic.id] = false;
+        showStepped(topic);
+      }], ["Next step", function () {
+        const count = readings[topic.id].querySelectorAll(":scope > .step").length;
+        stepAt[topic.id] = Math.min(count - 1, (stepAt[topic.id] || 0) + 1);
+        fullOpen[topic.id] = false;
+        showStepped(topic);
+      }]].forEach(function (pair) {
+        const button = document.createElement("button");
+        button.type = "button";
+        button.className = "secondary";
+        button.textContent = pair[0];
+        button.addEventListener("click", pair[1]);
+        tools.appendChild(button);
+        tools.appendChild(document.createTextNode(" "));
+      });
+      const full = document.createElement("button");
+      full.type = "button";
+      full.className = "secondary";
+      full.textContent = "Read the full explanation";
+      full.addEventListener("click", function () {
+        fullOpen[topic.id] = !fullOpen[topic.id];
+        showStepped(topic);
+      });
+      const help = document.createElement("button");
+      help.type = "button";
+      help.className = "secondary";
+      help.textContent = "Ask for help";
+      help.addEventListener("click", function () { askCoach(topic); });
+      tools.appendChild(full);
+      tools.appendChild(document.createTextNode(" "));
+      tools.appendChild(help);
+      stage.appendChild(tools);
+      liveNode = readings[topic.id].cloneNode(true);
+      stage.appendChild(liveNode);
+      liveCheck = buildCheck(topic);
+      stage.appendChild(liveCheck);
+      liveTopic = topic.id;
+      post({ action: "lesson_progress", topicId: topic.id, mode: "place", evidence: {} }).catch(function () {});
+    }
+    refreshSaveLine(topic);
+    const nodes = liveNode.querySelectorAll(":scope > .step");
+    const index = Math.min(stepAt[topic.id] || 0, nodes.length - 1);
+    stepAt[topic.id] = index;
+    const open = !!fullOpen[topic.id];
+    nodes.forEach(function (node, i) { node.hidden = !open && i !== index; });
+    if (liveCheck) liveCheck.hidden = !open && index !== nodes.length - 1;
+    const buttons = stage.querySelectorAll(".step-tools button");
+    if (buttons[0]) buttons[0].hidden = open || index === 0;
+    if (buttons[1]) buttons[1].hidden = open || index === nodes.length - 1;
+    if (buttons[2]) buttons[2].textContent = open ? "Show one step" : "Read the full explanation";
+    paintNav(topic.id);
+    renderCoach(topic, nodes[index]);
+  }
+
   function showTopic(topic) {
+    if (hasSteps(topic)) {
+      showStepped(topic);
+      return;
+    }
     panel.textContent = "";
     const h = document.createElement("h2");
     h.textContent = topic.title;
@@ -340,7 +641,7 @@
     const support = document.createElement("button");
     support.type = "button";
     support.className = "secondary";
-    support.textContent = lessonId === "ment-interviews@2026-10" ? "Ask for help" : "Continue with support";
+    support.textContent = "Continue with support";
     support.addEventListener("click", function () {
       post({ action: "lesson_progress", topicId: topic.id, mode: "support", evidence: {} }).then(function (body) {
         form.querySelectorAll(".reply").forEach(function (old) { old.remove(); });
@@ -643,6 +944,42 @@
 
   function paintNav(current) {
     nav.textContent = "";
+    if (document.body.classList.contains("stepped")) {
+      (content.topics || []).forEach(function (topic) {
+        const state = topicState(topic.id);
+        const button = document.createElement("button");
+        button.type = "button";
+        let mark = "";
+        if (state.status === "met") mark = " · Saved";
+        else if (state.status === "support") mark = " · With support";
+        button.textContent = topic.title + mark;
+        if (topic.id === current) button.setAttribute("aria-current", "true");
+        button.addEventListener("click", function () { showTopic(topic); });
+        nav.appendChild(button);
+        if (topic.id !== current) return;
+        const reading = readings[topic.id];
+        const steps = reading ? reading.querySelectorAll(":scope > .step") : [];
+        const index = stepAt[topic.id] || 0;
+        Array.prototype.forEach.call(steps, function (step, i) {
+          const sub = document.createElement("button");
+          sub.type = "button";
+          sub.className = "map-step";
+          sub.textContent = step.getAttribute("data-label") || ("Step " + (i + 1));
+          if (i === index) sub.setAttribute("aria-current", "true");
+          sub.addEventListener("click", function () {
+            stepAt[topic.id] = i;
+            fullOpen[topic.id] = false;
+            showStepped(topic);
+          });
+          nav.appendChild(sub);
+        });
+        if (mapWrap) {
+          const summary = mapWrap.querySelector("summary");
+          if (summary) summary.textContent = "Topics · " + topic.title;
+        }
+      });
+      return;
+    }
     (content.topics || []).forEach(function (topic) {
       const button = document.createElement("button");
       button.type = "button";
@@ -675,6 +1012,7 @@
   }).then(function (json) {
     content = json;
     title.textContent = json.title || "Lesson";
+    if (useShell()) mountShell();
     const opening = (content.topics || [])[0];
     if (!opening) throw new Error("topics");
     paintNav(opening.id);
