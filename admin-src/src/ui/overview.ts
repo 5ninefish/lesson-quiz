@@ -10,7 +10,7 @@ import { pageHeading } from "./help";
 
 let lessonScope = "";
 
-const DONE = new Set(["met", "support"]);
+const DONE = new Set(["met"]);
 
 function packFor(lessonId: string): PublishedLesson | undefined {
   return PUBLISHED_LESSONS.find((pack) => pack.lessonId === lessonId);
@@ -172,7 +172,7 @@ export function renderOverview(
   stat(
     "Lessons completed",
     `${submitted} of ${scoped.length}`,
-    "Student lessons with every topic met or supported",
+    "Student lessons with every topic met",
   );
   stat(
     "Assessments still owed",
@@ -215,7 +215,7 @@ export function renderOverview(
     if (scopeId === "__all__") who.append(el("span", { class: "cellnote" }, record.title));
     const topics = el("td");
     topics.append(document.createTextNode(`${progress.done} / ${progress.total}`));
-    if (record.support) topics.append(el("span", { class: "cellnote" }, "Completed with support"));
+    if (record.support) topics.append(el("span", { class: "cellnote" }, "Continued with support"));
     const followCell = el("td");
     if (note.warn) followCell.append(el("span", { class: "tag warn" }, note.text));
     else followCell.append(document.createTextNode(note.text));

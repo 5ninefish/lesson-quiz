@@ -287,7 +287,7 @@ function buildTeachingLessonsPayload_(ss, student, programId, tests) {
         updatedAt: latest ? latest.updatedAt : '',
       };
     });
-    const done = topics.filter(function (topic) { return topic.status === 'met' || topic.status === 'support'; }).length;
+    const done = topics.filter(function (topic) { return topic.status === 'met'; }).length;
     let resume = '';
     let resumeAt = '';
     topics.forEach(function (topic) {

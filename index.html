@@ -996,15 +996,26 @@ function paintChrome() {
   context.textContent = (isCohortId(state.programId) ? programLabel(state.programId) : 'Student portal');
 }
 
-function lessonStarted(lesson) {
+function demonstrated(lesson) {
+  const topics = lesson.topics || [];
   const progress = lesson.progress || { done: 0, total: 0 };
+  if (topics.length) {
+    return {
+      done: topics.filter(function (topic) { return topic.status === 'met'; }).length,
+      total: topics.length,
+    };
+  }
+  return { done: progress.done || 0, total: progress.total || 0 };
+}
+function lessonStarted(lesson) {
+  const progress = demonstrated(lesson);
   return progress.done > 0 || (lesson.topics || []).some(function (topic) { return topic.status; });
 }
 
 function lessonStatus(lesson) {
   if (lesson.availability === 'upcoming') return { text: 'Scheduled', warn: false };
   if (lesson.availability === 'locked') return { text: 'Closed', warn: false };
-  const progress = lesson.progress || { done: 0, total: 0 };
+  const progress = demonstrated(lesson);
   const finished = progress.total > 0 && progress.done >= progress.total;
   const unlinked = String(lesson.status || '').toUpperCase() === 'UNLINKED'
     || ((lesson.pre && lesson.pre.linked === false) && (lesson.post && lesson.post.linked === false));
@@ -1063,7 +1074,7 @@ function phaseActionable(card) {
 
 function nextTopicTitle(lesson) {
   const topics = lesson.topics || [];
-  const open = topics.find(function (topic) { return topic.status !== 'met' && topic.status !== 'support'; });
+  const open = topics.find(function (topic) { return topic.status !== 'met'; });
   if (open) return open.title || open.id;
   const resume = (lesson.progress && lesson.progress.resumeTopic) || '';
   const named = topics.find(function (topic) { return topic.id === resume; });
@@ -1079,7 +1090,7 @@ function latestTouch(lesson) {
 function continueLesson(lessons) {
   return lessons.filter(function (lesson) {
     if (lesson.availability === 'locked' || lesson.availability === 'upcoming') return false;
-    const progress = lesson.progress || { done: 0, total: 0 };
+    const progress = demonstrated(lesson);
     return lessonStarted(lesson) && progress.total && progress.done < progress.total;
   }).sort(function (a, b) { return latestTouch(b).localeCompare(latestTouch(a)); })[0] || null;
 }
@@ -1097,7 +1108,7 @@ function lessonAction(lesson, status) {
   if (preGateClosed(lesson)) return { label: 'Complete PRE first', disabled: true };
   if (!lesson.url) return { label: 'No lesson link', disabled: true };
   if (status.text === 'Finished' || status.text === 'POST outstanding' || status.text === 'Assessment unlinked') {
-    if ((lesson.progress || {}).done > 0) return { label: 'Review lesson', disabled: false };
+    if (demonstrated(lesson).done > 0) return { label: 'Review lesson', disabled: false };
   }
   return { label: lessonStarted(lesson) ? 'Resume lesson' : 'Start lesson', disabled: false };
 }
@@ -1133,7 +1144,7 @@ function appendPhase(parent, label, card) {
 
 function teachingCard(lesson, index, sectionName) {
   const status = lessonStatus(lesson);
-  const progress = lesson.progress || { done: 0, total: 0 };
+  const progress = demonstrated(lesson);
   const card = document.createElement('article');
   card.className = 'hk-card';
   const top = document.createElement('div');
@@ -1318,7 +1329,7 @@ function renderLessonGrid() {
   if (section === 'home') {
     const current = continueLesson(lessons);
     if (current) {
-      const progress = current.progress || { done: 0, total: 0 };
+      const progress = demonstrated(current);
       const panel = document.createElement('section');
       panel.className = 'hk-continue';
       const copy = document.createElement('div');

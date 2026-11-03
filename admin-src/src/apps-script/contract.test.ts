@@ -511,7 +511,7 @@ describe("Apps Script dashboard contract", () => {
     expect(progress.some((row) => row[5] === "support" && row[7] === "YES")).toBe(true);
     const listed = JSON.parse(code.getTries("ada", "secret", "teach-cs").getContent());
     expect(listed.lessons[0].lessonId).toBe("sci-cs@2026-10");
-    expect(listed.lessons[0].progress.done).toBe(1);
+    expect(listed.lessons[0].progress.done).toBe(0);
     expect(listed.lessons[0].pre.linked).toBe(true);
     expect(listed.tests).toEqual([]);
   });

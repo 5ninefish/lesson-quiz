@@ -91,7 +91,7 @@ describe("lesson records", () => {
     expect(records.map((row) => row.username)).toEqual(["preview", "preview", "walkada", "walkada"]);
     expect(records.map((row) => `${row.title}:${row.progress}:${row.assessment}:${row.support}`)).toEqual([
       "Health:In progress:POST missing:",
-      "Sustainability:Lesson completed:Assessment missing:Needs support",
+      "Sustainability:In progress:Assessment missing:Needs support",
       "Health:Not started:Assessment missing:",
       "Sustainability:Not started:Assessment missing:",
     ]);

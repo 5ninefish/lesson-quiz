@@ -252,11 +252,18 @@
     }
     if (body && body.ok && (body.status === "met" || body.status === "support") && local.status !== "met") met = false;
     let text = met ? interviewMet_(topicId) : interviewMiss_(topicId, reason, evidence);
-    if (topicId === "star" && met) {
-      text += " Saved. AI feedback is pending.";
-      try { sessionStorage.setItem("hokulani-star-ai-pending", "1"); } catch (e) {}
+    const confirmed = met && body && body.ok && body.status === "met";
+    const recorded = !!(body && body.ok);
+    if (confirmed) {
+      text += " Saved.";
+      if (topicId === "star") text += " No model is connected, so there is no AI comment and nothing is queued for review. The four beats are what an instructor can see.";
+    } else if (recorded && body.status === "support") {
+      text += " Saved with support. This is help. It does not mark the topic done.";
+    } else if (recorded) {
+      text += " The lesson recorded this try. It is not marked done, and nothing is queued for review.";
+    } else {
+      text += " This is a practice reply. It is not saved, and nothing is queued for review, until the lesson is assigned.";
     }
-    if (!body || !body.ok) text += " This reply is from the lesson. It is not stored on a cohort until the lesson is assigned.";
     return text;
   }
 
@@ -272,6 +279,16 @@
   const stepAt = {};
   const fullOpen = {};
   const coachTurns = {};
+  let coachPlace = null;
+  let draftBag = null;
+  let draftsReady = false;
+
+  const STAR_BEATS = [
+    { key: "situation", label: "Situation", hint: "where you were and what was going wrong" },
+    { key: "task", label: "Task", hint: "the part that was yours" },
+    { key: "action", label: "Action", hint: "the step you took, in I" },
+    { key: "result", label: "Result", hint: "what changed, with a number if you have one" },
+  ];
 
   function hasSteps(topic) {
     const reading = readings[topic.id];
@@ -299,17 +316,17 @@
     mapWrap.appendChild(summary);
     nav.className = "map";
     mapWrap.appendChild(nav);
-    if (window.matchMedia("(min-width: 701px)").matches) mapWrap.open = true;
+    if (window.matchMedia("(min-width: 1101px)").matches) mapWrap.open = true;
     stage = panel;
     stage.className = "topic stage";
     coachBox = document.createElement("aside");
     coachBox.className = "coach";
     const heading = document.createElement("h2");
     heading.textContent = "Coach";
-    const where = document.createElement("p");
-    where.className = "coach-where";
     coachLog = document.createElement("div");
     coachLog.className = "coach-log";
+    coachPlace = document.createElement("div");
+    coachPlace.className = "coach-place";
     coachStatus = document.createElement("p");
     coachStatus.className = "coach-status";
     const form = document.createElement("form");
@@ -323,14 +340,93 @@
     form.appendChild(send);
     form.addEventListener("submit", sendCoach);
     coachBox.appendChild(heading);
-    coachBox.appendChild(where);
     coachBox.appendChild(coachLog);
+    coachBox.appendChild(coachPlace);
     coachBox.appendChild(form);
     coachBox.appendChild(coachStatus);
     shell.appendChild(mapWrap);
     shell.appendChild(stage);
     shell.appendChild(coachBox);
     root.appendChild(shell);
+    ensureDrafts();
+    stage.addEventListener("input", persistDrafts);
+    stage.addEventListener("change", persistDrafts);
+    stage.addEventListener("click", function (event) {
+      const target = event.target && event.target.closest ? event.target.closest(".move-card button, .check-block, .prequestion") : null;
+      if (target) setTimeout(persistDrafts, 0);
+    });
+    try { sessionStorage.removeItem("hokulani-star-ai-pending"); } catch (e) {}
+  }
+
+  function ensureDrafts() {
+    if (!draftBag) {
+      try { draftBag = JSON.parse(sessionStorage.getItem("hokulani-draft:" + lessonId) || "null"); }
+      catch (e) { draftBag = null; }
+      if (!draftBag || typeof draftBag !== "object") draftBag = { topics: {}, coach: {} };
+      if (!draftBag.topics) draftBag.topics = {};
+      if (!draftBag.coach) draftBag.coach = {};
+    }
+    if (!draftsReady) {
+      draftsReady = true;
+      Object.keys(draftBag.coach).forEach(function (key) {
+        if (!coachTurns[key]) coachTurns[key] = draftBag.coach[key];
+      });
+    }
+    return draftBag;
+  }
+
+  function persistDrafts() {
+    const bag = ensureDrafts();
+    bag.coach = coachTurns;
+    if (liveTopic && stage) {
+      const fields = {};
+      const form = stage.querySelector(".check-block form");
+      if (form) {
+        Array.prototype.forEach.call(form.elements, function (el) {
+          if (!el.name || el.type === "button" || el.type === "submit") return;
+          fields[el.name] = el.type === "checkbox" ? (el.checked ? "1" : "") : el.value;
+        });
+      }
+      const pres = [];
+      stage.querySelectorAll(".prequestion textarea").forEach(function (area) { pres.push(area.value); });
+      bag.topics[liveTopic] = { fields: fields, pres: pres };
+    }
+    try { sessionStorage.setItem("hokulani-draft:" + lessonId, JSON.stringify(bag)); } catch (e) {}
+  }
+
+  function restoreDraft(topic) {
+    const bag = ensureDrafts();
+    const saved = bag.topics[topic.id];
+    if (!saved) return;
+    const form = liveCheck && liveCheck.querySelector("form");
+    if (form && saved.fields) {
+      Object.keys(saved.fields).forEach(function (name) {
+        const el = form.elements[name];
+        if (!el) return;
+        if (el.type === "checkbox") el.checked = saved.fields[name] === "1";
+        else el.value = saved.fields[name];
+      });
+      form.querySelectorAll(".move-card").forEach(function (card) {
+        const input = card.querySelector("input");
+        const value = input ? input.value : "";
+        const piles = card.closest(".piles");
+        if (!piles) return;
+        const target = value === "do" ? piles.querySelector(".pile.do") : value === "skip" ? piles.querySelector(".pile.skip") : piles.querySelector(".pile.bank");
+        if (target) target.appendChild(card);
+        const doBtn = card.querySelector("[data-move='do']");
+        const skipBtn = card.querySelector("[data-move='skip']");
+        const backBtn = card.querySelector("[data-move='back']");
+        if (doBtn) doBtn.hidden = value === "do";
+        if (skipBtn) skipBtn.hidden = value === "skip";
+        if (backBtn) backBtn.hidden = value === "";
+      });
+      applyWhen(form);
+    }
+    if (saved.pres) {
+      stage.querySelectorAll(".prequestion textarea").forEach(function (area, index) {
+        if (saved.pres[index] != null) area.value = saved.pres[index];
+      });
+    }
   }
 
   function currentStep(topic) {
@@ -343,25 +439,117 @@
     return topic.id + ":" + (step ? step.getAttribute("data-step") : "");
   }
 
+  function starValues() {
+    const form = liveCheck && liveCheck.querySelector("form");
+    const values = {};
+    STAR_BEATS.forEach(function (beat) {
+      values[beat.key] = form ? valueOf(form, beat.key).replace(/\s+/g, " ").trim() : "";
+    });
+    return values;
+  }
+
+  function mentionedBeats(text) {
+    const folded = String(text || "").toLowerCase();
+    const rules = {
+      situation: /\b(situation|setting)\b/,
+      task: /\b(task|my job was|i was responsible|responsibility)\b/,
+      action: /\b(action|what i did)\b/,
+      result: /\b(result|outcome|what changed|what happened)\b/,
+    };
+    return STAR_BEATS.filter(function (beat) { return rules[beat.key].test(folded); });
+  }
+
+  function starFollowUp(said, turns) {
+    const values = starValues();
+    let named = mentionedBeats(said);
+    if (!named.length && !values.action && /\bi (asked|took|wrote|called|measured|organized|told|made|helped|started|counted)\b/.test(said.toLowerCase())) {
+      named = STAR_BEATS.filter(function (beat) { return beat.key === "action"; });
+    }
+    const quote = said.replace(/\s+/g, " ").trim().slice(0, 110);
+    const prior = turns.filter(function (turn) { return turn.who === "coach"; }).map(function (turn) { return turn.text; });
+    function fresh(text, alternate) {
+      return prior.indexOf(text) >= 0 ? alternate : text;
+    }
+    if (named.length > 1) {
+      const bits = named.map(function (beat) {
+        return beat.label + (values[beat.key] ? " already says \"" + values[beat.key].slice(0, 60) + "\"" : " is still empty");
+      });
+      return fresh(
+        "You named " + named.map(function (beat) { return beat.label; }).join(" and ") + ". " + bits.join(". ") + ". Put each part in its own box. I will not replace a box unless you use the button.",
+        "Split that reply into the boxes you named. Change the thinner box so it states " + named[0].hint + "."
+      );
+    }
+    if (named.length === 1) {
+      const beat = named[0];
+      const current = values[beat.key];
+      if (!current) {
+        return fresh(
+          "That is the " + beat.label + ", " + beat.hint + ". The " + beat.label + " box is empty. Put this line in that box, then tell me the next beat.",
+          "The " + beat.label + " box is still empty. Add " + beat.hint + " there before we leave this beat."
+        );
+      }
+      return fresh(
+        "The " + beat.label + " box currently says \"" + current.slice(0, 80) + "\". Your new line is \"" + quote + "\". Keep the clearer one in that same box. I will not replace it unless you use the button.",
+        "Stay on " + beat.label + ". Add one missing detail: " + beat.hint + "."
+      );
+    }
+    const empty = STAR_BEATS.filter(function (beat) { return !values[beat.key]; });
+    if (empty.length) {
+      const next = empty[0];
+      return fresh(
+        "I am using that for " + next.label + ", " + next.hint + ". That box is still empty. Put the matching part there.",
+        "The " + next.label + " box is still empty. Name one concrete detail for " + next.hint + ", then put it in that box."
+      );
+    }
+    let weak = STAR_BEATS[0];
+    STAR_BEATS.forEach(function (beat) {
+      if (values[beat.key].length < values[weak.key].length) weak = beat;
+    });
+    return fresh(
+      "All four boxes have words. The thinnest is " + weak.label + ": \"" + values[weak.key].slice(0, 80) + "\". Add " + weak.hint + " in that same box.",
+      "Press Save my four beats when those four boxes are the version you want an instructor to see. No model is connected, so this conversation is not the saved answer."
+    );
+  }
+
   function renderCoach(topic, step) {
     if (!coachBox) return;
     const key = stepKey(topic, step);
-    const label = step ? (step.getAttribute("data-label") || "this step") : topic.title;
-    coachBox.querySelector(".coach-where").textContent = "This stays on " + topic.title + ", " + label + ". One question at a time.";
+    const turns = coachTurns[key] || [];
     coachLog.textContent = "";
-    (coachTurns[key] || []).forEach(function (turn) {
+    turns.forEach(function (turn) {
       const line = document.createElement("p");
       line.className = turn.who === "you" ? "you" : "coach-line";
       line.textContent = (turn.who === "you" ? "You: " : "Coach: ") + turn.text;
       coachLog.appendChild(line);
     });
-    let pending = false;
-    try { pending = sessionStorage.getItem("hokulani-star-ai-pending") === "1"; } catch (e) {}
-    if (topic.id === "star" && step && step.getAttribute("data-task") === "yes" && pending) {
-      coachStatus.textContent = "Saved. AI feedback is pending. Come back to Your story when a model is connected. The four beats are the revision an instructor can see once this lesson is assigned.";
-    } else {
-      coachStatus.textContent = "No model is connected on this page, so there is no scored comment yet. Ask for help asks one question about this step and does not give a sample answer.";
+    if (coachPlace) {
+      coachPlace.textContent = "";
+      const yours = turns.filter(function (turn) { return turn.who === "you"; });
+      const last = yours.length ? yours[yours.length - 1].text : "";
+      const named = topic.id === "star" && step && step.getAttribute("data-step") === "story" ? mentionedBeats(last) : [];
+      if (named.length === 1) {
+        const beat = named[0];
+        const values = starValues();
+        const button = document.createElement("button");
+        button.type = "button";
+        button.className = "secondary";
+        button.textContent = values[beat.key]
+          ? "Replace the " + beat.label + " box with my last reply"
+          : "Put my last reply in the " + beat.label + " box";
+        button.addEventListener("click", function () {
+          const form = liveCheck && liveCheck.querySelector("form");
+          const input = form && form.querySelector('[name="' + beat.key + '"]');
+          if (!input) return;
+          input.value = last;
+          const next = coachTurns[key] || (coachTurns[key] = []);
+          next.push({ who: "coach", text: "The " + beat.label + " box now has your last reply. Read it, and change that box if a detail is missing." });
+          persistDrafts();
+          renderCoach(topic, step);
+        });
+        coachPlace.appendChild(button);
+      }
     }
+    coachStatus.textContent = "No model is connected, so this coach does not score your answer and nothing is queued for review.";
   }
 
   function firstQuestion(topic, step) {
@@ -400,12 +588,14 @@
     const asked = turns.filter(function (turn) { return turn.who === "coach"; }).length;
     const folded = said.toLowerCase();
     const wantsSample = (folded.indexOf("give") >= 0 || folded.indexOf("sample") >= 0 || folded.indexOf("what is the") >= 0) && folded.indexOf("answer") >= 0;
+    const onStar = topic.id === "star" && step && step.getAttribute("data-step") === "story";
     let reply;
     if (wantsSample) reply = "The worked example stays on the page, and it is not yours to copy. What happened in your own life?";
+    else if (onStar) reply = starFollowUp(said, turns);
     else if (asked >= 3) reply = "Put that into the boxes on this step, then use the button under the boxes.";
-    else if (topic.id === "star" && step && step.getAttribute("data-step") === "story") reply = "You wrote \"" + said.replace(/\s+/g, " ").slice(0, 90) + "\". Which of the four beats is that, and what would you change before you save?";
     else reply = "You wrote \"" + said.replace(/\s+/g, " ").slice(0, 90) + "\". What is the one next piece this step asks you to use?";
     turns.push({ who: "coach", text: reply });
+    persistDrafts();
     renderCoach(topic, step);
   }
 
@@ -440,6 +630,7 @@
         else note.textContent = "Look again at this topic, then try once more.";
         form.appendChild(note);
         if (body.lesson) {
+          if (!remote) remote = {};
           remote.lessons = [body.lesson];
           paintNav(topic.id);
           refreshSaveLine(topic);
@@ -471,6 +662,7 @@
         }
         form.appendChild(note);
         if (body.lesson) {
+          if (!remote) remote = {};
           remote.lessons = [body.lesson];
           paintNav(topic.id);
           refreshSaveLine(topic);
@@ -486,7 +678,9 @@
 
   function showStepped(topic) {
     mountShell();
-    if (liveTopic !== topic.id) {
+    const switching = liveTopic !== topic.id;
+    if (switching && liveTopic) persistDrafts();
+    if (switching) {
       stage.textContent = "";
       const h = document.createElement("h2");
       h.textContent = topic.title;
@@ -536,6 +730,7 @@
       liveCheck = buildCheck(topic);
       stage.appendChild(liveCheck);
       liveTopic = topic.id;
+      restoreDraft(topic);
       post({ action: "lesson_progress", topicId: topic.id, mode: "place", evidence: {} }).catch(function () {});
     }
     refreshSaveLine(topic);
@@ -627,6 +822,7 @@
         else note.textContent = "Look again at this topic, then try once more.";
         form.appendChild(note);
         if (body.lesson) {
+          if (!remote) remote = {};
           remote.lessons = [body.lesson];
           paintNav(topic.id);
         }
@@ -656,6 +852,7 @@
         }
         form.appendChild(note);
         if (body.lesson) {
+          if (!remote) remote = {};
           remote.lessons = [body.lesson];
           paintNav(topic.id);
         }
@@ -951,7 +1148,7 @@
         button.type = "button";
         let mark = "";
         if (state.status === "met") mark = " · Saved";
-        else if (state.status === "support") mark = " · With support";
+        else if (state.status === "support") mark = " · Needs support";
         button.textContent = topic.title + mark;
         if (topic.id === current) button.setAttribute("aria-current", "true");
         button.addEventListener("click", function () { showTopic(topic); });
@@ -984,7 +1181,7 @@
       const button = document.createElement("button");
       button.type = "button";
       const state = topicState(topic.id);
-      button.textContent = topic.title + (state.status === "met" || state.status === "support" ? " ✓" : "");
+      button.textContent = topic.title + (state.status === "met" ? " ✓" : state.status === "support" ? " · Needs support" : "");
       if (topic.id === current) button.setAttribute("aria-current", "true");
       button.addEventListener("click", function () { showTopic(topic); paintNav(topic.id); });
       nav.appendChild(button);

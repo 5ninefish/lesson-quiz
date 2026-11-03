@@ -22,8 +22,8 @@ export type LessonRecord = {
   work: LessonWorkTopic[];
 };
 
-const DONE = new Set(["met", "support"]);
-const RANK: Record<string, number> = { met: 4, support: 4, needs_rubric: 2, place: 1 };
+const DONE = new Set(["met"]);
+const RANK: Record<string, number> = { met: 4, support: 3, needs_rubric: 2, place: 1 };
 
 function better(next: LessonProgressView, current: LessonProgressView): boolean {
   const nextRank = RANK[next.status] || 0;
