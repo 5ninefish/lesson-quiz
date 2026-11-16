@@ -243,6 +243,17 @@
 
   function interviewAttemptReply(topicId, evidence, body) {
     if (body && body.error === "pre_required") return "Complete the PRE on your lesson page first. Practice does not start the test.";
+    if (topicId === "wrap" && body && body.ok && body.status !== "invalid") {
+      if (body.status === "met") return interviewMet_("wrap") + " Saved.";
+      if (body.reason === "ai_unavailable") {
+        return "Your four wrap answers are saved. The grader was not reachable, so this check waits and you can leave the topic. It is not marked done.";
+      }
+      if (body.status === "needs_rubric") {
+        const feedback = String(body.feedback || "").replace(/\s+/g, " ").trim();
+        const lead = feedback || "This answer is saved for an instructor to review.";
+        return lead + " You can leave this topic. It is not marked done.";
+      }
+    }
     const local = judgeInterviewLocal_(topicId, evidence);
     let met = local.status === "met";
     let reason = local.reason;
@@ -603,7 +614,9 @@
     const line = stage && stage.querySelector(".save-state");
     if (!line) return;
     const state = topicState(topic.id);
-    if (state.status === "met") line.textContent = "Saved.";
+    if (state.regraded && state.status === "met") line.textContent = "Saved. This answer was re-graded.";
+    else if (state.regraded) line.textContent = "Saved for review. This answer was re-graded.";
+    else if (state.status === "met") line.textContent = "Saved.";
     else if (state.status === "support") line.textContent = "Saved with support. This did not mark the topic done, and it did not use a test attempt.";
     else line.textContent = "";
   }
@@ -1149,6 +1162,7 @@
         let mark = "";
         if (state.status === "met") mark = " · Saved";
         else if (state.status === "support") mark = " · Needs support";
+        if (state.regraded) mark += " · Re-graded";
         button.textContent = topic.title + mark;
         if (topic.id === current) button.setAttribute("aria-current", "true");
         button.addEventListener("click", function () { showTopic(topic); });
@@ -1181,7 +1195,7 @@
       const button = document.createElement("button");
       button.type = "button";
       const state = topicState(topic.id);
-      button.textContent = topic.title + (state.status === "met" ? " ✓" : state.status === "support" ? " · Needs support" : "");
+      button.textContent = topic.title + (state.status === "met" ? " ✓" : state.status === "support" ? " · Needs support" : "") + (state.regraded ? " · Re-graded" : "");
       if (topic.id === current) button.setAttribute("aria-current", "true");
       button.addEventListener("click", function () { showTopic(topic); paintNav(topic.id); });
       nav.appendChild(button);

@@ -539,4 +539,105 @@ describe("Apps Script dashboard contract", () => {
     expect(twoCohorts.needProgram).toBe(true);
     expect(twoCohorts.programId).toBeUndefined();
   });
+
+  it("mocks UrlFetchApp for wrap apply pass, retry, timeout, and malformed JSON", () => {
+    const live = book();
+    live.getSheetByName("Programs")!.appendRow(["preview", "Preview", "ACTIVE", "", "", "", "", "", ""]);
+    live.getSheetByName("ProgramStudents")!.appendRow(["preview", "ada", "TRUE", "", ""]);
+    const links = live.insertSheet("ProgramLessons");
+    links.appendRow(["ProgramId", "LessonId", "Enabled", "SortOrder", "LessonVersion", "OpenAt", "CloseAt", "UpdatedAtHST", "UpdatedBy", "RequirePre"]);
+    links.appendRow(["preview", "ment-interviews@2026-10", "TRUE", "1", "2026-10", "", "", "", "editor", "NO"]);
+    const code = loadCode(live) as unknown as {
+      judgeTeaching_: (lessonId: string, topicId: string, evidence: unknown) => { status: string; reason: string; feedback?: string };
+      lessonProgressPost_: (body: unknown) => { getContent: () => string };
+      regradeAiUnavailable_: () => void;
+      getTries: (username: string, password: string, programId: string) => { getContent: () => string };
+      UrlFetchApp: { fetch: (url: string, opts?: unknown) => { getResponseCode: () => number; getContentText: () => string } };
+    };
+    const evidence = {
+      why: "Interview practice can lead to a job or an internship.",
+      share: "I would ask my cousin one question and let them try it.",
+      culture: "I would read the organization goals and connect a family garden log.",
+      apply: "I would apply even if I am not fully qualified, and I would say which skill I can learn.",
+    };
+    expect(code.judgeTeaching_("ment-interviews@2026-10", "wrap", evidence)).toMatchObject({ status: "met", reason: "" });
+    code.UrlFetchApp.fetch = (url: string) => {
+      if (String(url).indexOf("/grade") >= 0) {
+        return { getResponseCode: () => 200, getContentText: () => JSON.stringify({ verdict: "retry", feedback: "Add how you would learn the missing skill." }) };
+      }
+      return { getResponseCode: () => 200, getContentText: () => JSON.stringify({ status: "ok" }) };
+    };
+    expect(code.judgeTeaching_("ment-interviews@2026-10", "wrap", evidence)).toMatchObject({
+      status: "needs_rubric",
+      reason: "retry",
+      feedback: "Add how you would learn the missing skill.",
+    });
+    const retrySaved = JSON.parse(code.lessonProgressPost_({
+      action: "lesson_progress",
+      username: "ada",
+      password: "secret",
+      programId: "preview",
+      lessonId: "ment-interviews@2026-10",
+      topicId: "wrap",
+      mode: "attempt",
+      evidence,
+    }).getContent());
+    expect(retrySaved.ok).toBe(true);
+    expect(retrySaved.status).toBe("needs_rubric");
+    expect(retrySaved.reason).toBe("retry");
+    code.UrlFetchApp.fetch = () => {
+      throw new Error("timeout");
+    };
+    expect(code.judgeTeaching_("ment-interviews@2026-10", "wrap", evidence)).toMatchObject({
+      status: "needs_rubric",
+      reason: "ai_unavailable",
+    });
+    code.UrlFetchApp.fetch = (url: string) => {
+      if (String(url).indexOf("/grade") >= 0) return { getResponseCode: () => 200, getContentText: () => "not-json" };
+      return { getResponseCode: () => 200, getContentText: () => "{}" };
+    };
+    expect(code.judgeTeaching_("ment-interviews@2026-10", "wrap", evidence).reason).toBe("ai_unavailable");
+    code.UrlFetchApp.fetch = (url: string) => {
+      if (String(url).indexOf("/grade") >= 0) {
+        return { getResponseCode: () => 200, getContentText: () => JSON.stringify({ verdict: "maybe", feedback: "nope" }) };
+      }
+      return { getResponseCode: () => 200, getContentText: () => "{}" };
+    };
+    expect(code.judgeTeaching_("ment-interviews@2026-10", "wrap", evidence).reason).toBe("ai_unavailable");
+    let called = false;
+    code.UrlFetchApp.fetch = () => {
+      called = true;
+      return { getResponseCode: () => 500, getContentText: () => "" };
+    };
+    expect(code.judgeTeaching_("ment-interviews@2026-10", "wrap", { ...evidence, apply: "too short" }).status).toBe("invalid");
+    expect(called).toBe(false);
+    code.UrlFetchApp.fetch = () => {
+      throw new Error("down");
+    };
+    const waiting = JSON.parse(code.lessonProgressPost_({
+      action: "lesson_progress",
+      username: "ada",
+      password: "secret",
+      programId: "preview",
+      lessonId: "ment-interviews@2026-10",
+      topicId: "wrap",
+      mode: "attempt",
+      evidence,
+    }).getContent());
+    expect(waiting.ok).toBe(true);
+    expect(waiting.reason).toBe("ai_unavailable");
+    code.UrlFetchApp.fetch = (url: string) => {
+      if (String(url).indexOf("/grade") >= 0) {
+        return { getResponseCode: () => 200, getContentText: () => JSON.stringify({ verdict: "pass", feedback: "Complete." }) };
+      }
+      return { getResponseCode: () => 200, getContentText: () => JSON.stringify({ status: "ok" }) };
+    };
+    code.regradeAiUnavailable_();
+    const listed = JSON.parse(code.getTries("ada", "secret", "preview").getContent()) as {
+      lessons: { lessonId: string; topics: { id: string; status: string; regraded?: boolean }[] }[];
+    };
+    const wrap = listed.lessons.find((lesson) => lesson.lessonId === "ment-interviews@2026-10")?.topics.find((topic) => topic.id === "wrap");
+    expect(wrap?.status).toBe("met");
+    expect(wrap?.regraded).toBe(true);
+  });
 });

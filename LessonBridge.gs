@@ -279,11 +279,21 @@ function buildTeachingLessonsPayload_(ss, student, programId, tests) {
     const topics = row.pack.topics.map(function (topic) {
       const hits = progress.filter(function (item) { return item.lessonId === row.pack.lessonId && item.topicId === topic.id; });
       const latest = bestProgress_(hits);
+      let regraded = false;
+      if (latest && latest.artifact) {
+        try {
+          const parsed = JSON.parse(latest.artifact);
+          regraded = !!(parsed && parsed.grader && parsed.grader.regraded === true);
+        } catch (ignore) {
+          regraded = false;
+        }
+      }
       return {
         id: topic.id,
         title: topic.title,
         status: latest ? latest.status : '',
         support: latest ? latest.support : false,
+        regraded: regraded,
         updatedAt: latest ? latest.updatedAt : '',
       };
     });
@@ -324,7 +334,7 @@ function preSubmitted_(ss, programId, username, testId) {
 }
 
 function redactArtifact_(value) {
-  let text = String(value || '').slice(0, 400);
+  let text = String(value || '').slice(0, 2000);
   ['password', 'passwordhash', 'correct', 'correctsnapshot', 'access_token', 'accesstoken', 'hash'].forEach(function (key) {
     text = text.split('"' + key + '"').join('"note"');
   });
@@ -419,16 +429,27 @@ function lessonProgressPost_(body) {
   let status = 'place';
   let support = 'NO';
   let reason = '';
+  let feedback = '';
+  let judged = null;
   if (mode === 'support') {
     status = 'support';
     support = 'YES';
   } else if (mode === 'place') {
     status = 'place';
   } else {
-    const judged = judgeTeaching_(pack.lessonId, topicId, body.evidence || {});
+    judged = judgeTeaching_(pack.lessonId, topicId, body.evidence || {});
     status = judged.status;
     reason = judged.reason || '';
+    feedback = judged.feedback || '';
     if (status === 'invalid') return respond({ ok: false, error: 'invalid', reason: reason, status: 'invalid' });
+  }
+  const evidenceOut = cleanEvidence_(body.evidence || {});
+  if (judged && judged.gradeState) {
+    evidenceOut.grader = {
+      state: judged.gradeState,
+      feedback: String(feedback || '').slice(0, 180),
+      regraded: false,
+    };
   }
   const attemptsBefore = ss.getSheetByName('Attempts') ? ss.getSheetByName('Attempts').getLastRow() : 0;
   upsertLessonProgress_(ss, {
@@ -438,7 +459,7 @@ function lessonProgressPost_(body) {
     version: pack.version,
     topicId: topicId,
     status: status,
-    artifact: redactArtifact_(JSON.stringify(cleanEvidence_(body.evidence || {}))),
+    artifact: redactArtifact_(JSON.stringify(evidenceOut)),
     support: support,
     updatedAt: new Date().toISOString(),
   });
@@ -449,6 +470,7 @@ function lessonProgressPost_(body) {
     ok: true,
     status: status,
     reason: reason,
+    feedback: feedback,
     support: support === 'YES',
     lesson: buildTeachingLessonsPayload_(ss, fresh || student, ctx.programId, tests).filter(function (item) {
       return item.lessonId === pack.lessonId;
@@ -805,8 +827,7 @@ function judgeInterviews_(topicId, evidence) {
     if (!sentence_(evidence.why) || !hasAny_(evidence.why, ['job', 'hire', 'scholarship', 'college', 'intern', 'school', 'work'])) return { status: 'invalid', reason: 'why' };
     if (!sentence_(evidence.share)) return { status: 'invalid', reason: 'share' };
     if (!sentence_(evidence.culture) || !hasAny_(evidence.culture, ['community', 'culture', 'background', 'organization', 'family', 'experience'])) return { status: 'invalid', reason: 'culture' };
-    if (!sentence_(evidence.apply) || !hasAny_(evidence.apply, ['qualif', 'apply', 'learn'])) return { status: 'invalid', reason: 'apply' };
-    return { status: 'met', reason: '' };
+    return gradeWrapApply_(evidence.apply);
   }
   return { status: 'invalid', reason: 'unknown_topic' };
 }
@@ -1151,4 +1172,118 @@ function judgeSust_(topicId, evidence) {
     return ok ? { status: 'met', reason: '' } : { status: 'needs_rubric', reason: 'wrap' };
   }
   return { status: 'invalid', reason: 'unknown_topic' };
+}
+
+function gradeConfig_() {
+  const props = PropertiesService.getScriptProperties();
+  return {
+    url: String(props.getProperty('GRADE_URL') || '').trim(),
+    secret: String(props.getProperty('GRADE_SECRET') || '').trim(),
+  };
+}
+
+function gradeUnavailable_() {
+  return { status: 'needs_rubric', reason: 'ai_unavailable', feedback: '', gradeState: 'ai_unavailable' };
+}
+
+function gradeWrapApply_(answer) {
+  const text = sentence_(answer);
+  if (!text) return { status: 'invalid', reason: 'apply' };
+  const cfg = gradeConfig_();
+  if (!cfg.url || !cfg.secret) return gradeUnavailable_();
+  let raw;
+  try {
+    raw = UrlFetchApp.fetch(cfg.url, {
+      method: 'post',
+      contentType: 'application/json',
+      headers: { Authorization: 'Bearer ' + cfg.secret },
+      payload: JSON.stringify({ rubric: 'wrap-apply', answer: text }),
+      muteHttpExceptions: true,
+      followRedirects: false,
+    });
+  } catch (err) {
+    return gradeUnavailable_();
+  }
+  let code = 0;
+  let body = '';
+  try {
+    code = raw.getResponseCode();
+    body = raw.getContentText() || '';
+  } catch (err2) {
+    return gradeUnavailable_();
+  }
+  if (code !== 200) return gradeUnavailable_();
+  let parsed;
+  try {
+    parsed = JSON.parse(body);
+  } catch (err3) {
+    return gradeUnavailable_();
+  }
+  const verdict = String(parsed && parsed.verdict || '');
+  const feedback = String(parsed && parsed.feedback || '').replace(/\s+/g, ' ').trim();
+  if ((verdict !== 'pass' && verdict !== 'retry') || !feedback || feedback.length > 180) return gradeUnavailable_();
+  if (verdict === 'pass') return { status: 'met', reason: '', feedback: feedback, gradeState: 'pass' };
+  return { status: 'needs_rubric', reason: 'retry', feedback: feedback, gradeState: 'retry' };
+}
+
+function gradeHealthUp_() {
+  const cfg = gradeConfig_();
+  if (!cfg.url || !cfg.secret) return false;
+  const healthUrl = cfg.url.replace(/\/grade\/?$/, '/health');
+  if (healthUrl === cfg.url) return false;
+  try {
+    const raw = UrlFetchApp.fetch(healthUrl, {
+      method: 'get',
+      muteHttpExceptions: true,
+      followRedirects: false,
+      headers: { Authorization: 'Bearer ' + cfg.secret },
+    });
+    return raw.getResponseCode() === 200;
+  } catch (err) {
+    return false;
+  }
+}
+
+function regradeAiUnavailable_() {
+  if (!gradeHealthUp_()) return;
+  const ss = ss_();
+  const sheet = ss.getSheetByName('LessonProgress');
+  if (!sheet) return;
+  const data = sheet.getDataRange().getValues();
+  for (let i = 1; i < data.length; i++) {
+    if (String(data[i][5] || '') !== 'needs_rubric') continue;
+    let artifact;
+    try {
+      artifact = JSON.parse(String(data[i][6] || ''));
+    } catch (err) {
+      continue;
+    }
+    if (!artifact || !artifact.grader || artifact.grader.state !== 'ai_unavailable' || artifact.grader.regraded === true) continue;
+    const graded = gradeWrapApply_(artifact.apply);
+    if (!graded || graded.reason === 'ai_unavailable' || graded.status === 'invalid') continue;
+    artifact.grader = {
+      state: graded.gradeState || (graded.status === 'met' ? 'pass' : 'retry'),
+      feedback: String(graded.feedback || '').slice(0, 180),
+      regraded: true,
+    };
+    upsertLessonProgress_(ss, {
+      programId: normalizeProgramId_(data[i][0]),
+      username: normalizeUsername_(data[i][1]),
+      lessonId: String(data[i][2] || ''),
+      version: String(data[i][3] || ''),
+      topicId: String(data[i][4] || ''),
+      status: graded.status === 'met' ? 'met' : 'needs_rubric',
+      artifact: redactArtifact_(JSON.stringify(artifact)),
+      support: String(data[i][7] || ''),
+      updatedAt: new Date().toISOString(),
+    });
+  }
+}
+
+function installGradeTrigger_() {
+  const have = ScriptApp.getProjectTriggers().some(function (trigger) {
+    return trigger.getHandlerFunction() === 'regradeAiUnavailable_';
+  });
+  if (have) return;
+  ScriptApp.newTrigger('regradeAiUnavailable_').timeBased().everyMinutes(15).create();
 }

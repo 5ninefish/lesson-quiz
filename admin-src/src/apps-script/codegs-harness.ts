@@ -44,7 +44,15 @@ export function loadCode(book: MockBook, options: { failBatch?: boolean } = {}):
     },
     Session: { getEffectiveUser: () => ({ getEmail: () => "owner@example.edu" }) },
     ScriptApp: { getOAuthToken: () => "script-token" },
-    PropertiesService: { getScriptProperties: () => ({ getProperty: () => "" }) },
+    PropertiesService: {
+      getScriptProperties: () => ({
+        getProperty: (key: string) => {
+          if (key === "GRADE_URL") return "https://grade.test/grade";
+          if (key === "GRADE_SECRET") return "test-secret-value";
+          return "";
+        },
+      }),
+    },
     ContentService: {
       MimeType: { JSON: "application/json" },
       createTextOutput: (text: string) => ({
@@ -70,6 +78,15 @@ export function loadCode(book: MockBook, options: { failBatch?: boolean } = {}):
           return {
             getResponseCode: () => 200,
             getContentText: () => JSON.stringify({ capabilities: { canEdit, canModifyContent: canEdit } }),
+          };
+        }
+        if (url.indexOf("/health") >= 0) {
+          return { getResponseCode: () => 200, getContentText: () => JSON.stringify({ status: "ok" }) };
+        }
+        if (url.indexOf("/grade") >= 0) {
+          return {
+            getResponseCode: () => 200,
+            getContentText: () => JSON.stringify({ verdict: "pass", feedback: "Stance and a way forward are both in the answer." }),
           };
         }
         if (url.indexOf(":batchUpdate") >= 0) {

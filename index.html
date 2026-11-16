@@ -1181,6 +1181,13 @@ function teachingCard(lesson, index, sectionName) {
     count.textContent = progress.done + ' of ' + progress.total + ' topics complete';
     card.append(bar, count);
   }
+  const regraded = (lesson.topics || []).filter(function (topic) { return topic.regraded; });
+  if (regraded.length) {
+    const note = document.createElement('p');
+    note.className = 'hk-small';
+    note.textContent = 'Re-graded: ' + regraded.map(function (topic) { return topic.title || topic.id; }).join(', ') + '.';
+    card.appendChild(note);
+  }
   const supported = (lesson.topics || []).filter(function (topic) { return topic.support || topic.status === 'support'; });
   if (supported.length) {
     const note = document.createElement('p');
